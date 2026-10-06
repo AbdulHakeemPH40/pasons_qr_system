@@ -453,7 +453,6 @@ def qr_redirect(request, key):
         "has_menu": True,
         "has_review": True,
         "has_instagram": True,
-        "has_game": True,
     }
     return render(request, "outlet_landing.html", context)
 

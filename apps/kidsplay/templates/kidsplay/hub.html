@@ -1,0 +1,30 @@
+{% extends "kidsplay/base.html" %}
+{% block title %}Games · {{ kid.nickname }}{% endblock %}
+{% block content %}
+<section class="kp-card">
+  <header class="kp-hub-head">
+    <span class="kp-avatar kp-avatar--{{ kid.avatar }}" aria-hidden="true"></span>
+    <div>
+      <p class="kp-kicker">{{ place }}</p>
+      <h1>{{ kid.nickname }}</h1>
+    </div>
+    <p class="kp-balance"><strong>{{ kid.points_balance }}</strong><span>points</span></p>
+  </header>
+  {% if not visit %}
+  <p class="kp-error" role="status">This table visit has ended. Scan the table QR to play again.</p>
+  {% endif %}
+  <div class="kp-games">
+    {% for game in games %}
+    <a class="kp-game" href="{% url 'kidsplay:play' table_code game.slug %}">
+      <h2>{{ game.title }}</h2>
+      <p>{{ game.description }}</p>
+    </a>
+    {% empty %}
+    <p>Games are being set up.</p>
+    {% endfor %}
+  </div>
+  <a class="kp-btn" href="{% url 'kidsplay:rewards' table_code %}">Rewards</a>
+  <a class="kp-btn kp-btn--quiet" href="{% url 'kidsplay:kids' table_code %}">Switch player</a>
+  <a class="kp-text-link" href="{% url 'kidsplay:delete' table_code %}">Delete my family data</a>
+</section>
+{% endblock %}

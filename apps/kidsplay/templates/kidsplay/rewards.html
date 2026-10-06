@@ -1,0 +1,31 @@
+{% extends "kidsplay/base.html" %}
+{% block title %}Rewards{% endblock %}
+{% block content %}
+<section class="kp-card">
+  <header class="kp-hub-head">
+    <div>
+      <p class="kp-kicker">{{ kid.nickname }}</p>
+      <h1>{{ kid.points_balance }} points</h1>
+    </div>
+  </header>
+  {% if redemption %}
+  <p class="kp-code" aria-label="Redemption code">{{ redemption.code }}</p>
+  <p>Show this code to the staff. It lasts 30 minutes.</p>
+  {% endif %}
+  {% if error == "insufficient_points" %}<p class="kp-error" role="alert">Not enough points yet.</p>{% endif %}
+  {% if error == "pending_exists" %}<p class="kp-error" role="alert">Finish the current reward first.</p>{% endif %}
+  {% if error == "out_of_stock" %}<p class="kp-error" role="alert">That reward is gone for now.</p>{% endif %}
+  <div class="kp-games">
+    {% for reward in rewards %}
+    <form method="post">
+      {% csrf_token %}
+      <button class="kp-game" type="submit" name="reward" value="{{ reward.pk }}">
+        <h2>{{ reward.title }}</h2>
+        <p>{{ reward.cost_points }} points</p>
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+  <a class="kp-btn kp-btn--quiet" href="{% url 'kidsplay:hub' table_code %}">Back to games</a>
+</section>
+{% endblock %}

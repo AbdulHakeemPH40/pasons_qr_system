@@ -85,22 +85,20 @@
         </a>
         {% endif %}
 
-        {% if has_game %}
         <a href="{% url 'qr_game' qr.redirect_key %}" class="btn-action btn-action--game reveal" style="--i: 5">
           <span class="btn-action__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="10" rx="4"/><path d="M8 13v3M6.5 14.5h3M15.5 13h.01M17.5 15.5h.01"/></svg>
           </span>
           <span class="btn-action__text">
-            <span class="btn-action__title">Play a Game & Win a Discount</span>
-            <span class="btn-action__sub">Match the pairs in 60 seconds</span>
+            <span class="btn-action__title">GAMES ZONE</span>
+            <span class="btn-action__sub">Three quick games while you wait</span>
           </span>
           <span class="btn-action__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         </a>
-        {% endif %}
       </section>
 
       {% if address_line or maps_url or phone_number %}
-      <footer class="outlet-info-strip glass reveal" style="--i: 6">
+      <footer class="outlet-info-strip glass reveal" style="--i: 7">
         {% if address_line %}<p>{{ address_line }}</p>{% endif %}
         <div class="info-links">
           {% if maps_url %}

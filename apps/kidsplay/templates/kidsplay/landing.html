@@ -1,0 +1,14 @@
+{% extends "kidsplay/base.html" %}
+{% block title %}Play & Win · {{ place }}{% endblock %}
+{% block content %}
+<section class="kp-card">
+  <p class="kp-kicker">{{ place }}</p>
+  <h1>Play & Win</h1>
+  <p>Short games while you wait. Points stay at this table.</p>
+  {% if known %}
+  <a class="kp-btn" href="{% url 'kidsplay:kids' table_code %}">Continue</a>
+  {% else %}
+  <a class="kp-btn" href="{% url 'kidsplay:otp_request' table_code %}">Start with a phone number</a>
+  {% endif %}
+</section>
+{% endblock %}

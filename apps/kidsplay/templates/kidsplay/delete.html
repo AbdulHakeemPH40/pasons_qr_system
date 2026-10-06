@@ -1,0 +1,15 @@
+{% extends "kidsplay/base.html" %}
+{% block title %}Delete family data{% endblock %}
+{% block content %}
+<form class="kp-card" method="post">
+  {% csrf_token %}
+  <h1>Delete family data</h1>
+  <p>This removes the phone number and every player nickname. It cannot be undone.</p>
+  <label class="kp-check">
+    <input type="checkbox" name="confirm" value="delete" required>
+    <span>Delete this family's data.</span>
+  </label>
+  <button class="kp-btn" type="submit">Delete</button>
+  <a class="kp-btn kp-btn--quiet" href="{% url 'kidsplay:hub' table_code %}">Keep my data</a>
+</form>
+{% endblock %}

@@ -200,12 +200,18 @@ class QrFlowTests(AcceptanceFixtures):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "https://menu.kingchef.example/international-city")
 
-    def test_game_page_loads_for_outlet_with_game(self):
-        # Session must match the scanned QR before a later result post.
-        self.client.get(reverse("qr_landing", args=["kcic-table-001"]))
+    def test_game_page_sends_player_to_games_hub(self):
+        # The QR game card lands on the Games Hub now; the tap is still logged
+        # and the hub is given the way back to the restaurant page.
         response = self.client.get(reverse("customer_game", args=["kcic-table-001"]))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "International City Dish Match")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            "{}?back=/q/kcic-table-001/".format(reverse("gameshub:hub")),
+        )
+        self.assertEqual(
+            TapEvent.objects.filter(qr_code=self.qr_intl, action="game").count(), 1
+        )
 
 
 class PanelScopeTests(AcceptanceFixtures):

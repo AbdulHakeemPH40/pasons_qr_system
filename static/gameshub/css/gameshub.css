@@ -1,0 +1,776 @@
+/* ==========================================================================
+   Games Hub
+   Mobile first, portrait first. Built on the site's design tokens so the hub
+   never looks like it came from somewhere else.
+
+   - the shell pads around the notch and home indicator with env()
+   - every action target is at least 48px tall
+   - the playfield letterboxes in landscape rather than cropping
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+.gh-body {
+  min-height: 100dvh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-optical-sizing: auto;
+  color: var(--text-primary);
+  background:
+    radial-gradient(120% 80% at 12% -10%, var(--aurora-1), transparent 62%),
+    radial-gradient(110% 70% at 88% 8%, var(--aurora-2), transparent 58%),
+    var(--mist);
+  -webkit-font-smoothing: antialiased;
+}
+
+.gh-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-height: 100dvh;
+  max-width: 1120px;
+  margin-inline: auto;
+  padding:
+    calc(14px + env(safe-area-inset-top))
+    calc(18px + env(safe-area-inset-right))
+    calc(20px + env(safe-area-inset-bottom))
+    calc(18px + env(safe-area-inset-left));
+}
+
+/* The play screen needs a definite height to share out, not a minimum: only
+   then can the stage take "whatever is left" and the board size itself from
+   it. The hub keeps min-height so a tall card grid can push the page longer. */
+.gh-shell:has(.gh-play) {
+  height: 100dvh;
+}
+
+/* Main carries the shell's leftover height down to the play column. Harmless
+   on the hub, where the shell grows instead of stretching its children. */
+.gh-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* --- skip link ---------------------------------------------------------- */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: 100;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: var(--forest);
+  color: #fff;
+  text-decoration: none;
+}
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
+}
+
+/* --- header ------------------------------------------------------------- */
+.gh-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.gh-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.gh-brand-mark {
+  width: 14px;
+  height: 14px;
+  border-radius: 5px;
+  background: linear-gradient(140deg, var(--sage), var(--leaf));
+  box-shadow: var(--shadow-soft);
+}
+
+.gh-brand-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.gh-exit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border-alpha);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-hi);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.gh-exit:active {
+  transform: scale(0.97);
+}
+
+/* --- headings ----------------------------------------------------------- */
+.gh-title {
+  margin: 0;
+  font-size: clamp(30px, 8vw, 46px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+}
+
+.gh-lede {
+  margin: 10px 0 0;
+  max-width: 30ch;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* --- game cards --------------------------------------------------------- */
+.gh-games {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gh-card {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  grid-template-areas:
+    "art body"
+    "art foot";
+  gap: 4px 16px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid var(--glass-border-alpha);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--shadow-glass);
+  color: inherit;
+  text-decoration: none;
+  touch-action: manipulation;
+  transition: transform 140ms ease-out, box-shadow 140ms ease-out;
+}
+.gh-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glass-lg);
+}
+.gh-card:active {
+  transform: scale(0.985);
+}
+.gh-card:focus-visible {
+  outline: 3px solid var(--leaf);
+  outline-offset: 3px;
+}
+
+.gh-card-art {
+  grid-area: art;
+  position: relative;
+  display: block;
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(150deg, var(--gp-near, var(--moss)), var(--gp-ground, var(--forest)));
+}
+.gh-card-blob {
+  position: absolute;
+  inset: 22px 18px 18px 22px;
+  border-radius: 12px 12px 8px 8px;
+  background: var(--gp-accent, var(--gold));
+}
+.gh-card-art--pairs .gh-card-blob {
+  inset: 18px;
+  border-radius: 10px;
+  background:
+    linear-gradient(var(--gp-accent, var(--gold)) 0 0) 0 0 / 46% 46% no-repeat,
+    linear-gradient(var(--mist) 0 0) 100% 0 / 46% 46% no-repeat,
+    linear-gradient(var(--mist) 0 0) 0 100% / 46% 46% no-repeat,
+    linear-gradient(var(--gp-accent, var(--gold)) 0 0) 100% 100% / 46% 46% no-repeat;
+}
+.gh-card-art--stack .gh-card-blob {
+  inset: 14px 20px 14px 20px;
+  border-radius: 8px;
+  background:
+    linear-gradient(var(--gp-accent, var(--gold)) 0 0) 50% 8% / 100% 20% no-repeat,
+    linear-gradient(var(--mist) 0 0) 50% 40% / 82% 20% no-repeat,
+    linear-gradient(var(--gp-accent, var(--gold)) 0 0) 50% 72% / 62% 20% no-repeat;
+}
+
+.gh-card-body {
+  grid-area: body;
+  display: block;
+  min-width: 0;
+}
+
+.gh-card-title {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.gh-card-short {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.gh-card-rule {
+  display: none;
+}
+
+.gh-card-foot {
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.gh-card-time {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+.gh-card-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--forest);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* --- background pack picker --------------------------------------------- */
+.gh-theme {
+  padding: 4px 2px 0;
+}
+
+.gh-theme-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.gh-theme-note {
+  margin: 6px 0 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.gh-theme-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 0 15px 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border-alpha);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-hi);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.gh-chip:active {
+  transform: scale(0.97);
+}
+.gh-chip:focus-visible {
+  outline: 3px solid var(--leaf);
+  outline-offset: 3px;
+}
+.gh-chip.is-on {
+  background: var(--forest);
+  border-color: transparent;
+  color: #fff;
+}
+
+.gh-chip-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, var(--chip-a, #9db18c), var(--chip-b, #31452d));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* --- play screen -------------------------------------------------------- */
+.gh-play {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* Absorbs whatever height the shell has left over and hands it to the
+     stage, so the playfield is sized by real remaining space rather than by
+     a hard-coded guess at how tall the chrome is. */
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Head, score bar and feedback keep their natural height; only the stage
+   gives up space when the window is short. */
+.gh-play > * {
+  flex-shrink: 0;
+}
+
+.gh-play-head {
+  text-align: center;
+}
+
+.gh-play-title {
+  margin: 0;
+  font-size: clamp(24px, 6.5vw, 34px);
+  line-height: 1.08;
+  letter-spacing: -0.032em;
+  font-weight: 700;
+}
+
+.gh-play-rule {
+  margin: 8px auto 0;
+  max-width: 34ch;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.gh-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
+  /* Grows into the leftover column height; 240px keeps the playfield at a
+     playable minimum on a short window. Size containment is safe here: the
+     stage's own box comes from the flex/grid layout, never from its content. */
+  flex: 1 1 auto;
+  min-height: 240px;
+  container-type: size;
+}
+
+.gh-canvas {
+  position: relative;
+  /* Portrait playfield, ratio locked at 390/620.
+     Sized from the container in BOTH axes (cqw/cqh), so it is the largest
+     exact-ratio box that fits whatever height the layout left over and never
+     runs out of width. Width stays auto, which is what keeps the ratio intact
+     even when the min-height floor below takes over. */
+  aspect-ratio: 390 / 620;
+  height: min(100cqh, calc(100cqw * 620 / 390));
+  width: auto;
+  min-height: 240px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--gp-sky, var(--mist));
+  box-shadow: var(--shadow-glass-lg);
+  touch-action: manipulation;
+}
+.gh-canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.gh-canvas-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+/* --- end + pause panels ------------------------------------------------- */
+.gh-end,
+.gh-pause {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  border-radius: 24px;
+  text-align: center;
+  background: rgba(250, 252, 248, 0.88);
+  backdrop-filter: blur(16px) saturate(160%);
+  animation: gh-rise 220ms ease-out;
+}
+.gh-end[hidden],
+.gh-pause[hidden] {
+  display: none;
+}
+
+@keyframes gh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.gh-end-kicker,
+.gh-pause-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.gh-end-score {
+  margin: 2px 0 0;
+  font-size: clamp(52px, 17vw, 76px);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+}
+.gh-end-score span {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.gh-end-best {
+  margin: 10px 0 4px;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+.gh-end-best output {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gh-end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* --- buttons ------------------------------------------------------------ */
+.gh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border-alpha);
+  background: var(--glass-fill-strong);
+  box-shadow: var(--shadow-btn);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 100ms ease-out;
+}
+.gh-btn:active {
+  transform: scale(0.96);
+}
+.gh-btn:focus-visible {
+  outline: 3px solid var(--leaf);
+  outline-offset: 3px;
+}
+.gh-btn--solid {
+  background: var(--forest);
+  border-color: transparent;
+  color: #fff;
+}
+
+.gh-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 420px;
+  margin-inline: auto;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border-alpha);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--shadow-glass);
+}
+
+.gh-score {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+}
+
+.gh-score-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.gh-score-value {
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gh-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.gh-btn--icon {
+  min-height: 48px;
+  min-width: 78px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.gh-feedback {
+  min-height: 22px;
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* --- footer ------------------------------------------------------------- */
+.gh-footer {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(49, 69, 45, 0.1);
+  flex-shrink: 0;
+}
+.gh-footer p {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Wide screens — the card menu becomes a clean row, the playfield stays
+   portrait and letterboxes instead of stretching.
+   ========================================================================== */
+@media (min-width: 720px) {
+  .gh-shell {
+    gap: 28px;
+  }
+
+  .gh-games {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+
+  .gh-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "art"
+      "body"
+      "foot";
+    align-items: start;
+    gap: 12px;
+    padding: 20px;
+  }
+
+  .gh-card-art {
+    width: 100%;
+    height: 108px;
+    border-radius: 18px;
+  }
+
+  .gh-card-rule {
+    display: block;
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
+  .gh-card-foot {
+    margin-top: 2px;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .gh-intro {
+    max-width: 46ch;
+  }
+}
+
+@media (min-width: 1040px) {
+  .gh-stage {
+    max-width: 440px;
+  }
+}
+
+/* Short and wide — a landscape phone or a small tablet on its side. A
+   portrait board plus a stacked chrome column cannot fit 390px of height,
+   so put the board beside the chrome instead of under it. Nothing hides:
+   the title, the score bar and the controls all stay on screen. */
+@media (max-height: 640px) and (min-width: 620px) {
+  .gh-play {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "stage head"
+      "stage bar"
+      "stage feedback";
+    align-items: start;
+    align-content: center;
+    gap: 14px 20px;
+  }
+
+  .gh-play-head {
+    grid-area: head;
+    text-align: left;
+  }
+
+  .gh-stage {
+    grid-area: stage;
+    align-self: stretch;
+    max-width: none;
+    min-height: 0;
+  }
+
+  .gh-bar {
+    grid-area: bar;
+    max-width: none;
+    flex-wrap: wrap;
+  }
+
+  .gh-feedback {
+    grid-area: feedback;
+    align-self: start;
+  }
+}
+
+/* ==========================================================================
+   Preferences
+   ========================================================================== */
+
+/* Short windows: the board is sized by what is left over, so trim the
+   decorative chrome to give it back some height. Nothing informational is
+   removed — only the footer line and some breathing room. */
+@media (max-height: 700px) {
+  .gh-footer {
+    display: none;
+  }
+
+  .gh-shell {
+    gap: 12px;
+  }
+
+  .gh-play {
+    gap: 10px;
+  }
+
+  .gh-play-rule {
+    margin-top: 4px;
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gh-card,
+  .gh-btn,
+  .gh-chip,
+  .gh-exit {
+    transition: none;
+  }
+  .gh-end,
+  .gh-pause {
+    animation: none;
+  }
+  .gh-card:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .gh-exit,
+  .gh-chip,
+  .gh-card,
+  .gh-bar {
+    background: #fff;
+    backdrop-filter: none;
+  }
+  .gh-end,
+  .gh-pause {
+    background: #fff;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .gh-card,
+  .gh-chip,
+  .gh-exit,
+  .gh-bar {
+    border-color: var(--forest);
+    border-width: 2px;
+  }
+}

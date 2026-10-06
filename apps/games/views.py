@@ -1,62 +1,39 @@
 """
 Games views (Part C.5):
 Interactive game interface and server-side submission endpoint.
+
+The QR "play a game" card now lands on the Games Hub (apps/gameshub): the
+three quick games replaced the old voucher game on the customer flow. The
+reward engine and the result endpoint below remain in place so reward-earning
+games can be reattached later.
 """
 
 import json
 from django.http import JsonResponse, HttpResponseBadRequest
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
-from django.views.decorators.csrf import ensure_csrf_cookie
 
 from apps.core.models import QrCode
 from apps.games.engine import resolve_active_game, evaluate_game_submission, get_device_hash
 from apps.analytics.models import TapEvent
 
 
-@ensure_csrf_cookie
 @require_GET
 def customer_game(request, key):
+    """QR game card entry point: log the tap, hand the player to the Games Hub."""
     qr = get_object_or_404(QrCode.objects.select_related("outlet", "brand"), redirect_key=key, active=True)
-    brand = qr.brand
-    outlet = qr.outlet
 
     # Record TapEvent for Analytics
     TapEvent.objects.create(
-        outlet=outlet,
-        brand=brand,
+        outlet=qr.outlet,
+        brand=qr.brand,
         qr_code=qr,
         action=TapEvent.ActionType.GAME,
         session_key=request.session.session_key or ""
     )
 
-    game = resolve_active_game(brand, outlet)
-    if not game:
-        return redirect(reverse("qr_landing", args=[key]))
-
-    lang = request.GET.get("lang", "en")
-    dir_rtl = (lang == "ar")
-
-    config = game.configuration or {}
-    icons = config.get("icons", ["🍲", "🍗", "☕", "🍨", "🥗", "🍔"])
-    time_limit = config.get("time_limit_sec", 60)
-
-    context = {
-        "qr": qr,
-        "brand": brand,
-        "outlet": outlet,
-        "game": game,
-        "lang": lang,
-        "dir": "rtl" if dir_rtl else "ltr",
-        "brand_colors": brand.brand_colors or {},
-        "game_config_json": json.dumps({
-            "icons": icons,
-            "timeLimit": time_limit,
-            "resultUrl": reverse("customer_game_result", args=[key]),
-        })
-    }
-    return render(request, "customer_game.html", context)
+    return redirect(f"{reverse('gameshub:hub')}?back=/q/{key}/")
 
 
 @require_POST

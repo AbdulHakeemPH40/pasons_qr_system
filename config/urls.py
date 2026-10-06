@@ -13,12 +13,13 @@ Internal (staff) routes:
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path, re_path
 
 from apps.analytics import views as analytics_views
 from apps.core import views
 from apps.menu import views as menu_views
 from apps.games import views as game_views
+from apps.gameshub import views as gameshub_views
 
 from django.contrib.auth import views as auth_views
 from apps.core import panel_views
@@ -71,6 +72,16 @@ urlpatterns = [
     path("panel/changelog/", panel_views.panel_changelog, name="panel_changelog"),
 
     path("dashboard/", analytics_views.dashboard, name="dashboard"),
+
+    # Games Hub — standalone, no backend, self-contained routes so the hub can
+    # be moved to its own domain later. `/games` answers directly too.
+    re_path(r"^games/", include("apps.gameshub.urls")),
+    path("games", gameshub_views.hub),
+
+    # KidsPlay. Existing /q/ routes are unchanged.
+    path("t/", include("apps.kidsplay.urls_public")),
+    path("api/kidsplay/", include("apps.kidsplay.urls_api")),
+    path("staff/kidsplay/", include("apps.kidsplay.urls_staff")),
 ]
 
 

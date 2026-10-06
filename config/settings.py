@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     "apps.engagement",
     "apps.analytics",
     "apps.games",
+    "apps.kidsplay",
+    "apps.gameshub",
 ]
 
 MIDDLEWARE = [

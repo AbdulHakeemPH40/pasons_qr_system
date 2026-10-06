@@ -33,6 +33,9 @@
       <div class="game-note">
         <p class="caption">One voucher if you finish in time</p>
         <p class="muted" style="font-size: var(--fs-sm); margin-top: 4px;">The timer starts when the board appears. Matched pairs stay open.</p>
+        <p style="margin-top: 12px;">
+          <a class="btn btn-secondary btn-sm" href="{% url 'gameshub:hub' %}?back=/q/{{ qr.redirect_key }}/game/">More games</a>
+        </p>
       </div>
 
     </div>
