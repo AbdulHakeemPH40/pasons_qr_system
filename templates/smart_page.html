@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% load social_tags %}
+
+{% block title %}{{ title }} · Pasons Smart QR{% endblock %}
+{% block description %}{{ hero_subtitle|truncatechars:150 }}{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+
+    <div class="device-screen">
+      {# Smart Page: module order 1:1 with frame 02; the 5 client-mandated modules (spec 37) always included #}
+
+      {# 1 · module_identity — signature card: avatar, name, stars, meta, status #}
+      <section class="identity-card glass glass--lg reveal" style="--i: 0">
+        <div class="avatar">
+          {% if brand.logo %}
+          <img src="{{ brand.logo.url }}" alt="{{ brand.name_en }} logo" width="80" height="80" decoding="async">
+          {% else %}
+            {{ brand.name_en|slice:":1"|upper }}
+          {% endif %}
+        </div>
+        <div>
+          <h1 class="identity-name">{% if hero_title %}{{ hero_title }}{% else %}{{ brand.name_en }}{% endif %}</h1>
+          <p class="identity-rating">
+            {% if review_avg %}
+            <span class="stars" aria-label="{{ review_avg }} out of 5 stars">★★★★★</span>
+            <span>{{ review_avg }} · {{ review_count }} review{{ review_count|pluralize }}</span>
+            {% else %}
+            <span>New — no reviews yet</span>
+            {% endif %}
+          </p>
+          <p class="identity-meta">
+            {% if brand_meta %}{{ brand_meta }}
+            {% elif location_label or closing_label %}{{ location_label }}{% if location_label and closing_label %} · {% endif %}{{ closing_label }}
+            {% else %}{{ hero_subtitle|default:brand.description }}{% endif %}
+          </p>
+        </div>
+        {% if "hours" in modules %}
+        {% if is_open %}<span class="chip chip--sm chip--open">Open now</span>
+        {% else %}<span class="chip chip--sm chip--warn">Closed</span>{% endif %}
+        {% endif %}
+        {% if not outlet %}<p class="identity-note">Complete on its own — no outlet required</p>{% endif %}
+      </section>
+
+      {% comment %} 1b · frame 09: choose a location + how a field resolves (spec 6) - brand pages right under identity, outlet
+      pages before feedback {% endcomment %}
+      {% if not outlet %}{% include "partials/brand_locations.html" with i0=1 %}{% endif %}
+
+      {# 2 · live campaign band (spec §12) — gold chip + CTA #}
+      {% if "campaign" in modules and campaign %}
+      <div class="offer-wide glass reveal" style="--i: 3">
+        <div>
+          <span class="chip chip--gold">{{ campaign.get_campaign_type_display }}</span>
+          <p class="h2" style="margin: var(--sp-2) 0 0">{{ campaign.name }}</p>
+          <p class="muted" style="margin: 2px 0 0; font-size: var(--fs-caption)">Ends {{ campaign.end_at|date:"j M" }}
+          </p>
+        </div>
+        {% if campaign.cta_label %}
+        <a class="btn btn-primary" href="{{ campaign.cta_target|default:'#offers' }}"
+          style="margin-inline-start: auto">{{ campaign.cta_label }}</a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# 3 · module_special_offers — client module 1/5 (spec §37) #}
+      {% if "offers" in modules %}
+      <section id="offers" aria-labelledby="offers-label">
+        <div class="section-head reveal" style="--i: 4">
+          <h2 id="offers-label" class="section-label">Special offers</h2>
+          <span class="section-action">View all</span>
+        </div>
+        <div class="offer-scroller reveal" style="--i: 5">
+          {% for o in offers %}
+          <article class="offer-card glass">
+            <span class="chip chip--gold chip--sm">{{ o.badge|default:"Special" }}</span>
+            <p class="offer-title">{{ o.title }}</p>
+            <p class="offer-price">
+              {% if o.original_price %}<span class="offer-was">AED {{ o.original_price }}</span>{% endif %}
+              <span class="offer-now">AED {{ o.price }}</span>
+            </p>
+            <p class="offer-tag">{{ o.tag|default:"Today's special" }}</p>
+          </article>
+          {% empty %}
+          <div class="glass" style="grid-column: 1 / -1; width: 100%">
+            <p class="muted" style="margin: 0">Today's special offers will appear here.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {# 4 · module_full_menu — client module 2/5 (spec §37) with frame 02 search pill and VAT notice #}
+      {% if "menu" in modules %}
+      <section id="menu" class="reveal" style="--i: 6" aria-labelledby="menu-label">
+        <div class="section-head">
+          <h2 id="menu-label" class="section-label">Full Menu</h2>
+          <span class="caption">AED · prices incl. VAT</span>
+        </div>
+
+        {# search pill — instant client-side filter (no page reload) #}
+        <div class="menu-search-wrap">
+          <label class="sr-only" for="menu-search">Search dishes</label>
+          <span class="menu-search-ico" aria-hidden="true">⚲</span>
+          <input id="menu-search" class="menu-search" type="search" placeholder="Search {{ menu_count|default:'dishes' }} dishes…" autocomplete="off">
+        </div>
+
+        <div class="glass glass--menu" id="menu-container">
+          {% for sec in menu %}
+          <h3 class="menu-cat">{{ sec.category.name_en }}</h3>
+          <ul class="menu-list" data-menu-group>
+            {% for item in sec.items %}
+            <li class="menu-row"
+              data-dish="{{ item.name_en|lower }} {{ item.name_ar|default:''|lower }} {{ item.description_en|default:''|lower }}">
+              <span class="dot dot--{{ item.dietary_type }}" aria-hidden="true"></span>
+              <span class="dish">
+                {{ item.name_en }}
+                {% if item.offer_price and item.regular_price and item.offer_price < item.regular_price %}
+                <del>AED {{ item.regular_price }}</del>
+                {% endif %}
+              </span>
+              <span class="price">AED {{ item.effective_price }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% empty %}
+          <p class="muted" style="margin: 0">Full menu is being updated.</p>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {# 5 · module_google_review — client module 3/5 (spec §37, §38) #}
+      {% if "google_review" in modules %}
+      <section class="review-card glass reveal" style="--i: 7" aria-labelledby="review-label">
+        <div>
+          <h2 id="review-label" class="section-label">Google Review</h2>
+          <p class="review-score">{{ review_avg|default:"5.0" }}</p>
+          <p class="review-meta">
+            <span class="stars" aria-hidden="true">★★★★★</span>
+            <span>{{ review_count|default:0 }} Google reviews</span>
+          </p>
+        </div>
+        <div class="review-cta">
+          {% if google_review_url %}
+          <a class="btn btn-primary" href="{{ google_review_url }}" target="_blank" rel="noopener">Write a review</a>
+          {% else %}
+          <a class="btn btn-primary" href="#feedback">Rate us</a>
+          {% endif %}
+          <span class="review-note">Takes 30 seconds</span>
+        </div>
+      </section>
+      {% endif %}
+
+      {# 6 · module_instagram — client module 4/5 (spec §37) with live-feeling handle and follow button #}
+      {% if "instagram" in modules and instagram_handle %}
+      <section class="ig-row glass reveal" style="--i: 8" aria-label="Instagram">
+        <span class="ig-tile" aria-hidden="true"></span>
+        <div class="ig-info">
+          <p class="ig-name">Instagram</p>
+          <p class="ig-handle">@{{ instagram_handle }}</p>
+        </div>
+        <a class="btn btn-secondary btn-sm" href="https://instagram.com/{{ instagram_handle }}" target="_blank"
+          rel="noopener" style="margin-inline-start: auto">Follow</a>
+      </section>
+      {% endif %}
+
+      {# 7 · module_other_social — client module 5/5 (spec §37) #}
+      {% if "social" in modules and social_links %}
+      <section class="reveal" style="--i: 9" aria-labelledby="social-label">
+        <h2 id="social-label" class="section-label" style="margin-block-end: var(--sp-2)">Follow & Connect</h2>
+        <div class="social-row">
+          {% for s in social_links %}
+          <a class="social-dot" href="{{ s.url }}" target="_blank" rel="noopener" aria-label="{{ s.label }}"
+            title="{{ s.label }}" style="--dot: {{ s.color }}">{{ s.mono }}</a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {# 1b (outlet pages) · frame 09 choose location before feedback #}
+      {% if outlet %}{% include "partials/brand_locations.html" with i0=10 %}{% endif %}
+
+      {# 8 · module_feedback (fallback review form) #}
+      {% if "feedback" in modules %}
+      <section id="feedback" class="glass reveal" style="--i: 11" aria-labelledby="feedback-label">
+        <h2 id="feedback-label" class="h2">Tell us how your visit was</h2>
+        <p class="muted" style="margin: var(--sp-1) 0 var(--sp-3); font-size: var(--fs-caption)">Your feedback goes
+          straight to the restaurant manager.</p>
+        {% if feedback_saved %}
+        <div class="chip chip--open" style="width: 100%; justify-content: center; padding: 0.65rem">
+          Thank you! Your feedback has been received.
+        </div>
+        {% else %}
+        <form method="post" action="{% url 'smart_page' slug=page.slug %}#feedback">
+          {% csrf_token %}
+          <input type="hidden" name="outlet_slug" value="{{ outlet.slug|default:'' }}">
+          <label class="field">
+            <span>Rating</span>
+            <select name="rating" required>
+              <option value="5">★★★★★ Excellent (5)</option>
+              <option value="4">★★★★☆ Very Good (4)</option>
+              <option value="3">★★★☆☆ Average (3)</option>
+              <option value="2">★★☆☆☆ Needs improvement (2)</option>
+              <option value="1">★☆☆☆☆ Poor (1)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Your comments</span>
+            <textarea name="message" rows="3" placeholder="Tell us what you liked or how we can do better…" required></textarea>
+          </label>
+          <button type="submit" class="btn btn-primary btn-block">Share feedback</button>
+        </form>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      {# 9 · module_contact_actions — contact bar inside screen on mobile, positioned sticky/docked #}
+      <nav class="action-bar" aria-label="Contact actions">
+        {% if "whatsapp" in modules or "order" in modules %}
+        <a class="btn btn-primary" href="{{ whatsapp_url|default:'#feedback' }}">
+          <span class="ico" aria-hidden="true">✆</span>WhatsApp
+        </a>
+        {% endif %}
+        {% if "call" in modules %}
+        <a class="btn btn-secondary" href="tel:{{ phone|default:'' }}">
+          <span class="ico" aria-hidden="true">☎</span>Call
+        </a>
+        {% endif %}
+        {% if "directions" in modules %}
+        <a class="btn btn-secondary" href="{{ maps_url|default:'#' }}" target="_blank" rel="noopener">
+          <span class="ico" aria-hidden="true">◉</span>Maps
+        </a>
+        {% endif %}
+        <a class="btn btn-secondary" href="#feedback">
+          <span class="ico" aria-hidden="true">✉</span>Enquire
+        </a>
+      </nav>
+      </nav>
+
+    </div><!-- /.device-screen -->
+
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div><!-- /.device -->
+
+  <p class="stage-caption">
+    <strong>{{ hero_title|default:brand.name_en }}</strong> ·
+    {% if outlet %}{{ outlet.name_en }} Branch · {% endif %}
+    Smart QR · Menu · Offers · Reviews
+  </p>
+</div><!-- /.device-stage -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Live menu filter (frame 02 search pill) — transform-free, instant.
+  (function () {
+    var input = document.getElementById("menu-search");
+    if (!input) return;
+    input.addEventListener("input", function () {
+      var q = input.value.trim().toLowerCase();
+      document.querySelectorAll("[data-dish]").forEach(function (row) {
+        row.hidden = q !== "" && row.getAttribute("data-dish").indexOf(q) === -1;
+      });
+      document.querySelectorAll("[data-menu-group]").forEach(function (list) {
+        var any = list.querySelector(".menu-row:not([hidden])");
+        list.hidden = !any;
+        if (list.previousElementSibling && list.previousElementSibling.classList.contains("menu-cat")) {
+          list.previousElementSibling.hidden = !any;
+        }
+      });
+    });
+  })();
+</script>
+{% endblock %}

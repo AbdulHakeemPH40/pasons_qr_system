@@ -1,0 +1,56 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Edit Outlet: {{ outlet.official_name }}</h1>
+    <p class="muted" style="margin: 4px 0 0;">Update operational details, social links, and Google review configurations.</p>
+  </div>
+</div>
+
+<div class="glass" style="max-width: 650px; padding: var(--sp-4);">
+  <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+    {% csrf_token %}
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Phone Number</label>
+      <input type="text" name="phone" value="{{ outlet.phone|default:'' }}"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Google Review Direct Link (Short URL)</label>
+      <input type="url" name="google_review_url" value="{{ outlet.google_review_url|default:'' }}"
+             placeholder="https://g.page/r/.../review or https://maps.app.goo.gl/..."
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+      <p class="caption muted" style="margin: 4px 0 0;">Essential: customers clicking 'Leave a Review' are redirected here directly.</p>
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Google Place ID</label>
+      <input type="text" name="google_place_id" value="{{ outlet.google_place_id|default:'' }}"
+             placeholder="ChIJ..."
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+      <p class="caption muted" style="margin: 4px 0 0;">Fallback for direct maps review URL composition.</p>
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Instagram Profile URL</label>
+      <input type="url" name="instagram_url" value="{{ outlet.instagram_url|default:'' }}"
+             placeholder="https://instagram.com/..."
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">External Menu URL (Optional)</label>
+      <input type="url" name="menu_url" value="{{ outlet.menu_url|default:'' }}"
+             placeholder="https://..."
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+
+    <div style="display: flex; gap: var(--sp-2); margin-top: var(--sp-2);">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <a href="{% url 'panel_outlets' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

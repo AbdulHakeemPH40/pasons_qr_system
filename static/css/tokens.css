@@ -1,0 +1,127 @@
+/* ==========================================================================
+   Pasons Smart QR — design tokens
+   Transcribed 1:1 from the approved prototype design system
+   (design_prototype_svg/01_design-system.svg, spec §0.3–0.4),
+   then elevated to a full glassmorphism / Apple-style material layer.
+
+   Palette:  SAGE #7FA06B · MOSS #9DB18C · LEAF #6E8F57 · FOREST #31452D
+             OLIVE #A8B59B · MIST #EEF3EA · WHITE #FAFCF8
+   Glass:    layered material — blur + saturate, white fill ~62%,
+             bright top edge (light catches the surface), forest-tinted
+             key + ambient shadows (never pure black)
+   Type:     system font first (SF Pro on Apple), optical sizing,
+             size-specific tracking — tight display, tracked caps
+   Motion:   critically damped springs (no overshoot), press feedback
+             on pointer-down, interruptible transitions
+   ========================================================================== */
+
+:root {
+  /* ---- color palette (prototype 01 — COLOR PALETTE) ---- */
+  --sage: #7FA06B;
+  --moss: #9DB18C;
+  --leaf: #6E8F57;
+  --forest: #31452D;
+  --olive: #A8B59B;
+  --mist: #EEF3EA;
+  --white: #FAFCF8;
+  --success: #79B36B;
+  --gold: #D5C98A;
+
+  --text-primary: #243024;
+  --text-secondary: #5E6D5C;
+
+  /* ---- glass surfaces (prototype 03 — glass card spec, glassmorphism) ---- */
+  --glass-fill: rgba(255, 255, 255, 0.62);
+  --glass-fill-strong: rgba(255, 255, 255, 0.85);
+  --glass-fill-solid: rgba(255, 255, 255, 0.95);
+  --glass-border: #ffffff;
+  --glass-border-alpha: rgba(255, 255, 255, 0.9);
+  --glass-blur: 18px;
+  --glass-saturate: 180%;
+  /* bright top edge — light catching the material (apple-design) */
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+
+  /* ---- shadows (soft forest-tinted, layered key + ambient, never black) ---- */
+  --shadow-soft: rgba(49, 69, 45, 0.1);
+  --shadow-strong: rgba(49, 69, 45, 0.14);
+  --shadow-card: 0 6px 24px var(--shadow-soft);
+  --shadow-float: 0 10px 32px var(--shadow-strong);
+  --shadow-btn: 0 4px 14px var(--shadow-strong);
+  /* glass depth: tight key + wide ambient + inner highlight */
+  --shadow-glass: 0 1px 2px rgba(49, 69, 45, 0.06),
+    0 8px 24px var(--shadow-soft), var(--glass-hi);
+  --shadow-glass-lg: 0 2px 4px rgba(49, 69, 45, 0.06),
+    0 16px 40px var(--shadow-strong), var(--glass-hi);
+
+  /* ---- ambient aurora (soft sage wash behind the glass) ---- */
+  --aurora-1: rgba(127, 160, 107, 0.3);
+  --aurora-2: rgba(157, 177, 140, 0.26);
+  --aurora-3: rgba(110, 143, 87, 0.18);
+
+  /* ---- chip tints (prototype 03 — component board) ---- */
+  --chip-open-bg: rgba(121, 179, 107, 0.25);
+  --chip-open-fg: #3e6b33;
+  --chip-gold-bg: var(--gold);
+  --chip-gold-fg: var(--forest);
+  --chip-warn-bg: rgba(213, 201, 138, 0.35);
+  --chip-warn-fg: #6e6231;
+  --chip-ai-bg: rgba(127, 160, 107, 0.18);
+  --chip-ai-fg: var(--leaf);
+
+  /* ---- social brand dots (prototype 02 — social row) ---- */
+  --soc-wa: #25d366;
+  --soc-fb: #1877f2;
+  --soc-yt: #ff0000;
+  --soc-tt: #111111;
+  --soc-x: #000000;
+  --soc-in: #0a66c2;
+  --ig-grad: linear-gradient(45deg, #f58529 0%, #dd2a7b 45%, #8134af 75%, #515bd4 100%);
+
+  /* ---- spacing (8px rhythm) ---- */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+
+  /* ---- radii (rounded UI, spec 0.1) ---- */
+  --r-chip: 12px;
+  --r-sm: 16px;
+  --r-md: 18px;
+  --r-lg: 20px;
+  --r-xl: 22px;
+  --r-2xl: 26px;
+  --r-pill: 999px;
+
+  /* ---- typography (prototype 02 — TYPOGRAPHY board)
+         platform system font first: SF Pro ships optical sizing + the
+         tracking tables this design leans on; Inter is the web fallback ---- */
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "SF Pro Text", "Inter", "Segoe UI", Roboto, Helvetica, Arial,
+    "Noto Sans", "Noto Kufi Arabic", sans-serif;
+  --fs-display: 2.125rem; /* 34 / 800 */
+  --fs-h1: 1.5rem;        /* 24 / 800 */
+  --fs-h2: 1.125rem;      /* 18 / 700 */
+  --fs-body: 0.9375rem;   /* 15 / 400 */
+  --fs-sm: 0.78125rem;    /* 12.5 */
+  --fs-caption: 0.6875rem;/* 11 / 700, uppercase, tracked */
+  --fs-micro: 0.5625rem;  /* 9 */
+  --lh-display: 1.18;
+  --lh-body: 1.6;
+  --track-caps: 0.145em;  /* ~1.6px at 11px */
+
+  /* ---- motion (apple-design: critically damped default, no overshoot;
+         springs are interruptible and velocity-aware by construction) ---- */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-press: 100ms;
+  --t-quick: 180ms;
+  --t-hover: 280ms;
+  --t-reveal: 420ms;
+
+  /* ---- layout ---- */
+  --page-max: 26.875rem; /* 430px — phone column, matches the 390 artboard */
+}

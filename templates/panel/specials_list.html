@@ -1,0 +1,55 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">All Specials</h1>
+    <p class="muted" style="margin: 4px 0 0;">Manage Signature dishes, Weekend Specials, and Offers.</p>
+  </div>
+  <div>
+    <a href="{% url 'panel_special_add' %}" class="btn btn-primary btn-sm">+ Add Special</a>
+  </div>
+</div>
+
+<div style="overflow-x: auto;">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Kind</th>
+        <th>Scope</th>
+        <th>Price / Offer</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in specials %}
+      <tr>
+        <td><strong>{{ s.title_en }}</strong></td>
+        <td>{{ s.get_kind_display }}</td>
+        <td>{{ s.outlet.official_name|default:"Whole Brand" }}</td>
+        <td>
+          {% if s.kind == "weekend" %}
+            <span class="muted caption">NO PRICE (WEEKEND)</span>
+          {% elif s.kind == "offer" %}
+            <del>{{ s.original_price }}</del> <strong>{{ s.offer_price }} AED</strong>
+            <span class="caption" style="color: var(--leaf);">({{ s.discount_label }})</span>
+          {% else %}
+            {{ s.offer_price|default:s.original_price|default:"—" }} AED
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge-status {% if s.active %}badge-active{% else %}badge-inactive{% endif %}">
+            {% if s.active %}Active{% else %}Inactive{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="muted" style="text-align: center; padding: var(--sp-4);">No specials registered.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

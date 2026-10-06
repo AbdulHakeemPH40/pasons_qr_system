@@ -1,0 +1,69 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">
+      {% if brand %}Edit {{ brand.name_en }}{% else %}Add brand{% endif %}
+    </h1>
+    <p class="muted" style="margin: 4px 0 0;">Brand code is used in QR names and cannot collide with another brand.</p>
+  </div>
+</div>
+
+<div class="glass" style="max-width: 650px; padding: var(--sp-4);">
+  <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+    {% csrf_token %}
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Name (English)</label>
+      <input type="text" name="name_en" required value="{{ brand.name_en|default:'' }}"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Name (Arabic)</label>
+      <input type="text" name="name_ar" dir="rtl" value="{{ brand.name_ar|default:'' }}"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Code</label>
+      <input type="text" name="code" required maxlength="20" value="{{ brand.code|default:'' }}"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; text-transform: uppercase;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Description</label>
+      <textarea name="description" rows="3"
+                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">{{ brand.description|default:'' }}</textarea>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Default phone</label>
+      <input type="text" name="default_phone" value="{{ brand.default_phone|default:'' }}"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Default WhatsApp</label>
+      <input type="text" name="default_whatsapp" value="{{ brand.default_whatsapp|default:'' }}"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Google review URL</label>
+      <input type="url" name="google_review_url" value="{{ brand.google_review_url|default:'' }}"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Google Place ID</label>
+      <input type="text" name="google_place_id" value="{{ brand.google_place_id|default:'' }}"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Status</label>
+      <select name="status" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        <option value="active" {% if not brand or brand.status == 'active' %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if brand and brand.status != 'active' %}selected{% endif %}>Inactive</option>
+      </select>
+    </div>
+    <div style="display: flex; gap: var(--sp-2);">
+      <button type="submit" class="btn btn-primary">Save brand</button>
+      <a href="{% url 'panel_brands' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Play · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen">
+
+      <header class="sheet-head">
+        <a href="{% url 'qr_landing' qr.redirect_key %}" class="sheet-back" aria-label="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </a>
+        <div>
+          <h1 class="sheet-title">{{ game.title }}</h1>
+          <span class="sheet-meta">Match every pair</span>
+        </div>
+        <span class="sheet-side">
+          <span id="game-timer" class="chip chip--gold chip--sm">60s</span>
+        </span>
+      </header>
+
+      <div id="game-modal" class="glass glass--strong" style="display: none; text-align: center; border: 1.5px solid var(--gold);">
+        <div id="modal-content"></div>
+      </div>
+
+      <div id="game-board-container" class="game-board glass">
+        <div id="grid" class="game-grid"></div>
+      </div>
+
+      <div class="game-note">
+        <p class="caption">One voucher if you finish in time</p>
+        <p class="muted" style="font-size: var(--fs-sm); margin-top: 4px;">The timer starts when the board appears. Matched pairs stay open.</p>
+      </div>
+
+    </div>
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.GAME_CONFIG = {
+    token: "{{ qr.redirect_key }}",
+    csrfToken: "{{ csrf_token }}",
+    resultUrl: "{% url 'qr_game_result' qr.redirect_key %}",
+    timeLimit: 60,
+    icons: ["\uD83C\uDF5B", "\uD83C\uDF5C", "\u2615", "\uD83E\uDD63", "\uD83E\uDD57", "\uD83C\uDF54"]
+  };
+</script>
+<script src="/static/js/game.js"></script>
+{% endblock %}

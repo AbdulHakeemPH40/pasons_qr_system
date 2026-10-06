@@ -1,0 +1,62 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">QR Codes Manager</h1>
+    <p class="muted" style="margin: 4px 0 0;">Manage permanent QR tokens, downloads, and table print tents.</p>
+  </div>
+  <div>
+    <a href="{% url 'panel_qr_generate' %}" class="btn btn-primary btn-sm">+ Generate QR</a>
+  </div>
+</div>
+
+<div style="overflow-x: auto;">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Label / Name</th>
+        <th>Brand</th>
+        <th>Outlet</th>
+        <th>URL Token</th>
+        <th>Scans</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in qr_codes %}
+      <tr>
+        <td>
+          <strong>{{ q.label|default:q.qr_code_name }}</strong>
+          <div class="caption muted">{{ q.get_source_type_display }}</div>
+        </td>
+        <td>{{ q.brand.name_en }}</td>
+        <td>{{ q.outlet.official_name|default:"Brand Wide" }}</td>
+        <td><code>/q/{{ q.redirect_key }}/</code></td>
+        <td><strong>{{ q.scan_count }}</strong></td>
+        <td>
+          <span class="badge-status {% if q.active %}badge-active{% else %}badge-inactive{% endif %}">
+            {% if q.active %}Active{% else %}Retired (410){% endif %}
+          </span>
+        </td>
+        <td>
+          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <a href="{% url 'panel_qr_download' q.pk 'png' %}" class="btn btn-sm btn-secondary" title="Download PNG">PNG</a>
+            <a href="{% url 'panel_qr_download' q.pk 'svg' %}" class="btn btn-sm btn-secondary" title="Download SVG">SVG</a>
+            <a href="{% url 'panel_qr_print' q.pk %}" target="_blank" class="btn btn-sm btn-secondary" title="Print Tent">Print</a>
+            {% if q.active and is_head_office %}
+            <a href="{% url 'panel_qr_regenerate' q.pk %}" class="btn btn-sm btn-secondary" style="color: #c93b2b;" onclick="return confirm('Regenerating will deactivate the current QR code immediately and issue a new token. Old printings will return 410. Continue?');">Regen</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="muted" style="text-align: center; padding: var(--sp-4);">No QR codes available.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Menus</h1>
+    <p class="muted" style="margin: 4px 0 0;">Booklet, PDF, or an external menu link. Outlet sources override the brand source.</p>
+  </div>
+</div>
+
+<div style="overflow-x: auto; margin-bottom: var(--sp-4);">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Brand</th>
+        <th>Scope</th>
+        <th>Type</th>
+        <th>Link</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sources %}
+      <tr>
+        <td>{{ s.brand.name_en }}</td>
+        <td>{{ s.outlet.official_name|default:"Whole brand" }}</td>
+        <td>{{ s.get_menu_type_display }}</td>
+        <td class="caption">{{ s.menu_url|default:"—" }}</td>
+        <td>
+          <span class="badge-status {% if s.active %}badge-active{% else %}badge-inactive{% endif %}">
+            {% if s.active %}Active{% else %}Off{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="muted" style="text-align: center; padding: var(--sp-4);">No menu sources yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_head_office %}
+<div class="glass" style="max-width: 650px; padding: var(--sp-4);">
+  <h2 style="margin: 0 0 var(--sp-3); font-size: 1.1rem; color: var(--forest);">Set menu source</h2>
+  <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+    {% csrf_token %}
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Brand</label>
+      <select name="brand" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        {% for b in brands %}
+        <option value="{{ b.pk }}">{{ b.name_en }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Outlet (blank = brand source)</label>
+      <select name="outlet" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        <option value="">Whole brand</option>
+        {% for o in outlets %}
+        <option value="{{ o.pk }}">{{ o.official_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Type</label>
+      <select name="menu_type" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        {% for val, label in menu_types %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">External menu URL</label>
+      <input type="url" name="menu_url" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Order online URL</label>
+      <input type="url" name="ordering_url" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+    </div>
+    <button type="submit" class="btn btn-primary">Save menu source</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

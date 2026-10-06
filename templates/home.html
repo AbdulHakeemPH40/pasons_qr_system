@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Pasons Group — Restaurant Smart Pages{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+
+    <div class="device-screen">
+
+      <header class="dir-hero reveal" style="--i: 0">
+        <p class="dir-kicker">Pasons Group</p>
+        <div class="dir-tile" aria-hidden="true">P</div>
+        <h1 class="display" style="margin-block-start: var(--sp-4)">Our Restaurants</h1>
+        <div class="dir-rule"></div>
+        <p class="dir-sub">Four kitchens. One scan.</p>
+        <p class="dir-tagline">Menu, today’s specials, and a way to leave a review — on the page for that restaurant.</p>
+        {% if pages %}
+        <p class="dir-count">{{ pages|length }} restaurant{{ pages|length|pluralize }}</p>
+        {% endif %}
+      </header>
+
+      <section class="brand-grid" aria-label="Restaurant brands">
+        {% for page in pages %}
+        <a class="brand-card glass glass--lg reveal" style="--i: {{ forloop.counter }}"
+          href="{% url 'smart_page' page.slug %}">
+          <div class="avatar avatar--lg">
+            {% if page.brand.logo %}
+            <img src="{{ page.brand.logo.url }}" alt="" width="56" height="56" loading="lazy" decoding="async">
+            {% else %}
+              {{ page.brand.name_en|slice:":1"|upper }}
+            {% endif %}
+          </div>
+          <div>
+            <h2 class="identity-name">{{ page.brand.name_en }}</h2>
+            <p class="identity-meta">
+              {% if page.brand.description %}{{ page.brand.description|truncatechars:90 }}
+              {% elif page.hero_subtitle %}{{ page.hero_subtitle|truncatechars:90 }}
+              {% else %}Menu, offers, and reviews{% endif %}
+            </p>
+          </div>
+          <span class="chip chip--sm chip--open">{{ page.brand.code }}</span>
+          <span class="open-arrow" aria-hidden="true">Open</span>
+        </a>
+        {% empty %}
+        <div class="glass reveal" style="--i: 1">
+          <p class="h2">No restaurants published yet.</p>
+          <p class="muted" style="margin: 0">Published brand pages appear here automatically.</p>
+        </div>
+        {% endfor %}
+      </section>
+
+    </div>
+
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+
+  <p class="stage-caption"><strong>Pasons Group</strong> — Smart QR · Menu · Offers · Reviews</p>
+</div>
+{% endblock %}

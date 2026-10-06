@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Login · Pasons Smart QR Panel{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen" style="display: flex; flex-direction: column; justify-content: center; padding: var(--sp-4);">
+      <div class="identity-card glass glass--lg" style="text-align: center; margin-bottom: var(--sp-4);">
+        <div class="avatar avatar--lg" style="margin: 0 auto var(--sp-2); font-size: 1.8rem; background: var(--sage); color: white;">
+          P
+        </div>
+        <h1 style="font-size: var(--fs-h1); color: var(--forest); margin: 0 0 4px;">Staff Login</h1>
+        <p class="muted caption" style="margin: 0;">Pasons Restaurant Management Panel</p>
+      </div>
+
+      <form method="post" class="glass glass--md" style="padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3);">
+        {% csrf_token %}
+        {% if form.errors %}
+        <div style="padding: var(--sp-2); background: rgba(200, 50, 50, 0.1); color: #c93b2b; border-radius: var(--r-md); font-size: 0.88rem;">
+          Invalid username or password. Please try again.
+        </div>
+        {% endif %}
+
+        <div>
+          <label style="display: block; font-size: var(--fs-caption); font-weight: 600; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px;">Username</label>
+          <input type="text" name="username" autofocus required class="field" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid rgba(0,0,0,0.15);">
+        </div>
+
+        <div>
+          <label style="display: block; font-size: var(--fs-caption); font-weight: 600; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px;">Password</label>
+          <input type="password" name="password" required class="field" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid rgba(0,0,0,0.15);">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top: var(--sp-2);">Sign In to Panel</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

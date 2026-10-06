@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}QR retired · Pasons Smart QR{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen">
+      <div class="status-screen">
+        <div class="status-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 4l9 16H3L12 4z"/><path d="M12 10v4M12 17h.01"/></svg>
+        </div>
+        <h1 class="display">This card has been retired</h1>
+        <p>The code on this table is no longer in use. Ask the staff for the current card.</p>
+        <a href="{% url 'home' %}" class="btn btn-secondary">See restaurants</a>
+      </div>
+    </div>
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+</div>
+{% endblock %}

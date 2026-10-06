@@ -1,0 +1,8 @@
+# Pasons Restaurant Smart QR platform — pinned runtime deps
+Django==6.1.1
+djangorestframework==3.18.1
+qrcode==8.2
+Pillow==12.3.0
+whitenoise==6.12.0
+# production database driver (dev uses SQLite)
+# psycopg[binary]==3.2.9

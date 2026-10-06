@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Management Dashboard · Pasons Smart QR{% endblock %}
+{% block page_class %}page--wide{% endblock %}
+
+{% block content %}
+{# Management dashboard (spec 25): KPIs, scans by day/outlet/source, top QR placements, pending approvals (spec 28-29).
+Brand scoping via ?brand=CODE (spec 25 Brand/Outlet views). #}
+
+<header class="dash-hero reveal" style="--i: 0">
+  <div>
+    <p class="caption">Pasons Group · Internal</p>
+    <h1 class="display" style="margin-block-start: var(--sp-2)">Management Dashboard</h1>
+    <p class="dir-sub">
+      {% if brand %}Scoped to {{ brand.name_en }} · {% endif %}
+      Generated {{ generated_at|date:"D d M Y, H:i" }}
+    </p>
+  </div>
+  <div class="dash-actions">
+    <a class="btn btn-secondary btn-sm" href="{% url 'admin:index' %}">Admin</a>
+    <a class="btn btn-secondary btn-sm" href="{% url 'home' %}">Public site</a>
+  </div>
+</header>
+
+{# brand scope chips — spec 25 Group / Brand / Outlet views #}
+<nav class="dash-scopes reveal" style="--i: 1" aria-label="Dashboard scope">
+  <a class="chip{% if not brand %} chip--open{% else %} chip--ghost{% endif %}" href="{% url 'dashboard' %}">Group</a>
+  {% for b in brands %}
+  <a class="chip{% if brand and b.pk == brand.pk %} chip--open{% else %} chip--ghost{% endif %}"
+    href="?brand={{ b.code }}">{{ b.name_en }}</a>
+  {% endfor %}
+</nav>
+
+{# Group Summary (spec 25): scans today, campaigns, enquiries, feedback, top performer + adoption strip (spec 50) #}
+<section aria-label="Key performance indicators">
+  <div class="kpi-grid">
+    {% for k in kpis %}
+    <div class="kpi glass reveal" style="--i: {{ forloop.counter|add:1 }}">
+      <p class="caption">{{ k.label }}</p>
+      <p class="kpi-value{% if k.text %} kpi-value--text{% endif %}">{{ k.value }}</p>
+      <p class="kpi-note">{{ k.note }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  <ul class="adoption-strip reveal" style="--i: {{ kpis|length|add:2 }}">
+    {% for a in adoption %}
+    <li><span class="accent">{{ a.count }}</span> {{ a.label|lower }}</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<div class="dash-cols">
+  {# scans by day — 14-day bar chart (spec 24 time-of-day / daily usage) #}
+  <section class="glass reveal" style="--i: {{ kpis|length|add:3 }}" aria-labelledby="h-day">
+    <div class="section-head">
+      <h2 id="h-day">Scans by day</h2>
+      <span class="section-action">Last 14 days</span>
+    </div>
+    <div class="bar-chart" role="img"
+      aria-label="Daily scans for the last 14 days: {% for d in by_day %}{{ d.full_label }} {{ d.count }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+      {% for d in by_day %}
+      <div class="bar-col">
+        <span class="bar-count">{{ d.count }}</span>
+        <div class="bar-track">
+          <div class="bar-fill{% if d.count %} bar-fill--on{% endif %}"
+            style="height: {% if d.pct %}{{ d.pct }}{% else %}3{% endif %}%"></div>
+        </div>
+        <span class="bar-label">{{ d.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# scans by outlet + source (spec 24/25 outlet + QR-source performance) #}
+  <section class="glass reveal" style="--i: {{ kpis|length|add:4 }}" aria-labelledby="h-outlet">
+    <div class="section-head">
+      <h2 id="h-outlet">Scans by location</h2>
+      <span class="section-action">All time</span>
+    </div>
+    <ul class="rank-list">
+      {% for row in by_outlet %}
+      <li class="rank-row">
+        <span class="rank-label">{{ row.label }}</span>
+        <span class="rank-bar" style="--w: {{ row.pct }}%"></span>
+        <span class="rank-count">{{ row.count }}</span>
+      </li>
+      {% empty %}
+      <li class="muted">No scans recorded yet.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="glass reveal" style="--i: {{ kpis|length|add:5 }}" aria-labelledby="h-source">
+    <div class="section-head">
+      <h2 id="h-source">Scans by source</h2>
+      <span class="section-action">QR placement type</span>
+    </div>
+    <ul class="rank-list">
+      {% for row in by_source %}
+      <li class="rank-row">
+        <span class="rank-label">{{ row.label }}</span>
+        <span class="rank-bar" style="--w: {{ row.pct }}%"></span>
+        <span class="rank-count">{{ row.count }}</span>
+      </li>
+      {% empty %}
+      <li class="muted">No scans recorded yet.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {# top QR placements (spec 25/50 QR-source performance) #}
+  <section class="glass reveal" style="--i: {{ kpis|length|add:6 }}" aria-labelledby="h-qr">
+    <div class="section-head">
+      <h2 id="h-qr">Top QR placements</h2>
+      <span class="section-action">By scans</span>
+    </div>
+    <ul class="rank-list">
+      {% for p in placements %}
+      <li class="rank-row rank-row--qr">
+        <span class="rank-label">
+          {{ p.name }}
+          {% if p.location %}<span class="rank-sub">{{ p.location }} · {{ p.source }}</span>{% endif %}
+        </span>
+        {% if not p.active %}<span class="chip chip--warn chip--sm">Retired</span>{% endif %}
+        <span class="rank-count">{{ p.count }}</span>
+      </li>
+      {% empty %}
+      <li class="muted">No scans recorded yet.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+{# campaign approvals awaiting action (spec 28 states / 29 workflow) #}
+<section class="glass reveal" style="--i: {{ kpis|length|add:7 }}" aria-labelledby="h-approve">
+  <div class="section-head">
+    <h2 id="h-approve">Campaign approvals</h2>
+    <a class="section-action" href="{% url 'admin:core_campaign_changelist' %}">Manage in admin →</a>
+  </div>
+  <ul class="rank-list">
+    {% for c in pending_campaigns %}
+    <li class="rank-row rank-row--qr">
+      <span class="rank-label">
+        {{ c.name }}
+        <span class="rank-sub">{{ c.brand.name_en }} · {{ c.start_at|date:"d M" }} → {{ c.end_at|date:"d M Y" }}</span>
+      </span>
+      <span class="chip chip--gold chip--sm">Pending approval</span>
+    </li>
+    {% empty %}
+    <li class="muted">Nothing awaiting approval.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

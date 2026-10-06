@@ -1,0 +1,67 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Management Dashboard</h1>
+    <p class="muted" style="margin: 4px 0 0;">Welcome, {{ user.username }}. Overview across authorized outlets.</p>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-4);">
+  <div class="glass glass--sm" style="padding: var(--sp-3); text-align: center;">
+    <p class="caption muted" style="margin: 0 0 4px;">ACTIVE OUTLETS</p>
+    <p style="font-size: 2rem; font-weight: 800; color: var(--forest); margin: 0;">{{ outlet_count }}</p>
+  </div>
+  <div class="glass glass--sm" style="padding: var(--sp-3); text-align: center;">
+    <p class="caption muted" style="margin: 0 0 4px;">ACTIVE QR CODES</p>
+    <p style="font-size: 2rem; font-weight: 800; color: var(--leaf); margin: 0;">{{ qr_count }}</p>
+  </div>
+  <div class="glass glass--sm" style="padding: var(--sp-3); text-align: center;">
+    <p class="caption muted" style="margin: 0 0 4px;">TOTAL SCANS</p>
+    <p style="font-size: 2rem; font-weight: 800; color: var(--ink); margin: 0;">{{ total_scans }}</p>
+  </div>
+  <div class="glass glass--sm" style="padding: var(--sp-3); text-align: center;">
+    <p class="caption muted" style="margin: 0 0 4px;">REWARDS ISSUED</p>
+    <p style="font-size: 2rem; font-weight: 800; color: var(--gold); margin: 0;">{{ rewards_issued }}</p>
+  </div>
+</div>
+
+<h2 style="font-size: var(--fs-h2); color: var(--forest); margin-top: var(--sp-4);">Managed Outlets</h2>
+<div style="overflow-x: auto;">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Outlet</th>
+        <th>Brand</th>
+        <th>City</th>
+        <th>QR Codes</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in outlets %}
+      <tr>
+        <td><strong>{{ o.official_name }}</strong></td>
+        <td>{{ o.brand.name_en }}</td>
+        <td>{{ o.city|default:"Dubai" }}</td>
+        <td>{{ o.qr_codes.count }}</td>
+        <td>
+          <span class="badge-status {% if o.active %}badge-active{% else %}badge-inactive{% endif %}">
+            {% if o.active %}Active{% else %}Inactive{% endif %}
+          </span>
+        </td>
+        <td>
+          <a href="{% url 'panel_outlet_edit' o.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="muted" style="text-align: center; padding: var(--sp-4);">No outlets assigned to your account.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

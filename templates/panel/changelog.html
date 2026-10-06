@@ -1,0 +1,41 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Audit Change Log</h1>
+    <p class="muted" style="margin: 4px 0 0;">Traceable record of configuration changes, QR lifecycle events, and voucher redemptions.</p>
+  </div>
+</div>
+
+<div style="overflow-x: auto;">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>User</th>
+        <th>Action</th>
+        <th>Target Details</th>
+        <th>Brand / Outlet</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in changelogs %}
+        <tr>
+          <td style="white-space: nowrap; font-size: 13px; color: var(--muted);">{{ entry.changed_at|date:"Y-m-d H:i:s" }}</td>
+          <td><strong>{{ entry.user.username|default:"System" }}</strong></td>
+          <td><span class="badge" style="background: var(--sand); font-weight: 600;">{{ entry.action }}</span></td>
+          <td style="font-size: 13px;">{{ entry.object_repr }}</td>
+          <td style="font-size: 13px;">{{ entry.brand.name_en }}{% if entry.outlet %} · {{ entry.outlet.official_name }}{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" style="text-align: center; padding: var(--sp-4); color: var(--muted);">
+            No audit log entries found.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

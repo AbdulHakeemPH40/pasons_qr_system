@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Please wait · Pasons Smart QR{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen">
+      <div class="status-screen">
+        <div class="status-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg>
+        </div>
+        <h1 class="display">Give it a moment</h1>
+        <p>Too many scans landed at once. Wait a few seconds, then scan the card again.</p>
+      </div>
+    </div>
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+</div>
+{% endblock %}

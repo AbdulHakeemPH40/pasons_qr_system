@@ -1,0 +1,45 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Generate New QR Code</h1>
+    <p class="muted" style="margin: 4px 0 0;">Create a permanent redirect QR token for an outlet or brand touchpoint.</p>
+  </div>
+</div>
+
+<div class="glass" style="max-width: 600px; padding: var(--sp-4);">
+  <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+    {% csrf_token %}
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Target Outlet *</label>
+      <select name="outlet" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; background: white;">
+        {% for o in outlets %}
+          <option value="{{ o.id }}">{{ o.brand.name_en }} — {{ o.official_name }} ({{ o.code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Source Type / Touchpoint</label>
+      <select name="source_type" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; background: white;">
+        {% for val, label in source_types %}
+          <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Label / Identifier</label>
+      <input type="text" name="label" placeholder="e.g. Table 04, Cash Counter 1, Takeaway Flysheet"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+      <p class="caption muted" style="margin: 4px 0 0;">Visible internally on print cards and logs.</p>
+    </div>
+
+    <div style="display: flex; gap: var(--sp-2); margin-top: var(--sp-2);">
+      <button type="submit" class="btn btn-primary">Generate QR Code</button>
+      <a href="{% url 'panel_qrcodes' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

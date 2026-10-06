@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ lang|default:'en' }}" dir="{{ dir|default:'ltr' }}">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="{{ brand.brand_colors.primary|default:'#7FA06B' }}">
+  <title>{% block title %}Pasons Smart QR{% endblock %}</title>
+  <meta name="description" content="{% block description %}Pasons Group restaurant smart pages{% endblock %}">
+  <link rel="preload" href="{% static 'css/tokens.css' %}" as="style">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <style>
+    :root {
+      {% if brand and brand.brand_colors %}
+        {% if brand.brand_colors.primary %}
+        --sage: {{ brand.brand_colors.primary }};
+        --leaf: {{ brand.brand_colors.primary }};
+        {% endif %}
+        {% if brand.brand_colors.secondary %}
+        --moss: {{ brand.brand_colors.secondary }};
+        {% endif %}
+        {% if brand.brand_colors.accent %}
+        --gold: {{ brand.brand_colors.accent }};
+        {% endif %}
+        {% if brand.brand_colors.dark %}
+        --forest: {{ brand.brand_colors.dark }};
+        {% endif %}
+      {% endif %}
+    }
+    {% block extra_css %}{% endblock %}
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <main id="main-content" class="page {% block page_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+
+    <footer class="site-footer">
+      <p>© {% now "Y" %} Pasons Group · Smart QR Platform</p>
+    </footer>
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>

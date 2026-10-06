@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Control Panel · Pasons Smart QR{% endblock %}
+{% block page_class %}page--wide{% endblock %}
+
+{% block extra_css %}
+<style>
+  .panel-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: var(--sp-4);
+    max-width: 1200px;
+    margin: var(--sp-4) auto;
+    width: 100%;
+    align-items: start;
+  }
+  .panel-sidebar {
+    padding: var(--sp-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .panel-sidebar nav a {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--r-md);
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 500;
+    transition: background var(--t-quick);
+  }
+  .panel-sidebar nav a:hover, .panel-sidebar nav a.active {
+    background: rgba(127, 160, 107, 0.18);
+    color: var(--forest);
+    font-weight: 600;
+  }
+  .panel-main {
+    padding: var(--sp-4);
+    min-height: 500px;
+  }
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--sp-4);
+    border-bottom: 1px solid rgba(127, 160, 107, 0.2);
+    padding-bottom: var(--sp-2);
+  }
+  .panel-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--sp-3);
+  }
+  .panel-table th, .panel-table td {
+    padding: var(--sp-2) var(--sp-3);
+    text-align: left;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  [dir="rtl"] .panel-table th, [dir="rtl"] .panel-table td {
+    text-align: right;
+  }
+  .panel-table th {
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+  .badge-status {
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-active { background: rgba(121, 179, 107, 0.2); color: var(--forest); }
+  .badge-inactive { background: rgba(0,0,0,0.08); color: var(--ink-muted); }
+
+  @media (max-width: 768px) {
+    .panel-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="panel-layout">
+  <aside class="panel-sidebar glass glass--md">
+    <div style="padding: var(--sp-2); margin-bottom: var(--sp-2); border-bottom: 1px solid rgba(0,0,0,0.08);">
+      <h2 style="font-size: 1.1rem; margin: 0; color: var(--forest);">Pasons Panel</h2>
+      <p class="muted caption" style="margin: 2px 0 0;">{{ user.username }} · {% if is_head_office %}Head Office{% else %}Outlet Manager{% endif %}</p>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px;">
+      <a href="{% url 'panel_dashboard' %}" class="{% if nav_active == 'dashboard' %}active{% endif %}">📊 Dashboard</a>
+      {% if is_head_office %}
+      <a href="{% url 'panel_brands' %}" class="{% if nav_active == 'brands' %}active{% endif %}">🏢 Brands</a>
+      {% endif %}
+      <a href="{% url 'panel_outlets' %}" class="{% if nav_active == 'outlets' %}active{% endif %}">📍 Outlets</a>
+      <a href="{% url 'panel_qrcodes' %}" class="{% if nav_active == 'qrcodes' %}active{% endif %}">🏁 QR Codes</a>
+      <a href="{% url 'panel_specials' %}" class="{% if nav_active == 'specials' %}active{% endif %}">🌟 Specials</a>
+      <a href="{% url 'panel_menus' %}" class="{% if nav_active == 'menus' %}active{% endif %}">📖 Menus</a>
+      <a href="{% url 'panel_games' %}" class="{% if nav_active == 'games' %}active{% endif %}">🎮 Games & Vouchers</a>
+      <a href="{% url 'panel_analytics' %}" class="{% if nav_active == 'analytics' %}active{% endif %}">📈 Analytics</a>
+      {% if is_head_office %}
+      <a href="{% url 'panel_changelog' %}" class="{% if nav_active == 'changelog' %}active{% endif %}">📜 Change Log</a>
+      {% endif %}
+      <form method="post" action="{% url 'logout' %}" style="margin-top: var(--sp-3); padding-top: var(--sp-2); border-top: 1px solid rgba(0,0,0,0.08);">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary btn-sm btn-block" style="text-align: center;">Logout</button>
+      </form>
+    </nav>
+  </aside>
+
+  <main class="panel-main glass glass--lg">
+    {% if messages %}
+    <div style="margin-bottom: var(--sp-3);">
+      {% for message in messages %}
+      <div style="padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: rgba(127,160,107,0.2); color: var(--forest); margin-bottom: 6px;">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block panel_content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

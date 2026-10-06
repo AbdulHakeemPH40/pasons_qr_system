@@ -1,0 +1,66 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Add outlet</h1>
+    <p class="muted" style="margin: 4px 0 0;">An outlet always belongs to one brand. A Smart Page is created with it.</p>
+  </div>
+</div>
+
+<div class="glass" style="max-width: 650px; padding: var(--sp-4);">
+  <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+    {% csrf_token %}
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Brand</label>
+      <select name="brand" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        {% for b in brands %}
+        <option value="{{ b.pk }}">{{ b.name_en }} ({{ b.code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Official name</label>
+      <input type="text" name="official_name" required placeholder="King Chef — International City"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Code</label>
+      <input type="text" name="code" required maxlength="30" placeholder="KINGCHEF-INTLCITY"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; text-transform: uppercase;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">City</label>
+      <input type="text" name="city" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Emirate</label>
+      <input type="text" name="emirate" value="Dubai" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Address</label>
+      <textarea name="address" rows="2" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;"></textarea>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Phone</label>
+      <input type="text" name="phone" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Google review URL</label>
+      <input type="url" name="google_review_url" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Google Place ID</label>
+      <input type="text" name="google_place_id" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Instagram URL</label>
+      <input type="url" name="instagram_url" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div style="display: flex; gap: var(--sp-2);">
+      <button type="submit" class="btn btn-primary">Create outlet</button>
+      <a href="{% url 'panel_outlets' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found · Pasons Smart QR{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen">
+      <div class="status-screen">
+        <div class="status-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>
+        </div>
+        <h1 class="display">This code isn’t recognised</h1>
+        <p>The link doesn’t match a restaurant page. Ask the team for the table card, or browse the restaurants we do publish.</p>
+        <a href="{% url 'home' %}" class="btn btn-primary">See restaurants</a>
+      </div>
+    </div>
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+</div>
+{% endblock %}

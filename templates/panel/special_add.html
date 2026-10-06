@@ -1,0 +1,71 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Add special</h1>
+    <p class="muted" style="margin: 4px 0 0;">Weekend specials never show a price. Offers show the struck-through original.</p>
+  </div>
+</div>
+
+<div class="glass" style="max-width: 650px; padding: var(--sp-4);">
+  <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+    {% csrf_token %}
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Brand</label>
+      <select name="brand" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        {% for b in brands %}
+        <option value="{{ b.pk }}">{{ b.name_en }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Outlet (blank = whole brand)</label>
+      <select name="outlet" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        <option value="">Whole brand</option>
+        {% for o in outlets %}
+        <option value="{{ o.pk }}">{{ o.official_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Kind</label>
+      <select name="kind" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        {% for val, label in kinds %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Title</label>
+      <input type="text" name="title_en" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Title (Arabic)</label>
+      <input type="text" name="title_ar" dir="rtl" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Description</label>
+      <textarea name="description" rows="2" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;"></textarea>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Original price</label>
+        <input type="number" step="0.01" name="original_price" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Offer price</label>
+        <input type="number" step="0.01" name="offer_price" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+      </div>
+    </div>
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Discount label</label>
+      <input type="text" name="discount_label" placeholder="15% OFF" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+    </div>
+    <div style="display: flex; gap: var(--sp-2);">
+      <button type="submit" class="btn btn-primary">Save special</button>
+      <a href="{% url 'panel_specials' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

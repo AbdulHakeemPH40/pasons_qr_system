@@ -1,0 +1,42 @@
+{# Frame 09 (09_brand-outlet-page.svg) - spec section 6: mandatory brand, optional outlets. Pass i0 as the reveal stagger base. #}
+
+{% if locations %}
+<section class="reveal" style="--i: {{ i0 }}" id="locations">
+  <div class="section-head">
+    <h2>Choose a location</h2>
+    <span class="section-action">{{ chooser_label }}</span>
+  </div>
+  <div class="loc-list">
+    {% for loc in locations %}
+    <a class="loc-row{% if loc.selected %} loc-row--selected{% endif %}" href="{{ loc.url }}">
+      <span class="loc-avatar" aria-hidden="true">{{ loc.initial }}</span>
+      <span class="loc-text">
+        <span class="loc-name">{{ loc.name }}</span>
+        <span class="loc-sub">{{ loc.sub }}</span>
+      </span>
+      <span class="loc-badge">{{ loc.badge }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if resolve_rows %}
+<section class="reveal" style="--i: {{ i0|add:1 }}" id="field-resolution">
+  <div class="section-head">
+    <h2>How a field resolves</h2>
+    <span class="section-action">{{ resolve_label }}</span>
+  </div>
+  <div class="glass glass--strong resolve-card">
+    <div class="resolve-head"><span>Field</span><span>Resolves to</span></div>
+    {% for label, source in resolve_rows %}
+    <div class="resolve-row{% if source == "OUTLET OVERRIDE" %} resolve-row--own{% endif %}">
+      <span class="resolve-label">{{ label }}</span>
+      <span class="resolve-dot" aria-hidden="true"></span>
+      <span class="resolve-val">{{ source }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="resolve-note">Brand content is always complete &middot; outlets override one field at a time (spec &sect;6)</p>
+</section>
+{% endif %}

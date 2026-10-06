@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Print QR Tent · {{ qr.outlet.official_name|default:qr.brand.name_en }}</title>
+  <style>
+    @page {
+      size: A5 portrait;
+      margin: 10mm;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #fdfdfd;
+    }
+    .tent-card {
+      width: 140mm;
+      height: 190mm;
+      border: 2px dashed #7FA06B;
+      border-radius: 16px;
+      padding: 24px;
+      box-sizing: border-box;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+    }
+    .brand-title {
+      font-size: 22pt;
+      font-weight: 800;
+      color: #31452D;
+      margin: 8px 0 2px;
+    }
+    .outlet-title {
+      font-size: 16pt;
+      font-weight: 600;
+      color: #6E8F57;
+      margin: 0 0 12px;
+    }
+    .qr-box {
+      margin: 12px 0;
+    }
+    .qr-box img {
+      width: 65mm;
+      height: 65mm;
+    }
+    .callout {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #243024;
+      margin: 6px 0;
+    }
+    .perks {
+      font-size: 11pt;
+      color: #5E6D5C;
+      line-height: 1.5;
+    }
+    .footer-note {
+      font-size: 8pt;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    @media print {
+      body { background: transparent; padding: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div style="position: fixed; top: 10px; right: 10px;" class="no-print">
+    <button onclick="window.print()" style="padding: 10px 20px; font-weight: bold; cursor: pointer; background: #6E8F57; color: white; border: none; border-radius: 6px;">Print Table Tent</button>
+  </div>
+
+  <div class="tent-card">
+    <div>
+      <div class="brand-title">{{ qr.brand.name_en }}</div>
+      <div class="outlet-title">{{ qr.outlet.official_name|default:"Table Service" }}</div>
+    </div>
+
+    <div class="qr-box">
+      <img src="{% url 'panel_qr_download' qr.pk 'png' %}" alt="Scan QR">
+    </div>
+
+    <div>
+      <div class="callout">SCAN WITH YOUR PHONE</div>
+      <div class="perks">
+        ✨ Today's Special Dishes<br>
+        📖 Full Digital Menu<br>
+        🎁 Play Game & Win a Discount Voucher!
+      </div>
+    </div>
+
+    <div class="footer-note">
+      {{ qr.label|default:qr.qr_code_name }} · Powered by Pasons Group
+    </div>
+  </div>
+</body>
+</html>

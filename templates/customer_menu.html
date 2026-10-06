@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Menu · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen">
+
+      <header class="sheet-head">
+        <a href="{% url 'qr_landing' qr.redirect_key %}" class="sheet-back" aria-label="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </a>
+        <div>
+          <h1 class="sheet-title">Menu</h1>
+          <span id="page-counter" class="sheet-meta">Page 1 of {{ total_pages|default:1 }}</span>
+        </div>
+        <span class="sheet-side">
+          {% if ordering_url %}
+          <a href="{{ ordering_url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Order</a>
+          {% endif %}
+        </span>
+      </header>
+
+      {% if pages %}
+      <div id="booklet-container" class="booklet">
+        {% for p in pages %}
+        <figure class="booklet-page glass booklet-page-card" data-page-num="{{ p.page_number }}">
+          <img src="{{ p.image.url }}" alt="Menu page {{ p.page_number }}" {% if forloop.counter > 2 %}loading="lazy" decoding="async"{% endif %}>
+          <figcaption class="caption">Page {{ p.page_number }}</figcaption>
+        </figure>
+        {% endfor %}
+      </div>
+      {% elif pdf_url %}
+      <div class="menu-empty glass">
+        <div class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg>
+        </div>
+        <h2>The menu is a PDF</h2>
+        <p class="muted">Open it to read every page, including prices.</p>
+        <a href="{{ pdf_url }}" class="btn btn-primary" target="_blank" rel="noopener">Open PDF menu</a>
+      </div>
+      {% else %}
+      <div class="menu-empty glass">
+        <div class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M6 4h9a3 3 0 013 3v13H9a3 3 0 01-3-3V4z"/></svg>
+        </div>
+        <h2>Menu is being updated</h2>
+        <p class="muted">Ask the team for a printed copy while this location’s booklet is refreshed.</p>
+      </div>
+      {% endif %}
+
+    </div>
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var cards = document.querySelectorAll(".booklet-page-card");
+    var counter = document.getElementById("page-counter");
+    var total = {{ total_pages|default:1 }};
+    if (!cards.length || !counter) return;
+    if (!("IntersectionObserver" in window)) return;
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          var num = entry.target.getAttribute("data-page-num");
+          if (num) counter.textContent = "Page " + num + " of " + total;
+        }
+      });
+    }, { threshold: 0.5 });
+
+    cards.forEach(function (card) { observer.observe(card); });
+  })();
+</script>
+{% endblock %}
