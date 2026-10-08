@@ -13,13 +13,11 @@ Internal (staff) routes:
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path, re_path
+from django.urls import path
 
 from apps.analytics import views as analytics_views
 from apps.core import views
 from apps.menu import views as menu_views
-from apps.games import views as game_views
-from apps.gameshub import views as gameshub_views
 
 from django.contrib.auth import views as auth_views
 from apps.core import panel_views
@@ -41,10 +39,10 @@ urlpatterns = [
     path("q/<slug:key>/review/", views.qr_review_redirect, name="qr_review"),
     path("q/<slug:key>/instagram/", views.qr_instagram_redirect, name="qr_instagram_redirect"),
     path("q/<slug:key>/instagram/", views.qr_instagram_redirect, name="qr_instagram"),
-    path("q/<slug:key>/game/", game_views.customer_game, name="customer_game"),
-    path("q/<slug:key>/game/", game_views.customer_game, name="qr_game"),
-    path("q/<slug:key>/game/result/", game_views.customer_game_result, name="customer_game_result"),
-    path("q/<slug:key>/game/result/", game_views.customer_game_result, name="qr_game_result"),
+    # "Play a Game & Win a Discount" button target. Serves a branded
+    # "coming soon" page until game #1 lands (GAME_META_PROMPT.md) — swap the
+    # view, keep the name, so landing cards and printed QR sheets never break.
+    path("q/<slug:key>/game/", views.qr_game_coming_soon, name="qr_game"),
     path("q/<slug:key>/tap/", views.tap_beacon, name="tap_beacon"),
 
     # Custom Panel routes (Spec Part D)
@@ -65,23 +63,11 @@ urlpatterns = [
     path("panel/specials/", panel_views.panel_specials, name="panel_specials"),
     path("panel/specials/add/", panel_views.panel_special_add, name="panel_special_add"),
     path("panel/menus/", panel_views.panel_menus, name="panel_menus"),
-    path("panel/games/", panel_views.panel_rewards, name="panel_games"),
-    path("panel/rewards/", panel_views.panel_rewards, name="panel_rewards"),
-    path("panel/rewards/<int:pk>/redeem/", panel_views.panel_reward_redeem, name="panel_reward_redeem"),
     path("panel/analytics/", analytics_views.dashboard, name="panel_analytics"),
     path("panel/changelog/", panel_views.panel_changelog, name="panel_changelog"),
 
     path("dashboard/", analytics_views.dashboard, name="dashboard"),
 
-    # Games Hub — standalone, no backend, self-contained routes so the hub can
-    # be moved to its own domain later. `/games` answers directly too.
-    re_path(r"^games/", include("apps.gameshub.urls")),
-    path("games", gameshub_views.hub),
-
-    # KidsPlay. Existing /q/ routes are unchanged.
-    path("t/", include("apps.kidsplay.urls_public")),
-    path("api/kidsplay/", include("apps.kidsplay.urls_api")),
-    path("staff/kidsplay/", include("apps.kidsplay.urls_staff")),
 ]
 
 

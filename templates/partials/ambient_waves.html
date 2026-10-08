@@ -1,0 +1,39 @@
+<svg class="ambient-waves" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice"
+  aria-hidden="true" focusable="false">
+  <defs>
+    <pattern id="wave-dots" width="13" height="13" patternUnits="userSpaceOnUse">
+      <circle cx="2.4" cy="2.4" r="2.1" fill="var(--gold-line)" opacity="0.5"></circle>
+    </pattern>
+  </defs>
+
+  {# --- top-left organic wave (two layers for depth) --- #}
+  <path fill="var(--wave-green-soft)" opacity="0.5"
+    d="M0 0 H262 C232 30 202 52 162 70 C112 92 64 102 38 130 C22 148 10 168 0 190 Z"></path>
+  <path fill="var(--wave-green)"
+    d="M0 0 H238 C210 24 182 44 146 60 C100 80 58 88 32 116 C16 132 5 152 0 174 Z"></path>
+  <path fill="none" stroke="var(--gold-line)" stroke-width="2.4"
+    d="M244 6 C216 32 188 54 150 72 C104 92 60 102 36 130 C20 148 8 170 3 194"></path>
+
+  {# --- top-right corner sliver + long gold curve --- #}
+  <path fill="var(--wave-green)" opacity="0.92"
+    d="M390 0 V72 C356 58 330 34 316 0 Z"></path>
+  <path fill="none" stroke="var(--gold-line)" stroke-width="2.2"
+    d="M389 98 C358 140 342 188 346 242 C349 286 338 324 314 360"></path>
+
+  {# --- bottom-right organic wave (two layers) --- #}
+  <path fill="var(--wave-green-soft)" opacity="0.5"
+    d="M390 844 V586 C372 622 348 646 312 668 C262 698 208 726 180 774 C156 814 108 838 66 844 Z"></path>
+  <path fill="var(--wave-green)"
+    d="M390 844 V612 C368 642 338 664 298 684 C248 709 202 732 178 772 C158 806 118 830 82 844 Z"></path>
+  <path fill="none" stroke="var(--gold-line)" stroke-width="2.4"
+    d="M390 604 C366 636 336 658 296 678 C246 703 200 726 176 766 C156 800 116 824 80 838"></path>
+
+  {# --- bottom-left small accent --- #}
+  <path fill="var(--wave-green)" opacity="0.92"
+    d="M0 844 V812 C20 802 38 788 50 770 C56 760 68 752 80 748 V844 Z"></path>
+
+  {# --- gold dot clusters --- #}
+  <rect x="316" y="106" width="52" height="39" fill="url(#wave-dots)"></rect>
+  <rect x="22" y="300" width="39" height="52" fill="url(#wave-dots)"></rect>
+  <rect x="30" y="700" width="52" height="39" fill="url(#wave-dots)"></rect>
+</svg>

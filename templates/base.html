@@ -8,9 +8,12 @@
   <meta name="theme-color" content="{{ brand.brand_colors.primary|default:'#7FA06B' }}">
   <title>{% block title %}Pasons Smart QR{% endblock %}</title>
   <meta name="description" content="{% block description %}Pasons Group restaurant smart pages{% endblock %}">
-  <link rel="preload" href="{% static 'css/tokens.css' %}" as="style">
-  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% with ASSET_V="2026-10-08-14" %}
+  <link rel="preload" href="{% static 'css/tokens.css' %}?v={{ ASSET_V }}" as="style">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v={{ ASSET_V }}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ ASSET_V }}">
+  <link rel="stylesheet" href="{% static 'css/theme-warm.css' %}?v={{ ASSET_V }}">
+  {% endwith %}
   <style>
     :root {
       {% if brand and brand.brand_colors %}
@@ -33,7 +36,7 @@
   </style>
 </head>
 
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <main id="main-content" class="page {% block page_class %}{% endblock %}">
     {% block content %}{% endblock %}

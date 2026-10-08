@@ -26,7 +26,6 @@ from apps.core.panel_permissions import (
     scoped_outlets,
 )
 from apps.core.qr_utils import generate_qr_png_bytes, generate_qr_svg_bytes, get_qr_url
-from apps.games.models import Game, Reward
 from apps.menu.models import MenuPage, MenuSource, SpecialItem
 
 
@@ -39,7 +38,6 @@ def panel_dashboard(request):
 
     qr_qs = QrCode.objects.filter(outlet__in=outlets, active=True)
     total_scans = sum(qr_qs.values_list("scan_count", flat=True))
-    rewards_issued = Reward.objects.filter(outlet__in=outlets).count()
 
     context = {
         "nav_active": "dashboard",
@@ -48,7 +46,6 @@ def panel_dashboard(request):
         "brand_count": brands.count(),
         "qr_count": qr_qs.count(),
         "total_scans": total_scans,
-        "rewards_issued": rewards_issued,
         "outlets": outlets[:20],
     }
     return render(request, "panel/dashboard.html", context)
@@ -95,6 +92,9 @@ def panel_brand_edit(request, pk=None):
             brand.google_review_url = (request.POST.get("google_review_url") or "").strip()
             brand.google_place_id = (request.POST.get("google_place_id") or "").strip()
             brand.status = request.POST.get("status") or "active"
+            logo = request.FILES.get("logo")
+            if logo:
+                brand.logo = logo
             brand.save()
             log_change(user, "BRAND_EDIT" if pk else "BRAND_CREATE", brand.name_en, brand)
             messages.success(request, f"Saved brand {brand.name_en}.")
@@ -338,46 +338,6 @@ def panel_specials(request):
         "specials": specials,
     }
     return render(request, "panel/specials_list.html", context)
-
-
-@login_required
-@require_GET
-def panel_rewards(request):
-    user = request.user
-    outlets = scoped_outlets(user)
-    query = request.GET.get("q", "").strip()
-
-    qs = Reward.objects.filter(outlet__in=outlets).select_related("outlet", "game", "redeemed_by")
-    if query:
-        qs = qs.filter(coupon_code__icontains=query)
-
-    context = {
-        "nav_active": "games",
-        "is_head_office": is_head_office(user),
-        "rewards": qs[:50],
-        "search_query": query,
-    }
-    return render(request, "panel/rewards_list.html", context)
-
-
-@login_required
-@require_POST
-def panel_reward_redeem(request, pk):
-    reward = get_object_or_404(Reward, pk=pk)
-    check_outlet_permission(request.user, reward.outlet)
-
-    if reward.status == Reward.Status.ISSUED:
-        reward.status = Reward.Status.REDEEMED
-        reward.redeemed_at = timezone.now()
-        reward.redeemed_by = request.user
-        reward.save(update_fields=["status", "redeemed_at", "redeemed_by"])
-
-        log_change(request.user, "REWARD_REDEEM", reward.coupon_code, reward.outlet.brand, reward.outlet)
-        messages.success(request, f"Coupon {reward.coupon_code} marked as REDEEMED.")
-    else:
-        messages.warning(request, f"Coupon {reward.coupon_code} is {reward.get_status_display()}.")
-
-    return redirect("panel_rewards")
 
 
 @login_required

@@ -11,8 +11,18 @@
 </div>
 
 <div class="glass" style="max-width: 650px; padding: var(--sp-4);">
-  <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+  <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: var(--sp-3);">
     {% csrf_token %}
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Logo</label>
+      {% if brand and brand.logo %}
+      <img src="{{ brand.logo.url }}" alt="" width="64" height="64"
+           style="display: block; width: 64px; height: 64px; object-fit: contain; border-radius: 50%; background: #fff; border: 1px solid var(--border); margin-bottom: 8px;">
+      {% endif %}
+      <input type="file" name="logo" accept="image/png,image/jpeg,image/webp"
+             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+      <p class="muted" style="margin: 6px 0 0;">Square PNG or JPG. It shows in the circle on the customer page. Leave empty to keep the current logo.</p>
+    </div>
     <div>
       <label style="display: block; font-weight: 600; margin-bottom: 4px;">Name (English)</label>
       <input type="text" name="name_en" required value="{{ brand.name_en|default:'' }}"

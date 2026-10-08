@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% load social_tags %}
+{% load social_tags icon_tags %}
 
 {% block title %}{{ title }} · Pasons Smart QR{% endblock %}
 {% block description %}{{ hero_subtitle|truncatechars:150 }}{% endblock %}
+{% block body_class %}theme-warm{% endblock %}
 {% block page_class %}page--device{% endblock %}
 
 {% block content %}
@@ -26,7 +27,7 @@
           <h1 class="identity-name">{% if hero_title %}{{ hero_title }}{% else %}{{ brand.name_en }}{% endif %}</h1>
           <p class="identity-rating">
             {% if review_avg %}
-            <span class="stars" aria-label="{{ review_avg }} out of 5 stars">★★★★★</span>
+            <span class="stars" aria-label="{{ review_avg }} out of 5 stars">{% icon "star" %}{% icon "star" %}{% icon "star" %}{% icon "star" %}{% icon "star" %}</span>
             <span>{{ review_avg }} · {{ review_count }} review{{ review_count|pluralize }}</span>
             {% else %}
             <span>New — no reviews yet</span>
@@ -103,7 +104,7 @@
         {# search pill — instant client-side filter (no page reload) #}
         <div class="menu-search-wrap">
           <label class="sr-only" for="menu-search">Search dishes</label>
-          <span class="menu-search-ico" aria-hidden="true">⚲</span>
+          <span class="menu-search-ico" aria-hidden="true">{% icon "search" %}</span>
           <input id="menu-search" class="menu-search" type="search" placeholder="Search {{ menu_count|default:'dishes' }} dishes…" autocomplete="off">
         </div>
 
@@ -139,7 +140,7 @@
           <h2 id="review-label" class="section-label">Google Review</h2>
           <p class="review-score">{{ review_avg|default:"5.0" }}</p>
           <p class="review-meta">
-            <span class="stars" aria-hidden="true">★★★★★</span>
+            <span class="stars" aria-hidden="true">{% icon "star" %}{% icon "star" %}{% icon "star" %}{% icon "star" %}{% icon "star" %}</span>
             <span>{{ review_count|default:0 }} Google reviews</span>
           </p>
         </div>
@@ -174,7 +175,7 @@
         <div class="social-row">
           {% for s in social_links %}
           <a class="social-dot" href="{{ s.url }}" target="_blank" rel="noopener" aria-label="{{ s.label }}"
-            title="{{ s.label }}" style="--dot: {{ s.color }}">{{ s.mono }}</a>
+            title="{{ s.label }}" style="--dot: {{ s.color }}">{% icon s.icon "icon--badge" %}</a>
           {% endfor %}
         </div>
       </section>
@@ -200,11 +201,11 @@
           <label class="field">
             <span>Rating</span>
             <select name="rating" required>
-              <option value="5">★★★★★ Excellent (5)</option>
-              <option value="4">★★★★☆ Very Good (4)</option>
-              <option value="3">★★★☆☆ Average (3)</option>
-              <option value="2">★★☆☆☆ Needs improvement (2)</option>
-              <option value="1">★☆☆☆☆ Poor (1)</option>
+              <option value="5">Excellent (5)</option>
+              <option value="4">Very Good (4)</option>
+              <option value="3">Average (3)</option>
+              <option value="2">Needs improvement (2)</option>
+              <option value="1">Poor (1)</option>
             </select>
           </label>
           <label class="field">
@@ -221,23 +222,22 @@
       <nav class="action-bar" aria-label="Contact actions">
         {% if "whatsapp" in modules or "order" in modules %}
         <a class="btn btn-primary" href="{{ whatsapp_url|default:'#feedback' }}">
-          <span class="ico" aria-hidden="true">✆</span>WhatsApp
+          <span class="ico" aria-hidden="true">{% icon "chat" %}</span>WhatsApp
         </a>
         {% endif %}
         {% if "call" in modules %}
         <a class="btn btn-secondary" href="tel:{{ phone|default:'' }}">
-          <span class="ico" aria-hidden="true">☎</span>Call
+          <span class="ico" aria-hidden="true">{% icon "phone" %}</span>Call
         </a>
         {% endif %}
         {% if "directions" in modules %}
         <a class="btn btn-secondary" href="{{ maps_url|default:'#' }}" target="_blank" rel="noopener">
-          <span class="ico" aria-hidden="true">◉</span>Maps
+          <span class="ico" aria-hidden="true">{% icon "pin" %}</span>Maps
         </a>
         {% endif %}
         <a class="btn btn-secondary" href="#feedback">
-          <span class="ico" aria-hidden="true">✉</span>Enquire
+          <span class="ico" aria-hidden="true">{% icon "mail" %}</span>Enquire
         </a>
-      </nav>
       </nav>
 
     </div><!-- /.device-screen -->

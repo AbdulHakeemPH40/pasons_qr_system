@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% load icon_tags %}
 
 {% block title %}Specials · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
-{% block page_class %}page--device{% endblock %}
+{% block body_class %}theme-warm{% endblock %}
+{% block page_class %}page--device page--glass{% endblock %}
 
 {% block content %}
 <div class="device-stage">

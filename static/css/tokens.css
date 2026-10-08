@@ -124,4 +124,32 @@
 
   /* ---- layout ---- */
   --page-max: 26.875rem; /* 430px — phone column, matches the 390 artboard */
+
+  /* ---- generic UI colors (panel forms, muted text) ---- */
+  --border: rgba(34, 48, 31, 0.12);
+  --ink-muted: #6F7D6A;
+  --muted: #6F7D6A;
+  --sand: #EDE4D2;
+
+  /* ---- warm brand canvas (theme-warm, reference redesign 2026-10-08) ----
+     cream paper base, organic deep-green waves, warm gold line accents.
+     The wave colors track the brand: --forest/--leaf come from
+     brand_colors.dark / .primary (see base.html). */
+  --cream: #F5EFE3;
+  --cream-deep: #EDE4D2;
+  --gold-line: #C2A24B;
+  --gold-deep: #A8893E;
+  /* Wave art stays the reference deep green on every brand. Brand colors
+     recolor buttons and type only — never the background waves. */
+  --wave-green: #2E5B3E;
+  --wave-green-soft: #7FA06B;
+  --ink: #22301F;
+  --link-title: #22301F;
+  --link-sub: #6F7D6A;
+  --link-arrow: #9BA894;
+  --card-white: #FFFFFF;
+  --tint-green: #EDF4E8;
+  --tint-blue: #EAF1F8;
+  --tint-pink: #FAECEF;
+  --tint-cream: #FBF6EA;
 }

@@ -38,9 +38,6 @@ INSTALLED_APPS = [
     "apps.menu",
     "apps.engagement",
     "apps.analytics",
-    "apps.games",
-    "apps.kidsplay",
-    "apps.gameshub",
 ]
 
 MIDDLEWARE = [
@@ -64,6 +61,7 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                "django.template.context_processors.csrf",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],

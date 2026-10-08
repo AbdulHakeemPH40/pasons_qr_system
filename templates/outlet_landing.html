@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% load icon_tags %}
 
 {% block title %}{{ outlet_title }} · {{ brand.name_en }}{% endblock %}
 {% block description %}{{ subtitle }}{% endblock %}
+{% block body_class %}theme-warm{% endblock %}
 {% block page_class %}page--device{% endblock %}
 
 {% block content %}
@@ -10,112 +12,108 @@
     <div class="device-island" aria-hidden="true"></div>
 
     <div class="device-screen">
-      <section class="scan-identity glass glass--lg reveal" style="--i: 0">
-        <div class="avatar avatar--lg">
+      {# ---- identity: logo, brand, location (reference header) ---- #}
+      <header class="scan-identity">
+        <div class="avatar">
           {% if brand.logo %}
-          <img src="{{ brand.logo.url }}" alt="" width="72" height="72" decoding="async">
+          <img src="{{ brand.logo.url }}" alt="{{ brand.name_en }} logo" width="104" height="104" decoding="async">
           {% else %}
             {{ brand.name_en|slice:":1"|upper }}
           {% endif %}
         </div>
-        <div>
-          <p class="scan-brand">{{ brand.name_en }}</p>
-          <h1 class="scan-outlet">{{ outlet_title }}</h1>
-          {% if subtitle or brand.description %}
-          <p class="scan-sub">{{ subtitle|default:brand.description }}</p>
-          {% endif %}
-        </div>
-        {% if is_open %}
-        <span class="chip chip--sm chip--open">Open now</span>
-        {% else %}
-        <span class="chip chip--sm chip--warn">Closed</span>
+        <h1 class="scan-outlet">{{ outlet_title }}</h1>
+        {% if address_line %}
+        <p class="scan-loc">{% icon "pin" %}<span>{{ address_line }}</span></p>
         {% endif %}
-      </section>
+      </header>
 
+      {# ---- contact circles: call / WhatsApp / Instagram (reference row) ---- #}
+      <nav class="contact-row" aria-label="Contact us">
+        {% if phone_number %}
+        <a class="contact-circle contact-circle--call" href="tel:{{ phone_number }}" aria-label="Call">
+          <img src="/media/icons/Green%20Circle%20Phone%20Icon.png" alt="" width="54" height="54" decoding="async">
+        </a>
+        {% endif %}
+        {% if whatsapp_url %}
+        <a class="contact-circle" href="{{ whatsapp_url }}" target="_blank" rel="noopener" aria-label="WhatsApp">
+          <img src="/media/icons/Pale%20Mint%20WhatsApp%20Icon.png" alt="" width="54" height="54" decoding="async">
+        </a>
+        {% endif %}
+        {% if has_instagram %}
+        <a class="contact-circle" href="{% url 'qr_instagram' qr.redirect_key %}" target="_blank" rel="noopener"
+          aria-label="Instagram">
+          <img src="/media/icons/Instagram%20Gradient%20Badge.png" alt="" width="54" height="54" decoding="async">
+        </a>
+        {% endif %}
+      </nav>
+
+      {# ---- action cards: brand badge + title + sub + chevron ---- #}
       <section class="outlet-actions" aria-label="Restaurant options">
-        {% if has_specials %}
-        <a href="{% url 'qr_specials' qr.redirect_key %}" class="btn-action reveal" style="--i: 1">
+        {% if has_review %}
+        <a href="{% url 'qr_review' qr.redirect_key %}" target="_blank" rel="noopener"
+          class="btn-action reveal" style="--i: 1">
           <span class="btn-action__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3l1.6 4.6L18 9.2l-4.4 1.6L12 15.4 10.4 10.8 6 9.2l4.4-1.6L12 3z"/><path d="M18 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"/></svg>
+            <img src="/media/icons/Google%20Review%20Star%20Badge.png" alt="" width="54" height="54" decoding="async">
           </span>
+          <span class="btn-action__text">
+            <span class="btn-action__title">REVIEW US ON GOOGLE</span>
+            <span class="btn-action__sub">Share your valuable review</span>
+          </span>
+          <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
+        </a>
+        {% endif %}
+
+        {% if has_specials %}
+        <a href="{% url 'qr_specials' qr.redirect_key %}"
+          class="btn-action btn-action--tint-green reveal" style="--i: 2">
+          <span class="btn-action__icon btn-action__icon--gold" aria-hidden="true">{% icon "sparkle" %}</span>
           <span class="btn-action__text">
             <span class="btn-action__title">SPECIALS</span>
             <span class="btn-action__sub">Signature dishes, weekend plates, and offers</span>
           </span>
-          <span class="btn-action__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>
         {% endif %}
 
         {% if has_menu %}
-        <a href="{% url 'qr_menu' qr.redirect_key %}" class="btn-action reveal" style="--i: 2">
-          <span class="btn-action__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M6 4h9a3 3 0 013 3v13H9a3 3 0 01-3-3V4z"/><path d="M6 17a3 3 0 013-3h9"/><path d="M9 8h6M9 11.5h6"/></svg>
+        <a href="{% url 'qr_menu' qr.redirect_key %}" class="btn-action reveal" style="--i: 3">
+          <span class="btn-action__icon btn-action__icon--green" aria-hidden="true">
+            <img src="/media/icons/Minimal%20Sage%20Circle%20Open%20Book%20Icon.png" alt="" width="54" height="54" decoding="async">
           </span>
           <span class="btn-action__text">
             <span class="btn-action__title">CHECKOUT OUR MENU</span>
             <span class="btn-action__sub">The full booklet, with prices</span>
           </span>
-          <span class="btn-action__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-        </a>
-        {% endif %}
-
-        {% if has_review %}
-        <a href="{% url 'qr_review' qr.redirect_key %}" target="_blank" rel="noopener" class="btn-action reveal" style="--i: 3">
-          <span class="btn-action__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3.5l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16l-4.8 2.4.9-5.4L4.2 9.2l5.4-.8L12 3.5z"/></svg>
-          </span>
-          <span class="btn-action__text">
-            <span class="btn-action__title">REVIEW US ON GOOGLE</span>
-            <span class="btn-action__sub">Takes about 30 seconds</span>
-          </span>
-          <span class="btn-action__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span>
+          <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>
         {% endif %}
 
         {% if has_instagram %}
-        <a href="{% url 'qr_instagram' qr.redirect_key %}" target="_blank" rel="noopener" class="btn-action reveal" style="--i: 4">
+        <a href="{% url 'qr_instagram' qr.redirect_key %}" target="_blank" rel="noopener"
+          class="btn-action btn-action--tint-pink reveal" style="--i: 4">
           <span class="btn-action__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="17.2" cy="6.8" r="0.8" fill="currentColor" stroke="none"/></svg>
+            <img src="/media/icons/Instagram%20Gradient%20Badge.png" alt="" width="54" height="54" decoding="async">
           </span>
           <span class="btn-action__text">
             <span class="btn-action__title">Follow Us on Instagram</span>
             <span class="btn-action__sub">New plates and stories</span>
           </span>
-          <span class="btn-action__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span>
+          <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>
         {% endif %}
 
         <a href="{% url 'qr_game' qr.redirect_key %}" class="btn-action btn-action--game reveal" style="--i: 5">
           <span class="btn-action__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="10" rx="4"/><path d="M8 13v3M6.5 14.5h3M15.5 13h.01M17.5 15.5h.01"/></svg>
+            <img src="/media/icons/Golden%20Gamepad%20Emblem.png" alt="" width="54" height="54" decoding="async">
           </span>
           <span class="btn-action__text">
-            <span class="btn-action__title">GAMES ZONE</span>
-            <span class="btn-action__sub">Three quick games while you wait</span>
+            <span class="btn-action__title">Play a Game &amp; Win a Discount</span>
+            <span class="btn-action__sub">Real games are coming soon</span>
           </span>
-          <span class="btn-action__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>
       </section>
 
-      {% if address_line or maps_url or phone_number %}
-      <footer class="outlet-info-strip glass reveal" style="--i: 7">
-        {% if address_line %}<p>{{ address_line }}</p>{% endif %}
-        <div class="info-links">
-          {% if maps_url %}
-          <a href="{{ maps_url }}" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
-            Directions
-          </a>
-          {% endif %}
-          {% if phone_number %}
-          <a href="tel:{{ phone_number }}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h3l1.5 4-2 1.2a12 12 0 005.3 5.3L17 12.5 21 14v3a2 2 0 01-2.2 2A16 16 0 014 6.2 2 2 0 016 4h2z"/></svg>
-            Call
-          </a>
-          {% endif %}
-        </div>
-      </footer>
-      {% endif %}
     </div>
 
     <div class="device-home-indicator" aria-hidden="true"></div>

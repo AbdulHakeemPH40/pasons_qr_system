@@ -3,7 +3,7 @@ Acceptance tests for the restaurant QR flows (Parts A–D).
 
 Covers King Chef International City and Al Nahda fixtures:
 QR landing, retired tokens, review fallback, specials, menu redirect,
-panel scope, and voucher redemption.
+and panel scope.
 """
 
 from django.contrib.auth.models import User
@@ -15,7 +15,6 @@ from django.utils import timezone
 from apps.analytics.models import ScanEvent, TapEvent
 from apps.core.models import Brand, ChangeLog, Outlet, OutletManager, QrCode, SmartPage
 from apps.core.panel_permissions import check_outlet_permission
-from apps.games.models import Game, Reward
 from apps.menu.models import MenuSource, SpecialItem
 
 
@@ -120,16 +119,6 @@ class AcceptanceFixtures(TestCase):
             title_en="Family Biryani Bucket", original_price=89, offer_price=69,
             active=True,
         )
-        cls.game = Game.objects.create(
-            brand=cls.brand, outlet=cls.intl, title="International City Dish Match",
-            enabled=True, coupon_prefix="KCIC",
-        )
-        cls.reward = Reward.objects.create(
-            game=cls.game, outlet=cls.intl, qr_code=cls.qr_intl,
-            reward_type=Reward.RewardType.PERCENT, reward_value="10% OFF",
-            coupon_code="KCIC-ACCEPT",
-            expires_at=timezone.now() + timezone.timedelta(days=7),
-        )
         cls.head = User.objects.create_user("headoffice", password="pass-head", is_staff=True)
         cls.manager = User.objects.create_user("ic-manager", password="pass-ic")
         profile = OutletManager.objects.create(user=cls.manager, can_edit_contact=True)
@@ -146,6 +135,25 @@ class QrFlowTests(AcceptanceFixtures):
         self.assertEqual(response.status_code, 410)
         self.assertEqual(ScanEvent.objects.filter(qr_code=self.retired).count(), 0)
 
+    def test_token_urlsafe_underscore_keys_route_correctly(self):
+        # secrets.token_urlsafe() mints keys that may contain "_". The format
+        # guard must accept them or the landing 404s instead of rendering /
+        # returning 410 for retired codes (regression: flaky
+        # test_head_office_generates_and_retires_qr).
+        active = QrCode.objects.create(
+            brand=self.brand, outlet=self.intl, destination_page=self.intl_page,
+            source_type="table", label="Table U",
+            qr_code_name="KINGCHEF-INTLCITY-TABLE-050",
+            redirect_key="kcic_table_U-50",
+        )
+        response = self.client.get(reverse("qr_landing", args=[active.redirect_key]))
+        self.assertEqual(response.status_code, 200)
+
+        active.active = False
+        active.save(update_fields=["active"])
+        retired_page = self.client.get(reverse("qr_landing", args=[active.redirect_key]))
+        self.assertEqual(retired_page.status_code, 410)
+
     def test_active_token_renders_outlet_and_records_scan(self):
         response = self.client.get(reverse("qr_landing", args=["kcic-table-001"]))
         self.assertEqual(response.status_code, 200)
@@ -157,6 +165,18 @@ class QrFlowTests(AcceptanceFixtures):
         self.qr_intl.refresh_from_db()
         self.assertEqual(self.qr_intl.scan_count, 1)
         self.assertEqual(self.client.session["qr"], self.qr_intl.pk)
+
+    def test_game_button_stays_and_game_page_shows_coming_soon(self):
+        """The "Play a Game & Win a Discount" button is permanent customer UI."""
+        landing = self.client.get(reverse("qr_landing", args=["kcic-table-001"]))
+        self.assertContains(landing, "Play a Game")
+        game_page = self.client.get(reverse("qr_game", args=["kcic-table-001"]))
+        self.assertEqual(game_page.status_code, 200)
+        self.assertContains(game_page, "coming soon")
+        # Unknown keys still 404.
+        self.assertEqual(
+            self.client.get(reverse("qr_game", args=["does-not-exist"])).status_code, 404
+        )
 
     def test_arabic_query_sets_rtl(self):
         response = self.client.get(reverse("qr_landing", args=["kcic-table-001"]) + "?lang=ar")
@@ -199,19 +219,6 @@ class QrFlowTests(AcceptanceFixtures):
         response = self.client.get(reverse("customer_menu", args=["kcic-table-001"]))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "https://menu.kingchef.example/international-city")
-
-    def test_game_page_sends_player_to_games_hub(self):
-        # The QR game card lands on the Games Hub now; the tap is still logged
-        # and the hub is given the way back to the restaurant page.
-        response = self.client.get(reverse("customer_game", args=["kcic-table-001"]))
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(
-            response["Location"],
-            "{}?back=/q/kcic-table-001/".format(reverse("gameshub:hub")),
-        )
-        self.assertEqual(
-            TapEvent.objects.filter(qr_code=self.qr_intl, action="game").count(), 1
-        )
 
 
 class PanelScopeTests(AcceptanceFixtures):
@@ -291,22 +298,6 @@ class PanelScopeTests(AcceptanceFixtures):
         self.client.login(username="ic-manager", password="pass-ic")
         response = self.client.get(reverse("panel_qr_generate"))
         self.assertEqual(response.status_code, 403)
-
-    def test_manager_redeems_only_own_voucher(self):
-        other = Reward.objects.create(
-            game=self.game, outlet=self.nahda, reward_type="percent",
-            reward_value="5% OFF", coupon_code="KCNA-OTHER",
-            expires_at=timezone.now() + timezone.timedelta(days=3),
-        )
-        self.client.login(username="ic-manager", password="pass-ic")
-        denied = self.client.post(reverse("panel_reward_redeem", args=[other.pk]))
-        self.assertEqual(denied.status_code, 403)
-
-        ok = self.client.post(reverse("panel_reward_redeem", args=[self.reward.pk]))
-        self.assertEqual(ok.status_code, 302)
-        self.reward.refresh_from_db()
-        self.assertEqual(self.reward.status, Reward.Status.REDEEMED)
-        self.assertEqual(self.reward.redeemed_by, self.manager)
 
     def test_special_add_is_scoped(self):
         self.client.login(username="ic-manager", password="pass-ic")

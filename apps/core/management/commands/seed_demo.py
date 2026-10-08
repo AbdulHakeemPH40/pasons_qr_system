@@ -17,7 +17,6 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from apps.core.models import Brand, Campaign, Group, Outlet, PageModule, QrCode, SmartPage
-from apps.games.models import Game
 from apps.menu.models import MenuCategory, MenuItem, MenuSource, SpecialItem
 
 WEEK_HOURS = {
@@ -47,6 +46,13 @@ MODULE_ORDER = [
 BRANDS = [
     {
         "code": "KINGCHEF",
+        # Tandoori warmth: maroon buttons and type. Waves stay deep green.
+        "colors": {
+            "primary": "#C0553C",
+            "secondary": "#E0A189",
+            "accent": "#C2A24B",
+            "dark": "#6B2418",
+        },
         "name_en": "King Chef Restaurant",
         "name_ar": "مطعم كينج شيف",
         "description": "Multi-branch family restaurant — biryani, grill and karak favourites.",
@@ -130,6 +136,13 @@ BRANDS = [
     },
     {
         "code": "PARAMOUNT",
+        # Premium dining: wine buttons and type. Waves stay deep green.
+        "colors": {
+            "primary": "#A8435C",
+            "secondary": "#C98697",
+            "accent": "#C2A24B",
+            "dark": "#4A1B2A",
+        },
         "name_en": "Paramount Restaurant",
         "name_ar": "مطعم باراماونت",
         "description": "Arabic and continental cuisine in a premium family setting.",
@@ -171,6 +184,13 @@ BRANDS = [
     },
     {
         "code": "MILANVEG",
+        # Pure veg: garden green buttons and type. Waves stay deep green.
+        "colors": {
+            "primary": "#7FA06B",
+            "secondary": "#9DB18C",
+            "accent": "#C2A24B",
+            "dark": "#2E5B3E",
+        },
         "name_en": "Milan Veg",
         "name_ar": "ميلان فيج",
         "description": "Pure vegetarian kitchen — Indian and continental veg favourites.",
@@ -201,6 +221,13 @@ BRANDS = [
     },
     {
         "code": "DONARIST",
+        # Turkish grill: teal buttons and type. Waves stay deep green.
+        "colors": {
+            "primary": "#2E7D74",
+            "secondary": "#7FB3AC",
+            "accent": "#C2A24B",
+            "dark": "#16454B",
+        },
         "name_en": "Donar Istanbul",
         "name_ar": "دونار اسطنبول",
         "description": "Turkish grill house — donar, kebabs and mezze.",
@@ -265,6 +292,7 @@ class Command(BaseCommand):
                     "default_phone": spec["phone"],
                     "social_links": spec["social"],
                     "google_review_url": spec["review"],
+                    "brand_colors": spec["colors"],
                     "status": "active",
                 },
             )
@@ -451,17 +479,6 @@ class Command(BaseCommand):
                 "discount_label": "22% OFF",
                 "active": True,
                 "display_order": 3,
-            },
-        )
-
-        Game.objects.update_or_create(
-            brand=brand, outlet=intl,
-            defaults={
-                "title": "International City Dish Match",
-                "enabled": True,
-                "coupon_prefix": "KCIC",
-                "win_probability": 1.0,
-                "discount_percent": 10,
             },
         )
 

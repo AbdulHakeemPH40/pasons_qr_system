@@ -351,7 +351,10 @@ def qr_redirect(request, key):
     4. Records ScanEvent and sets request.session["qr"] = qr.pk
     5. Directly renders the outlet landing window (outlet_landing.html)
     """
-    if len(key) > 64 or not key.replace("-", "").isalnum():
+    # Keys are minted with secrets.token_urlsafe() (panel generate/regenerate),
+    # whose alphabet is [A-Za-z0-9_-] — accept it in full, or ~17% of minted
+    # keys would 404 here before the retired-410 check below.
+    if len(key) > 64 or not key.replace("-", "").replace("_", "").isalnum():
         return render(request, "404.html", status=404)
 
     if not _rate_limit_check(request):
@@ -437,7 +440,7 @@ def qr_redirect(request, key):
         "qr": qr,
         "brand": brand,
         "outlet": outlet,
-        "outlet_title": outlet.official_name if outlet else brand.name_en,
+        "outlet_title": f"{_brand_short(brand)} - Restaurant",
         "subtitle": brand.description.split("—")[0].strip() if brand.description else "Authentic Dining Experience",
         "is_open": is_open,
         "today_close_str": today_close_str,
@@ -445,6 +448,7 @@ def qr_redirect(request, key):
         "address": address_line,
         "maps_url": maps_url,
         "phone_number": phone_number,
+        "whatsapp_url": _wa_link((outlet.whatsapp if outlet else "") or brand.default_whatsapp),
         "brand_colors": brand.brand_colors or {},
         "lang": lang,
         "dir": "rtl" if dir_rtl else "ltr",
@@ -519,6 +523,26 @@ def qr_instagram_redirect(request, key):
         ig_url = "https://instagram.com"
 
     return redirect(ig_url)
+
+
+@require_GET
+def qr_game_coming_soon(request, key):
+    """
+    Target of the landing page's "Play a Game & Win a Discount" button.
+
+    The button is permanent customer UI (client plan: real games live here,
+    built one at a time per GAME_META_PROMPT.md). Until game #1 lands this
+    serves a branded "coming soon" page instead of a dead link. Replace the
+    body when the first game ships; keep the view name and URL.
+    """
+    qr = get_object_or_404(
+        QrCode.objects.select_related("outlet", "brand"), redirect_key=key, active=True
+    )
+    return render(
+        request,
+        "game_coming_soon.html",
+        {"qr": qr, "brand": qr.brand, "outlet": qr.outlet},
+    )
 
 
 @require_http_methods(["POST"])

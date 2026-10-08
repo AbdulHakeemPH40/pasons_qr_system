@@ -29,15 +29,22 @@ CIRCLE_ORDER = [
     "instagram", "linkedin", "telegram", "snapchat",
 ]
 
+# Keys with a real brand badge in icon_tags.BRANDS (used for card/circle icons).
+ICON_KEYS = {
+    "whatsapp", "facebook", "youtube", "tiktok", "x", "twitter",
+    "instagram", "linkedin", "telegram", "snapchat",
+}
+
 
 @register.simple_tag
 def social_meta(name):
-    """Return {mono, color, label} for a social network key."""
+    """Return {mono, icon, color, label} for a social network key."""
     key = (name or "").strip().lower()
     mono, color, label = SOCIAL_META.get(
         key, (key[:2].upper() or "··", "#7FA06B", (name or "").title())
     )
-    return {"mono": mono, "color": color, "label": label}
+    icon = "x" if key in ("x", "twitter") else (key if key in ICON_KEYS else "link")
+    return {"mono": mono, "icon": icon, "color": color, "label": label}
 
 
 @register.filter
@@ -73,5 +80,6 @@ def circle_links(social, whatsapp_url=""):
         if mono in seen:  # e.g. 'x' and 'twitter' both map to X
             continue
         seen.add(mono)
-        out.append({"mono": mono, "color": color, "label": label, "url": url})
+        icon = "x" if key in ("x", "twitter") else (key if key in ICON_KEYS else "link")
+        out.append({"mono": mono, "icon": icon, "color": color, "label": label, "url": url})
     return out
