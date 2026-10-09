@@ -1,0 +1,75 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Leads &amp; Enquiries</h1>
+    <p class="muted" style="margin: 4px 0 0;">Group bookings, events, bulk orders and general enquiries collected from QR scans.</p>
+  </div>
+</div>
+
+<form method="get" style="display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); flex-wrap: wrap;">
+  <select name="status" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+    <option value="">All statuses</option>
+    {% for val, label in statuses %}
+    <option value="{{ val }}" {% if active_status == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="outlet" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+    <option value="">All branches</option>
+    {% for o in outlets %}
+    <option value="{{ o.pk }}" {% if active_outlet == o.pk|stringformat:"s" %}selected{% endif %}>{{ o.official_name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+</form>
+
+<div style="overflow-x: auto;">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Customer</th>
+        <th>Type</th>
+        <th>Branch</th>
+        <th>Message</th>
+        <th>Status</th>
+        <th>Update</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for lead in leads %}
+      <tr>
+        <td>
+          <strong>{{ lead.customer_name }}</strong>
+          <div class="caption muted">{{ lead.phone|default:"—" }} · {{ lead.email|default:"—" }}</div>
+          <div class="caption muted">{{ lead.created_at|date:"Y-m-d H:i" }}</div>
+        </td>
+        <td>{{ lead.get_lead_type_display }}</td>
+        <td>{{ lead.outlet.official_name|default:"Whole brand" }}</td>
+        <td class="caption">{{ lead.message|truncatechars:80|default:"—" }}</td>
+        <td>
+          <span class="badge-status {% if lead.status == "new" %}badge-active{% else %}badge-inactive{% endif %}">
+            {{ lead.get_status_display }}
+          </span>
+        </td>
+        <td>
+          <form method="post" action="{% url 'panel_lead_update' lead.pk %}" style="display: flex; gap: 6px;">
+            {% csrf_token %}
+            <select name="status" style="padding: 6px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px;">
+              {% for val, label in statuses %}
+              <option value="{{ val }}" {% if lead.status == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="muted" style="text-align: center; padding: var(--sp-4);">No leads yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

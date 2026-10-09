@@ -14,10 +14,27 @@ def is_head_office(user):
     return user.is_superuser or user.is_staff or user.groups.filter(name="Head office").exists()
 
 
+def is_brand_manager(user):
+    """Brand manager: manages all outlets of one brand (never structure changes)."""
+    if not user.is_authenticated or is_head_office(user):
+        return False
+    profile = getattr(user, "outlet_manager_profile", None)
+    return bool(profile and profile.role == profile.Role.BRAND)
+
+
+def can_manage_structure(user):
+    """
+    Creating / editing / modifying brands and branches is reserved for
+    Head Office (higher authority). Managers never get this.
+    """
+    return is_head_office(user)
+
+
 def scoped_outlets(user):
     """
     Returns queryset of Outlets that the user is authorized to manage.
     Head office: all outlets.
+    Brand manager: all outlets of the assigned brand.
     Outlet manager: only assigned outlets in OutletManager profile.
     Others: empty queryset.
     """
@@ -28,7 +45,7 @@ def scoped_outlets(user):
 
     profile = getattr(user, "outlet_manager_profile", None)
     if profile:
-        return profile.outlets.all()
+        return profile.managed_outlets()
     return Outlet.objects.none()
 
 

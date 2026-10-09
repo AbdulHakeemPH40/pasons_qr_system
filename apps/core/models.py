@@ -451,10 +451,31 @@ class QrCode(TimeStampedModel):
 
 
 class OutletManager(TimeStampedModel):
-    """Outlet manager profile for role-based scoping in /panel/."""
+    """
+    Manager profile for role-based scoping in /panel/.
+
+    Two roles (brand/branch structural changes stay head-office only):
+    - outlet_manager: manages the assigned outlets (branches)
+    - brand_manager: manages ALL outlets of one brand
+    """
+
+    class Role(models.TextChoices):
+        OUTLET = "outlet_manager", "Outlet Manager"
+        BRAND = "brand_manager", "Brand Manager"
 
     user = models.OneToOneField(
         "auth.User", on_delete=models.CASCADE, related_name="outlet_manager_profile"
+    )
+    role = models.CharField(
+        max_length=20, choices=Role.choices, default=Role.OUTLET
+    )
+    brand = models.ForeignKey(
+        Brand,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="managers",
+        help_text="Set for brand managers: scope is all outlets of this brand",
     )
     outlets = models.ManyToManyField(Outlet, related_name="managers", blank=True)
     can_edit_contact = models.BooleanField(default=False)
@@ -464,7 +485,14 @@ class OutletManager(TimeStampedModel):
         verbose_name_plural = "Outlet Managers"
 
     def __str__(self):
-        return f"{self.user.username} (Manager)"
+        role = "Brand Manager" if self.role == self.Role.BRAND else "Manager"
+        return f"{self.user.username} ({role})"
+
+    def managed_outlets(self):
+        """Outlets in this manager's scope (all brand outlets for brand managers)."""
+        if self.role == self.Role.BRAND and self.brand_id:
+            return Outlet.objects.filter(brand_id=self.brand_id)
+        return self.outlets.all()
 
 
 class ChangeLog(models.Model):

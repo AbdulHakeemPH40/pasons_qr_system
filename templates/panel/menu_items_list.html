@@ -1,0 +1,92 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Menu Items</h1>
+    <p class="muted" style="margin: 4px 0 0;">Brand-level items are managed by Head Office. Branch managers can create branch versions and edit their own items.</p>
+  </div>
+  <div>
+    <a href="{% url 'panel_menu_item_add' %}" class="btn btn-primary btn-sm">+ Add Item</a>
+  </div>
+</div>
+
+<form method="get" style="display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); flex-wrap: wrap;">
+  <select name="outlet" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+    <option value="">All items in scope</option>
+    {% for o in outlets %}
+    <option value="{{ o.pk }}" {% if active_outlet == o.pk|stringformat:"s" %}selected{% endif %}>{{ o.official_name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+</form>
+
+<div style="overflow-x: auto;">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Category</th>
+        <th>Scope</th>
+        <th>Price</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>
+          <strong>{{ item.name_en }}</strong>
+          {% if item.name_ar %}<div class="caption muted" dir="rtl">{{ item.name_ar }}</div>{% endif %}
+          {% if item.overrides %}<div class="caption" style="color: var(--leaf);">Branch version of a brand item</div>{% endif %}
+        </td>
+        <td>{{ item.category.name_en }}</td>
+        <td>{{ item.outlet.official_name|default:"Whole brand" }}</td>
+        <td>
+          {% if item.offer_price %}
+            <del>{{ item.regular_price }}</del> <strong>{{ item.offer_price }}</strong> {{ item.currency }}
+          {% else %}
+            {{ item.regular_price }} {{ item.currency }}
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge-status {% if item.available %}badge-active{% else %}badge-inactive{% endif %}">
+            {% if item.available %}Available{% else %}Unavailable{% endif %}
+          </span>
+          {% if item.featured %}<span class="badge-status badge-active" style="margin-left: 4px;">Featured</span>{% endif %}
+        </td>
+        <td>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            {% if item.outlet_id or is_head_office %}
+            <a href="{% url 'panel_menu_item_edit' item.pk %}" class="btn btn-outline btn-sm">Edit</a>
+            <form method="post" action="{% url 'panel_menu_item_toggle' item.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-secondary btn-sm">{% if item.available %}Mark off{% else %}Mark on{% endif %}</button>
+            </form>
+            {% endif %}
+            {% if not item.outlet_id %}
+            <form method="post" action="{% url 'panel_menu_item_override' item.pk %}">
+              {% csrf_token %}
+              <select name="outlet" style="padding: 6px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px;">
+                {% for o in outlets %}
+                {% if o.brand_id == item.brand_id %}
+                <option value="{{ o.pk }}">{{ o.official_name }}</option>
+                {% endif %}
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-primary btn-sm">Branch version</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="muted" style="text-align: center; padding: var(--sp-4);">No menu items yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

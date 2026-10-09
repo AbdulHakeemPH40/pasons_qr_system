@@ -1,0 +1,113 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">{% if item %}Edit Menu Item: {{ item.name_en }}{% else %}Add Menu Item{% endif %}</h1>
+    <p class="muted" style="margin: 4px 0 0;">Leave the branch empty for a brand-level item (Head Office only). Branch managers pick their branch.</p>
+  </div>
+</div>
+
+<div class="glass" style="max-width: 650px; padding: var(--sp-4);">
+  <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+    {% csrf_token %}
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Brand</label>
+      <select name="brand" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        {% for b in brands %}
+        <option value="{{ b.pk }}" {% if item and item.brand_id == b.pk %}selected{% endif %}>{{ b.name_en }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Branch (blank = whole brand)</label>
+      <select name="outlet" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"
+              {% if not is_head_office %}required{% endif %}>
+        {% if is_head_office %}
+        <option value="">Whole brand</option>
+        {% endif %}
+        {% for o in outlets %}
+        <option value="{{ o.pk }}" {% if item and item.outlet_id == o.pk %}selected{% endif %}>{{ o.brand.name_en }} — {{ o.official_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Category</label>
+      <select name="category" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        {% for c in categories %}
+        <option value="{{ c.pk }}" {% if item and item.category_id == c.pk %}selected{% endif %}>{{ c.name_en }}{% if c.outlet %} ({{ c.outlet.official_name }}){% endif %}</option>
+        {% endfor %}
+      </select>
+      <input type="text" name="new_category" placeholder="…or type a new category name"
+             style="width: 100%; padding: 10px; margin-top: 6px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Item name</label>
+      <input type="text" name="name_en" value="{{ item.name_en|default:'' }}" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Item name (Arabic)</label>
+      <input type="text" name="name_ar" dir="rtl" value="{{ item.name_ar|default:'' }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Description</label>
+      <textarea name="description_en" rows="2" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">{{ item.description_en|default:'' }}</textarea>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Regular price (AED)</label>
+        <input type="number" step="0.01" name="regular_price" value="{{ item.regular_price|default:'' }}" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Offer price (blank = no offer)</label>
+        <input type="number" step="0.01" name="offer_price" value="{{ item.offer_price|default:'' }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Dietary</label>
+        <select name="dietary_type" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+          {% for val, label in dietary_types %}
+          <option value="{{ val }}" {% if item and item.dietary_type == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Spice level</label>
+        <select name="spice_level" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+          {% for val, label in spice_levels %}
+          <option value="{{ val }}" {% if item and item.spice_level == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Photo</label>
+      <input type="file" name="image" accept="image/*">
+    </div>
+
+    <div style="display: flex; gap: var(--sp-3);">
+      <label style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
+        <input type="checkbox" name="available" {% if not item or item.available %}checked{% endif %}> Available
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
+        <input type="checkbox" name="featured" {% if item and item.featured %}checked{% endif %}> Featured
+      </label>
+    </div>
+
+    <div style="display: flex; gap: var(--sp-2); margin-top: var(--sp-2);">
+      <button type="submit" class="btn btn-primary">{% if item %}Save Changes{% else %}Add Item{% endif %}</button>
+      <a href="{% url 'panel_menu_items' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

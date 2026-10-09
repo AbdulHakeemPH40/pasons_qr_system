@@ -1,0 +1,77 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Customer Feedback</h1>
+    <p class="muted" style="margin: 4px 0 0;">Ratings and comments collected from customer pages. Update the status and note the resolution.</p>
+  </div>
+</div>
+
+<form method="get" style="display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); flex-wrap: wrap;">
+  <select name="status" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+    <option value="">All statuses</option>
+    {% for val, label in statuses %}
+    <option value="{{ val }}" {% if active_status == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="outlet" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+    <option value="">All branches</option>
+    {% for o in outlets %}
+    <option value="{{ o.pk }}" {% if active_outlet == o.pk|stringformat:"s" %}selected{% endif %}>{{ o.official_name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+</form>
+
+<div style="overflow-x: auto;">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Rating</th>
+        <th>Category</th>
+        <th>Branch</th>
+        <th>Comment</th>
+        <th>Status</th>
+        <th>Update</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fb in feedback_rows %}
+      <tr>
+        <td>
+          <strong>{% for i in "12345" %}{% if forloop.counter <= fb.rating %}★{% else %}☆{% endif %}{% endfor %}</strong>
+          <div class="caption muted">{{ fb.customer_name|default:"Anonymous" }}</div>
+          <div class="caption muted">{{ fb.created_at|date:"Y-m-d H:i" }}</div>
+        </td>
+        <td>{{ fb.get_category_display }}</td>
+        <td>{{ fb.outlet.official_name|default:"Whole brand" }}</td>
+        <td class="caption">{{ fb.message|truncatechars:80 }}</td>
+        <td>
+          <span class="badge-status {% if fb.status == "new" %}badge-active{% else %}badge-inactive{% endif %}">
+            {{ fb.get_status_display }}
+          </span>
+        </td>
+        <td>
+          <form method="post" action="{% url 'panel_feedback_update' fb.pk %}" style="display: flex; flex-direction: column; gap: 6px; min-width: 150px;">
+            {% csrf_token %}
+            <select name="status" style="padding: 6px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px;">
+              {% for val, label in statuses %}
+              <option value="{{ val }}" {% if fb.status == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="resolution" value="{{ fb.resolution }}" placeholder="Resolution note"
+                   style="padding: 6px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px;">
+            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="muted" style="text-align: center; padding: var(--sp-4);">No feedback yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

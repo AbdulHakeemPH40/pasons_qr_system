@@ -1,0 +1,107 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">{% if target %}Edit User: {{ target.username }}{% else %}Add Staff User{% endif %}</h1>
+    <p class="muted" style="margin: 4px 0 0;">Roles decide what this person can do. Only Head Office creates brands and branches.</p>
+  </div>
+</div>
+
+<div class="glass" style="max-width: 650px; padding: var(--sp-4);">
+  <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+    {% csrf_token %}
+
+    {% if not target %}
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Username</label>
+      <input type="text" name="username" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+    {% endif %}
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 4px;">First name</label>
+        <input type="text" name="first_name" value="{{ target.first_name|default:'' }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Last name</label>
+        <input type="text" name="last_name" value="{{ target.last_name|default:'' }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+      </div>
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Email</label>
+      <input type="email" name="email" value="{{ target.email|default:'' }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Role</label>
+      <select name="role" id="role-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        <option value="head_office" {% if current_role == "head_office" %}selected{% endif %}>Head Office — full access, creates brands &amp; branches</option>
+        <option value="brand_manager" {% if current_role == "brand_manager" %}selected{% endif %}>Brand Manager — all branches of one brand</option>
+        <option value="outlet_manager" {% if not target or current_role == "outlet_manager" %}selected{% endif %}>Outlet Manager — selected branches only</option>
+      </select>
+    </div>
+
+    <div id="brand-field">
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Brand (for Brand Manager)</label>
+      <select name="brand" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        <option value="">— select brand —</option>
+        {% for b in brands %}
+        <option value="{{ b.pk }}" {% if current_brand and current_brand.pk == b.pk %}selected{% endif %}>{{ b.name_en }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div id="outlets-field">
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Branches (for Outlet Manager — hold Ctrl to select multiple)</label>
+      <select name="outlets" multiple size="6" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        {% for o in outlets %}
+        <option value="{{ o.pk }}" {% if o.pk in current_outlets %}selected{% endif %}>{{ o.brand.name_en }} — {{ o.official_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Password{% if target %} (leave blank to keep current){% endif %}</label>
+      <input type="password" name="password" {% if not target %}required{% endif %} style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+    </div>
+
+    <div style="display: flex; gap: var(--sp-2); margin-top: var(--sp-2);">
+      <button type="submit" name="action" value="save" class="btn btn-primary">{% if target %}Save Changes{% else %}Create User{% endif %}</button>
+      <a href="{% url 'panel_users' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+
+  {% if target %}
+  <div style="margin-top: var(--sp-4); padding-top: var(--sp-3); border-top: 1px solid rgba(0,0,0,0.08); display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" name="action" value="toggle_active" class="btn btn-secondary btn-sm">
+        {% if target.is_active %}Deactivate{% else %}Activate{% endif %}
+      </button>
+    </form>
+    <form method="post" onsubmit="return confirm('Delete user {{ target.username }}? This cannot be undone.');">
+      {% csrf_token %}
+      <button type="submit" name="action" value="delete" class="btn btn-outline btn-sm" style="color: #b3402a;">Delete User</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  (function () {
+    var roleSelect = document.getElementById('role-select');
+    var brandField = document.getElementById('brand-field');
+    var outletsField = document.getElementById('outlets-field');
+    function sync() {
+      var role = roleSelect.value;
+      brandField.style.display = role === 'brand_manager' ? '' : 'none';
+      outletsField.style.display = role === 'outlet_manager' ? '' : 'none';
+    }
+    roleSelect.addEventListener('change', sync);
+    sync();
+  })();
+</script>
+{% endblock %}

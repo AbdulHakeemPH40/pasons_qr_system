@@ -41,9 +41,11 @@
   </table>
 </div>
 
-{% if is_head_office %}
 <div class="glass" style="max-width: 650px; padding: var(--sp-4);">
   <h2 style="margin: 0 0 var(--sp-3); font-size: 1.1rem; color: var(--forest);">Set menu source</h2>
+  {% if not is_head_office %}
+  <p class="caption muted" style="margin: 0 0 var(--sp-2);">You can set the menu for your own branches. The brand-wide menu is managed by Head Office.</p>
+  {% endif %}
   <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
     {% csrf_token %}
     <div>
@@ -56,8 +58,10 @@
     </div>
     <div>
       <label style="display: block; font-weight: 600; margin-bottom: 4px;">Outlet (blank = brand source)</label>
-      <select name="outlet" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+      <select name="outlet" {% if not is_head_office %}required{% endif %} style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        {% if is_head_office %}
         <option value="">Whole brand</option>
+        {% endif %}
         {% for o in outlets %}
         <option value="{{ o.pk }}">{{ o.official_name }}</option>
         {% endfor %}
@@ -82,5 +86,4 @@
     <button type="submit" class="btn btn-primary">Save menu source</button>
   </form>
 </div>
-{% endif %}
 {% endblock %}

@@ -4,7 +4,6 @@
 {% block page_class %}page--wide{% endblock %}
 
 {% block extra_css %}
-<style>
   .panel-layout {
     display: grid;
     grid-template-columns: 240px 1fr;
@@ -13,6 +12,12 @@
     margin: var(--sp-4) auto;
     width: 100%;
     align-items: start;
+  }
+  /* Grid items default to min-width:auto, which lets wide content (tables)
+     stretch the track instead of scrolling. min-width:0 restores the scroll
+     wrappers inside .panel-main on narrow screens. */
+  .panel-sidebar, .panel-main {
+    min-width: 0;
   }
   .panel-sidebar {
     padding: var(--sp-3);
@@ -40,10 +45,17 @@
     padding: var(--sp-4);
     min-height: 500px;
   }
+  .panel-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
   .panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
     margin-bottom: var(--sp-4);
     border-bottom: 1px solid rgba(127, 160, 107, 0.2);
     padding-bottom: var(--sp-2);
@@ -79,9 +91,26 @@
   @media (max-width: 768px) {
     .panel-layout {
       grid-template-columns: 1fr;
+      margin: var(--sp-3) auto;
+      gap: var(--sp-3);
+    }
+    /* Sidebar stacks on top; the link list becomes a compact wrapping
+       grid so staff see content without scrolling past a tall nav. */
+    .panel-nav {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(9.5rem, 100%), 1fr));
+    }
+    .panel-nav form {
+      grid-column: 1 / -1;
+    }
+    .panel-main {
+      padding: var(--sp-3);
+      min-height: 0;
+    }
+    .panel-table th, .panel-table td {
+      padding: var(--sp-2);
     }
   }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -91,7 +120,7 @@
       <h2 style="font-size: 1.1rem; margin: 0; color: var(--forest);">Pasons Panel</h2>
       <p class="muted caption" style="margin: 2px 0 0;">{{ user.username }} · {% if is_head_office %}Head Office{% else %}Outlet Manager{% endif %}</p>
     </div>
-    <nav style="display: flex; flex-direction: column; gap: 4px;">
+    <nav class="panel-nav">
       <a href="{% url 'panel_dashboard' %}" class="{% if nav_active == 'dashboard' %}active{% endif %}">📊 Dashboard</a>
       {% if is_head_office %}
       <a href="{% url 'panel_brands' %}" class="{% if nav_active == 'brands' %}active{% endif %}">🏢 Brands</a>
@@ -100,9 +129,13 @@
       <a href="{% url 'panel_qrcodes' %}" class="{% if nav_active == 'qrcodes' %}active{% endif %}">🏁 QR Codes</a>
       <a href="{% url 'panel_specials' %}" class="{% if nav_active == 'specials' %}active{% endif %}">🌟 Specials</a>
       <a href="{% url 'panel_menus' %}" class="{% if nav_active == 'menus' %}active{% endif %}">📖 Menus</a>
+      <a href="{% url 'panel_menu_items' %}" class="{% if nav_active == 'menu_items' %}active{% endif %}">🍽️ Menu Items</a>
+      <a href="{% url 'panel_leads' %}" class="{% if nav_active == 'leads' %}active{% endif %}">📥 Leads</a>
+      <a href="{% url 'panel_feedback' %}" class="{% if nav_active == 'feedback' %}active{% endif %}">💬 Feedback</a>
       <a href="{% url 'panel_analytics' %}" class="{% if nav_active == 'analytics' %}active{% endif %}">📈 Analytics</a>
       {% if is_head_office %}
-      <a href="{% url 'panel_changelog' %}" class="{% if nav_active == 'changelog' %}active{% endif %}">📜 Change Log</a>
+      <a href="{% url 'panel_users' %}" class="{% if nav_active == 'users' %}active{% endif %}">👥 Users</a>
+      <a href="{% url 'panel_changelog' %}" class="{% if nav_active == 'changelog' %}active{% endif %}">📋 Change Log</a>
       {% endif %}
       <form method="post" action="{% url 'logout' %}" style="margin-top: var(--sp-3); padding-top: var(--sp-2); border-top: 1px solid rgba(0,0,0,0.08);">
         {% csrf_token %}
