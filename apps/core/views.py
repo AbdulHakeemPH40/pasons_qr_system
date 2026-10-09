@@ -8,6 +8,7 @@ Flow per scan:
 """
 
 import hashlib
+import json
 
 from django.conf import settings
 from django.db.models import Avg, Count
@@ -15,7 +16,7 @@ from django.http import HttpResponseGone, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from django.core.cache import cache
 from apps.analytics.models import ScanEvent, TapEvent
@@ -23,6 +24,7 @@ from apps.engagement.models import Feedback
 from apps.menu.models import MenuCategory, items_for
 
 from .models import Brand, Campaign, QrCode, SmartPage
+from .review_assist import suggest_variants
 from .templatetags.social_tags import circle_links, ig_handle
 
 DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -226,9 +228,7 @@ def smart_page(request, slug):
         "offers": offers,
         "menu": menu_groups,
         "menu_count": sum(len(g["items"]) for g in menu_groups),
-        "google_review_url": (
-            (outlet.google_review_url if outlet else "") or brand.google_review_url
-        ),
+        "google_review_url": _review_url(brand, outlet),
         "social": social,
         "instagram_handle": instagram_handle,
         "social_links": social_links,
@@ -236,12 +236,38 @@ def smart_page(request, slug):
             (outlet.whatsapp if outlet else "") or brand.default_whatsapp
         ),
         "phone": (outlet.phone if outlet else "") or brand.default_phone,
-        "maps_url": (outlet.google_maps_url if outlet else "") or "",
+        "maps_url": _maps_url(brand, outlet),
         "thanks": request.GET.get("thanks") == "1",
         "lang": lang,
         "dir": "rtl" if lang == "ar" else "ltr",
     }
     return render(request, "smart_page.html", context)
+
+
+def _review_url(brand, outlet):
+    """Google review link. Contract: leave Review URL empty and the link is
+    built from the Place ID. Outlet review URL -> Outlet Place ID ->
+    Brand review URL -> Brand Place ID -> Google search fallback."""
+    if outlet and outlet.google_review_url:
+        return outlet.google_review_url
+    if outlet and outlet.google_place_id:
+        return f"https://search.google.com/local/writereview?placeid={outlet.google_place_id}"
+    if brand.google_review_url:
+        return brand.google_review_url
+    if brand.google_place_id:
+        return f"https://search.google.com/local/writereview?placeid={brand.google_place_id}"
+    return f"https://www.google.com/search?q={brand.name_en}"
+
+
+def _maps_url(brand, outlet):
+    """Directions link: explicit maps URL first, else built from the Place ID."""
+    if outlet and outlet.google_maps_url:
+        return outlet.google_maps_url
+    if outlet and outlet.google_place_id:
+        return f"https://www.google.com/maps/search/?api=1&query_place_id={outlet.google_place_id}"
+    if brand.google_place_id:
+        return f"https://www.google.com/maps/search/?api=1&query_place_id={brand.google_place_id}"
+    return ""
 
 
 def _h12(value):
@@ -423,13 +449,7 @@ def qr_redirect(request, key):
 
     # Info strip parameters
     address_line = (outlet.address if outlet else "") or getattr(brand, "corporate_address", "")
-    maps_url = ""
-    if outlet and outlet.google_maps_url:
-        maps_url = outlet.google_maps_url
-    elif outlet and outlet.google_place_id:
-        maps_url = f"https://www.google.com/maps/search/?api=1&query_place_id={outlet.google_place_id}"
-    elif brand.google_place_id:
-        maps_url = f"https://www.google.com/maps/search/?api=1&query_place_id={brand.google_place_id}"
+    maps_url = _maps_url(brand, outlet)
 
     phone_number = (outlet.phone if outlet else "") or brand.default_phone
 
@@ -479,20 +499,93 @@ def qr_review_redirect(request, key):
         session_key=request.session.session_key or ""
     )
 
-    review_url = ""
-    if outlet and outlet.google_review_url:
-        review_url = outlet.google_review_url
-    elif outlet and outlet.google_place_id:
-        review_url = f"https://search.google.com/local/writereview?placeid={outlet.google_place_id}"
-    elif brand.google_review_url:
-        review_url = brand.google_review_url
-    elif brand.google_place_id:
-        review_url = f"https://search.google.com/local/writereview?placeid={brand.google_place_id}"
-
-    if not review_url:
-        review_url = f"https://www.google.com/search?q={brand.name_en}"
+    review_url = _review_url(brand, outlet)
 
     return redirect(review_url)
+
+
+# --------------------------------------------------------------------------
+# Review composer (spec section 39) — write here, get AI-polished variants,
+# copy one, then post it on Google. Google has no API to post reviews on a
+# guest's behalf, so the final post always happens on Google itself.
+# --------------------------------------------------------------------------
+
+def _composer_context(request, brand, outlet, back_url, open_url):
+    lang = _language(request)
+    return {
+        "brand": brand,
+        "outlet": outlet,
+        "back_url": back_url,
+        "google_open_url": open_url,
+        "assist_url": reverse("review_assist"),
+        "lang": lang,
+        "dir": "rtl" if lang == "ar" else "ltr",
+    }
+
+
+@require_GET
+def qr_review_write(request, key):
+    """Composer page for a scanned QR. The final button goes through
+    qr_review_redirect, so the Google tap stays tracked as before."""
+    qr = get_object_or_404(
+        QrCode.objects.select_related("outlet", "brand"), redirect_key=key, active=True
+    )
+    context = _composer_context(
+        request, qr.brand, qr.outlet,
+        back_url=reverse("qr_landing", args=[qr.redirect_key]),
+        open_url=reverse("qr_review", args=[qr.redirect_key]),
+    )
+    return render(request, "review_composer.html", context)
+
+
+@require_GET
+def smart_review_write(request, slug):
+    """Same composer reached from a Smart Page (brand or outlet)."""
+    page = get_object_or_404(
+        SmartPage.objects.select_related("brand", "outlet"), slug=slug, published=True
+    )
+    brand, outlet = page.brand, page.outlet
+    context = _composer_context(
+        request, brand, outlet,
+        back_url=reverse("smart_page", args=[slug]),
+        open_url=_review_url(brand, outlet),
+    )
+    return render(request, "review_composer.html", context)
+
+
+@require_POST
+def api_review_assist(request):
+    """POST {"text": "<half review>"} -> 6 improved versions (spec section 39).
+
+    Versions come from the LLM (MiMo first, then DeepSeek / Gemini) as plain
+    strings — no tone labels, no emojis. Without a key the draft is returned
+    lightly tidied (the guest's own words only). Light per-IP throttle.
+    """
+    if request.content_type == "application/json":
+        try:
+            payload = json.loads(request.body or b"{}")
+        except ValueError:
+            payload = {}
+    else:
+        payload = request.POST
+    text = (payload.get("text") or "").strip()
+
+    if len(text) < 3 or len(text) > 2000:
+        return JsonResponse(
+            {"error": "Write at least a few words (max 2000 characters)."},
+            status=400,
+        )
+
+    bucket = f"review-assist:{request.META.get('REMOTE_ADDR', '')}"
+    hits = cache.get(bucket, 0)
+    if hits >= 12:
+        return JsonResponse(
+            {"error": "Too many suggestions right now — try again in a minute."},
+            status=429,
+        )
+    cache.set(bucket, hits + 1, 60)
+
+    return JsonResponse(suggest_variants(text))
 
 
 @require_GET

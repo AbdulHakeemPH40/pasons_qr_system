@@ -146,11 +146,12 @@
         </div>
         <div class="review-cta">
           {% if google_review_url %}
-          <a class="btn btn-primary" href="{{ google_review_url }}" target="_blank" rel="noopener">Write a review</a>
+          <a class="btn btn-primary" href="{% url 'smart_review_write' page.slug %}">Write a review</a>
+          <a class="btn btn-secondary btn-sm" href="{{ google_review_url }}" target="_blank" rel="noopener">Open Google directly</a>
           {% else %}
           <a class="btn btn-primary" href="#feedback">Rate us</a>
           {% endif %}
-          <span class="review-note">Takes 30 seconds</span>
+          <span class="review-note">Write here, then post on Google</span>
         </div>
       </section>
       {% endif %}

@@ -50,14 +50,14 @@
       {# ---- action cards: brand badge + title + sub + chevron ---- #}
       <section class="outlet-actions" aria-label="Restaurant options">
         {% if has_review %}
-        <a href="{% url 'qr_review' qr.redirect_key %}" target="_blank" rel="noopener"
+        <a href="{% url 'qr_review_write' qr.redirect_key %}"
           class="btn-action reveal" style="--i: 1">
           <span class="btn-action__icon" aria-hidden="true">
             <img src="/media/icons/Google%20Review%20Star%20Badge.png" alt="" width="54" height="54" decoding="async">
           </span>
           <span class="btn-action__text">
             <span class="btn-action__title">REVIEW US ON GOOGLE</span>
-            <span class="btn-action__sub">Share your valuable review</span>
+            <span class="btn-action__sub">Write it here, polish it, post it on Google</span>
           </span>
           <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>

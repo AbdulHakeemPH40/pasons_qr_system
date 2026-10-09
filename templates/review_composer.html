@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static icon_tags %}
+
+{% block title %}Write a Review · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
+{% block description %}Write your review here, polish it, and post it on Google.{% endblock %}
+{% block body_class %}theme-warm{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen">
+
+      <header class="sheet-head">
+        <a href="{{ back_url }}" class="sheet-back" aria-label="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </a>
+        <div>
+          <h1 class="sheet-title">Write a Review</h1>
+          <span class="sheet-meta">{{ outlet.official_name|default:brand.name_en }}</span>
+        </div>
+      </header>
+
+      <p class="sheet-lead">Write a few words here &mdash; we polish them &mdash; then you post them on Google.</p>
+
+      {# ---- ONE box: whatever is in here is what gets posted ---- #}
+      <section class="composer-card reveal" style="--i: 0" aria-labelledby="review-label">
+        <div class="composer-head">
+          <h2 id="review-label" class="composer-label">Your review</h2>
+          <span class="composer-count" id="draft-count" aria-live="polite">0 / 2000</span>
+        </div>
+        <p class="composer-hint">A few words are enough &mdash; spelling and grammar do not matter.</p>
+        <form id="assist-form" method="post" action="{{ assist_url }}">
+          {% csrf_token %}
+          <label class="sr-only" for="review-draft">Your review</label>
+          <textarea id="review-draft" class="composer-textarea" rows="5" maxlength="2000"
+            placeholder="e.g. food was amazing loved the mandi service fast"></textarea>
+          <div class="composer-row composer-row--buttons">
+            <button type="button" class="btn btn-secondary btn-sm" id="copy-btn">Copy review</button>
+            <button type="submit" class="btn btn-primary" id="suggest-btn">Suggest improved versions</button>
+          </div>
+        </form>
+        <p class="composer-error" id="composer-error" role="alert" hidden></p>
+      </section>
+
+      {# ---- suggestions: tap one and it loads into the box above ---- #}
+      <section class="composer-variants reveal" style="--i: 1" id="variants-wrap" hidden aria-labelledby="variants-label">
+        <div class="section-head">
+          <h2 id="variants-label">Suggestions</h2>
+          <span class="section-action" id="variants-provider"></span>
+        </div>
+        <div id="variants" class="variant-list"></div>
+      </section>
+
+      {# ---- the Google hand-off ---- #}
+      <section class="composer-actions reveal" style="--i: 2" aria-label="Post your review">
+        <a class="btn btn-primary btn-block" id="google-open" href="{{ google_open_url }}"
+          target="_blank" rel="noopener">Open Google &amp; post my review</a>
+        <a class="composer-link" href="{{ google_open_url }}" target="_blank" rel="noopener">Open Google without text</a>
+        <p class="composer-hint composer-hint--fine">Your review is copied when you tap the button &mdash; paste it into Google&rsquo;s review box.</p>
+        <p class="composer-status" id="composer-status" aria-live="polite"></p>
+      </section>
+
+    </div>
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/review_composer.js' %}?v=2026-10-09-4" defer></script>
+{% endblock %}

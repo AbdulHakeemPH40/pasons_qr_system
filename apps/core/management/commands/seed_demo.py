@@ -1,9 +1,12 @@
 """
-Seed demo data for the Pasons Restaurant Smart QR platform.
+Seed data for the Pasons Restaurant Smart QR platform.
 
 Idempotent — safe to run multiple times. Creates:
   - Pasons Group + the 4 restaurant brands (plan change 2026-10-02)
-  - demo outlets (King Chef x2, Paramount x1; Milan Veg & Donar Istanbul brand-only)
+  - the 13 real branches (Google Place IDs document, 2026-10-09):
+    King Chef x8, Milan Veg x3, Paramount x1, Donar Istanbul x1 —
+    each with its verified Google Place ID and an empty Review URL
+    (the review link is built from the Place ID)
   - brand-level Smart Pages + outlet Smart Pages, with the full
     14-module set in the recommended order (spec sections 9-11)
   - demo menus (Milan Veg vegetarian, Donar Istanbul grill-oriented)
@@ -66,28 +69,12 @@ BRANDS = [
             "youtube": "https://youtube.com/@kingchefuae",
             "x": "https://x.com/kingchefuae",
         },
-        "review": "https://g.page/r/kingchef-demo/review",
+        # Real branch Place IDs verified 2026-10-09 (Google Place IDs –
+        # Restaurant Branches.md). Review URL stays empty: the review link is
+        # built from the Place ID. A brand-level Place ID can be added later in
+        # the panel (Brands screen) and acts as the fallback.
+        "review": "",
         "outlets": [
-            {
-                "code": "KINGCHEF-DEIRA",
-                "official_name": "King Chef — Deira",
-                "city": "Deira",
-                "emirate": "Dubai",
-                "address": "Al Rigga Road, Deira, Dubai",
-                "maps": "https://maps.google.com/?q=Deira+Dubai",
-                "phone": "04 220 0002",
-                "whatsapp": "97142200002",
-            },
-            {
-                "code": "KINGCHEF-ALQUOZ",
-                "official_name": "King Chef — Al Quoz",
-                "city": "Al Quoz",
-                "emirate": "Dubai",
-                "address": "Street 8, Al Quoz Industrial 1, Dubai",
-                "maps": "https://maps.google.com/?q=Al+Quoz+Dubai",
-                "phone": "04 220 0003",
-                "whatsapp": "97142200003",
-            },
             {
                 "code": "KINGCHEF-INTLCITY",
                 "slug": "international-city",
@@ -95,24 +82,103 @@ BRANDS = [
                 "city": "International City",
                 "emirate": "Dubai",
                 "address": "France Cluster, International City, Dubai",
-                "maps": "https://maps.google.com/?q=King+Chef+International+City+Dubai",
+                "maps": "",
                 "phone": "04 220 0011",
                 "whatsapp": "97142200011",
-                "google_place_id": "ChIJ-kingchef-intl-city-demo",
-                "google_review_url": "https://search.google.com/local/writereview?placeid=ChIJ-kingchef-intl-city-demo",
+                "google_place_id": "ChIJDX8qpTRnXz4RmYFym3s39bA",
+                "google_review_url": "",
                 "instagram_url": "https://instagram.com/kingchef.internationalcity",
             },
             {
-                "code": "KINGCHEF-ALNAHDA",
-                "slug": "al-nahda",
-                "official_name": "King Chef — Al Nahda",
-                "city": "Al Nahda",
+                "code": "KINGCHEF-MUHAISINAH",
+                "slug": "muhaisinah",
+                "official_name": "King Chef — Muhaisinah",
+                "city": "Muhaisinah",
                 "emirate": "Dubai",
-                "address": "Al Nahda 2, Dubai",
-                "maps": "https://maps.google.com/?q=King+Chef+Al+Nahda+Dubai",
-                "phone": "04 220 0012",
-                "whatsapp": "97142200012",
-                # Intentionally no review URL or Place ID — panel must warn of brand fallback.
+                "address": "Muhaisinah, Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJz3xD_CdcXz4RpwFnb5EOOMc",
+                "google_review_url": "",
+            },
+            {
+                "code": "KINGCHEF-QUSAIS",
+                "slug": "al-qusais",
+                "official_name": "King Chef — Al Qusais – Lomi Hamed",
+                "city": "Al Qusais",
+                "emirate": "Dubai",
+                "address": "Al Qusais Industrial 3, Dubai",
+                "maps": "",
+                "phone": "04 220 0013",
+                "whatsapp": "97142200013",
+                "google_place_id": "ChIJ2zV-3g9dXz4RX60t4_6MqKo",
+                "google_review_url": "",
+            },
+            {
+                "code": "KINGCHEF-ALQUOZ-IND2",
+                "slug": "al-quoz-ind-2",
+                "official_name": "King Chef — Al Quoz Ind-2",
+                "city": "Al Quoz",
+                "emirate": "Dubai",
+                "address": "Al Quoz Industrial 2, Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJXRPz825pXz4RPqjf3zvWWbk",
+                "google_review_url": "",
+            },
+            {
+                "code": "KINGCHEF-ALQUOZ-PARSONS",
+                "slug": "al-quoz-pasons-building",
+                "official_name": "King Chef — Al Quoz – Pasons Building",
+                "city": "Al Quoz",
+                "emirate": "Dubai",
+                "address": "Pasons Building, Al Quoz, Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJX1SyzPFpXz4RRPHZ9lrVcPk",
+                "google_review_url": "",
+            },
+            {
+                "code": "KINGCHEF-ALQUOZ",
+                "slug": "al-quoz",
+                "official_name": "King Chef — Al Quoz",
+                "city": "Al Quoz",
+                "emirate": "Dubai",
+                "address": "Street 8, Al Quoz Industrial 1, Dubai",
+                "maps": "",
+                "phone": "04 220 0003",
+                "whatsapp": "97142200003",
+                "google_place_id": "ChIJdUuEQIlpXz4RlwdRP3gfv04",
+                "google_review_url": "",
+            },
+            {
+                "code": "KINGCHEF-SHAJARAT-DIP2",
+                "slug": "shajarat-dip-2",
+                "official_name": "King Chef — Shajarat – DIP-2",
+                "city": "Dubai Investment Park 2",
+                "emirate": "Dubai",
+                "address": "Shajarat, Dubai Investment Park 2 (DIP-2), Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJjR76pQpzXz4RR3qeYf_Za3w",
+                "google_review_url": "",
+            },
+            {
+                "code": "KINGCHEF-PARSONS-DIP2",
+                "slug": "pasons-dip-2",
+                "official_name": "King Chef — Pasons – DIP-2",
+                "city": "Dubai Investment Park 2",
+                "emirate": "Dubai",
+                "address": "Pasons, Dubai Investment Park 2 (DIP-2), Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJk1l3QUJyXz4RwMWZT5oCABY",
+                "google_review_url": "",
             },
         ],
         "menu": {
@@ -154,17 +220,20 @@ BRANDS = [
             "facebook": "https://facebook.com/paramountuae",
             "youtube": "https://youtube.com/@paramountuae",
         },
-        "review": "https://g.page/r/paramount-demo/review",
+        "review": "",
         "outlets": [
             {
-                "code": "PARAMOUNT-MARINA",
-                "official_name": "Paramount — Dubai Marina",
-                "city": "Dubai Marina",
+                "code": "PARAMOUNT-QUSAIS",
+                "slug": "al-qusais",
+                "official_name": "Paramount — Al Qusais",
+                "city": "Al Qusais",
                 "emirate": "Dubai",
-                "address": "Marina Walk, Dubai Marina, Dubai",
-                "maps": "https://maps.google.com/?q=Dubai+Marina",
-                "phone": "04 330 0002",
-                "whatsapp": "97143300002",
+                "address": "Al Qusais, Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJj5xHF1ddXz4RefV0z65m-SQ",
+                "google_review_url": "",
             },
         ],
         "menu": {
@@ -201,8 +270,48 @@ BRANDS = [
             "instagram_followers": "5.2K",
             "facebook": "https://facebook.com/milanveguae",
         },
-        "review": "https://g.page/r/milanveg-demo/review",
-        "outlets": [],  # brand-only pilot (spec section 42 Pilot B)
+        "review": "",
+        "outlets": [
+            {
+                "code": "MILANVEG-MUHAISNAH",
+                "slug": "muhaisnah",
+                "official_name": "Milan Veg — Muhaisnah",
+                "city": "Muhaisnah",
+                "emirate": "Dubai",
+                "address": "Muhaisnah, Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJt9zECeBfXz4Rgl9KfRnfPLk",
+                "google_review_url": "",
+            },
+            {
+                "code": "MILANVEG-QUSAIS",
+                "slug": "al-qusais",
+                "official_name": "Milan Veg — Al Qusais",
+                "city": "Al Qusais",
+                "emirate": "Dubai",
+                "address": "Al Qusais, Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJPesrN31dXz4RauFPfS7AFxE",
+                "google_review_url": "",
+            },
+            {
+                "code": "MILANVEG-KARAMA",
+                "slug": "karama",
+                "official_name": "Milan Veg — Karama",
+                "city": "Karama",
+                "emirate": "Dubai",
+                "address": "Karama, Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJTfp6HtdCXz4RALlvr6801HQ",
+                "google_review_url": "",
+            },
+        ],  # real branches per the Place ID document
         "menu": {
             "Vegetarian": [
                 ("Paneer Tikka Masala", "بانير تكا مسالا", 34.00, None, "veg", "medium"),
@@ -239,8 +348,22 @@ BRANDS = [
             "tiktok": "https://tiktok.com/@donaristanbuluae",
             "facebook": "https://facebook.com/donaristanbuluae",
         },
-        "review": "https://g.page/r/donaristanbul-demo/review",
-        "outlets": [],  # brand-only
+        "review": "",
+        "outlets": [
+            {
+                "code": "DONARIST-LULU",
+                "slug": "lulu-village",
+                "official_name": "Donar Istanbul — Lulu Center – Lulu Village",
+                "city": "Lulu Village",
+                "emirate": "Dubai",
+                "address": "Lulu Center, Lulu Village, Dubai",
+                "maps": "",
+                "phone": "",
+                "whatsapp": "",
+                "google_place_id": "ChIJv-MPcKhfXz4RCNoMBOq6O6U",
+                "google_review_url": "",
+            },
+        ],  # real branch per the Place ID document
         "menu": {
             "Grill": [
                 ("Donar Kebab Plate", "طبق دونار كباب", 42.00, None, "non_veg", "mild"),
@@ -406,11 +529,11 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Seed complete — 4 brands ready."))
 
     def _seed_kingchef_fixtures(self, brand, now):
-        """Acceptance fixtures: International City and Al Nahda."""
+        """Acceptance fixtures: International City and Al Qusais."""
         intl = Outlet.objects.get(code="KINGCHEF-INTLCITY")
-        nahda = Outlet.objects.get(code="KINGCHEF-ALNAHDA")
+        qusais = Outlet.objects.get(code="KINGCHEF-QUSAIS")
         intl_page = SmartPage.objects.get(outlet=intl)
-        nahda_page = SmartPage.objects.get(outlet=nahda)
+        qusais_page = SmartPage.objects.get(outlet=qusais)
 
         self._make_qr(
             "KINGCHEF-INTLCITY-TABLE-001",
@@ -418,9 +541,9 @@ class Command(BaseCommand):
             redirect_key="kcic-table-001",
         )
         self._make_qr(
-            "KINGCHEF-ALNAHDA-ENTRANCE-001",
-            brand, nahda, nahda_page, "entrance", "Main entrance",
-            redirect_key="kcnahda-entrance",
+            "KINGCHEF-QUSAIS-TABLE-004",
+            brand, qusais, qusais_page, "table", "Table 4",
+            redirect_key="kcqusais-table-004",
         )
 
         MenuSource.objects.update_or_create(

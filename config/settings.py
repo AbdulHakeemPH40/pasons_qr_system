@@ -11,6 +11,49 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_env_file(path: Path) -> None:
+    """Load KEY=VALUE pairs from a .env file into os.environ.
+
+    Stdlib only (no python-dotenv dependency). The .env file is
+    authoritative for every key it sets with a real value: it overwrites
+    whatever is in the environment, so the dev autoreloader (which passes
+    its environment down to every restarted child) never keeps a stale
+    value after the file is edited. Blank values are placeholders and only
+    fill a missing variable. Lines starting with '#' and blank lines are
+    ignored.
+    """
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip().removeprefix("export ").strip()
+        if not key:
+            continue
+        value = value.strip()
+        if value:
+            os.environ[key] = value
+        else:
+            os.environ.setdefault(key, "")
+
+
+_load_env_file(BASE_DIR / ".env")
+
+# Editing .env should restart the dev server automatically, like a code
+# change (runserver only watches code otherwise).
+try:
+    from django.utils.autoreload import autoreload_started
+
+    def _watch_env_file(sender, **kwargs):
+        sender.extra_files.add(BASE_DIR / ".env")
+
+    autoreload_started.connect(_watch_env_file, dispatch_uid="pasons_watch_env_file")
+except Exception:  # pragma: no cover - autoreload only exists under runserver
+    pass
+
 # --- security ------------------------------------------------------------
 SECRET_KEY = os.environ.get(
     "SECRET_KEY",

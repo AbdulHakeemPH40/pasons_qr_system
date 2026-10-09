@@ -22,15 +22,19 @@ body.theme-warm::before { display: none; }
 .ambient-waves,
 body.theme-warm .ambient-waves { display: none; }
 
-/* Generated art fills the phone screen only. A fixed layer, not a
-   scrolling background, so the green corners stay on the frame edges
-   while the cards scroll over the cream middle. */
+/* Generated art fills the phone screen only. The layer is PINNED
+   (position: fixed): the green corners stay on the frame edges while the
+   cards scroll over the cream middle — the background never scrolls with
+   the content. On real phones the fixed layer pins to the viewport (the
+   screen IS the viewport). Inside the desktop mock frame, .device carries
+   a translateZ(0) containing block (see the min-width: 860px block below)
+   so the layer pins to the phone body, box-matched to the screen. */
 body.theme-warm .device-screen {
   background: transparent;
 }
 body.theme-warm .device-screen::before {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
@@ -39,6 +43,20 @@ body.theme-warm .device-screen::before {
 body.theme-warm .device-screen > * {
   position: relative;
   z-index: 1;
+}
+
+/* Inside the desktop mock frame, pin the background layer to the phone
+   body: translateZ(0) makes .device the containing block of the fixed
+   layer, and .device's padding box (border-box 390x844 minus the 11px
+   bezel = 368x822) is exactly the screen box. The layer gets the screen
+   radius too — a fixed layer is not clipped by the screen's overflow. */
+@media (min-width: 860px) {
+  body.theme-warm .device {
+    transform: translateZ(0);
+  }
+  body.theme-warm .device-screen::before {
+    border-radius: 46px;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -81,14 +99,24 @@ body.theme-warm .identity-card {
 /* Home screen matches the reference: logo, name, place, three contact
    circles, then the five buttons. The block scales to the phone height
    so the game button stays inside the frame. It does not scroll. */
+/* The container query box lives on .device, NOT on .device-screen: the
+   screen is the scroller, and container-type implies layout containment
+   which makes an element the containing block for fixed descendants —
+   on the scroller that would translate the pinned background with the
+   scroll again. cqh values are unchanged: .device's content box is the
+   screen box (368x822 in the frame, 100dvh on real phones). */
+body.theme-warm .device:has(.outlet-actions) {
+  container-type: size;
+}
+
 body.theme-warm .device-screen:has(.outlet-actions) {
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   gap: clamp(6px, 1.2cqh, 12px);
   padding: 1.7rem 1rem 0.7rem;
-  container-type: size;
   height: 100%;
   min-height: 0;
 }
@@ -149,7 +177,10 @@ body.theme-warm .device-screen:has(.outlet-actions) .contact-circle--call .icon 
 }
 
 body.theme-warm .device-screen:has(.outlet-actions) .outlet-actions {
-  flex: 1 1 auto;
+  /* grow to fill the frame when there is room, but never shrink below
+     the cards' own size — when the five cards don't fit, the screen
+     scrolls over the pinned background instead of squashing them */
+  flex: 1 0 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -674,6 +705,216 @@ body.theme-warm .page--glass .dish-card:active {
     transition: none;
   }
   body.theme-warm .page--glass .dish-card:active {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   REVIEW COMPOSER — write here, polish, copy, post on Google (spec §39)
+   ========================================================================== */
+
+body.theme-warm .sheet-lead {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+body.theme-warm .composer-card {
+  margin-top: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--r-xl);
+  background: var(--card-white, #fff);
+  border: 1px solid var(--glass-border-alpha);
+  box-shadow: var(--shadow-card);
+}
+
+body.theme-warm .composer-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+body.theme-warm .composer-label {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+body.theme-warm .composer-hint {
+  margin: var(--sp-1) 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+body.theme-warm .composer-hint--fine {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-caption);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+body.theme-warm .composer-hint--fine a {
+  color: var(--leaf);
+  font-weight: 700;
+}
+
+body.theme-warm .composer-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--sp-3);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--white);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-primary);
+  resize: vertical;
+  transition: border-color var(--t-quick) var(--ease-out),
+              box-shadow var(--t-quick) var(--ease-out);
+}
+
+body.theme-warm .composer-textarea:focus {
+  outline: none;
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px var(--chip-ai-bg);
+}
+
+body.theme-warm .composer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+
+/* Copy (left) + Suggest (right), side by side under the box. */
+body.theme-warm .composer-row--buttons {
+  align-items: stretch;
+}
+
+body.theme-warm .composer-row--buttons .btn {
+  margin-top: 0;
+}
+
+body.theme-warm .composer-row--buttons .btn-sm {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+body.theme-warm .composer-row--buttons .btn-primary {
+  flex: 1 1 auto;
+}
+
+body.theme-warm .composer-count {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+body.theme-warm .composer-error {
+  margin: var(--sp-2) 0 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-chip);
+  background: rgba(179, 69, 47, 0.09);
+  color: #8c3a2b;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+body.theme-warm .composer-actions {
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+
+body.theme-warm .composer-link {
+  display: block;
+  text-align: center;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  color: var(--leaf);
+  text-decoration: none;
+}
+
+body.theme-warm .composer-link:hover {
+  text-decoration: underline;
+}
+
+body.theme-warm .composer-status {
+  margin: var(--sp-2) 0 0;
+  min-height: 1.2em;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--chip-ai-fg);
+}
+
+body.theme-warm .variant-list {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+/* Tap-to-use suggestion rows: one tap loads the text into the review box. */
+body.theme-warm .variant-row {
+  display: grid;
+  gap: var(--sp-1);
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-xl);
+  background: var(--card-white, #fff);
+  border: 1px solid var(--glass-border-alpha);
+  box-shadow: var(--shadow-card);
+  font: inherit;
+  cursor: pointer;
+  transition: transform var(--t-press) var(--ease-out),
+              border-color var(--t-quick) var(--ease-out),
+              box-shadow var(--t-quick) var(--ease-out);
+}
+
+body.theme-warm .variant-row:active {
+  transform: scale(0.98);
+}
+
+body.theme-warm .variant-row__text {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+body.theme-warm .variant-row__hint {
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+body.theme-warm .variant-row--used {
+  border-color: var(--sage);
+  box-shadow: 0 0 0 2px var(--chip-ai-bg);
+}
+
+body.theme-warm .variant-row--used .variant-row__hint {
+  color: var(--chip-ai-fg);
+}
+
+#variants-wrap[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.theme-warm .composer-textarea,
+  body.theme-warm .variant-row {
+    transition: none;
+  }
+  body.theme-warm .variant-row:active {
     transform: none;
   }
 }

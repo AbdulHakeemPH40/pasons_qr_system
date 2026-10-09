@@ -8,7 +8,7 @@
   <meta name="theme-color" content="{{ brand.brand_colors.primary|default:'#7FA06B' }}">
   <title>{% block title %}Pasons Smart QR{% endblock %}</title>
   <meta name="description" content="{% block description %}Pasons Group restaurant smart pages{% endblock %}">
-  {% with ASSET_V="2026-10-08-14" %}
+  {% with ASSET_V="2026-10-09-4" %}
   <link rel="preload" href="{% static 'css/tokens.css' %}?v={{ ASSET_V }}" as="style">
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v={{ ASSET_V }}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ ASSET_V }}">
@@ -32,6 +32,7 @@
         {% endif %}
       {% endif %}
     }
+    {% comment %}extra_css: emit bare CSS only — this block already renders inside a <style> element. Nested <style> tags corrupt the first rule and it gets dropped.{% endcomment %}
     {% block extra_css %}{% endblock %}
   </style>
 </head>
