@@ -1,0 +1,135 @@
+{% extends "panel/base_panel.html" %}
+
+{% block extra_css %}
+.spec-form { max-width: 680px; padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
+.spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.spec-grid--3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-2); }
+@media (max-width: 640px) { .spec-grid, .spec-grid--3 { grid-template-columns: 1fr; } }
+.spec-field label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+.spec-field input, .spec-field select, .spec-field textarea {
+  width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+  font-size: 14px; background: #fff; font-family: inherit;
+}
+.spec-field input[type="checkbox"] { width: auto; }
+.spec-field input[type="file"] { padding: 8px; border-style: dashed; }
+.spec-help { font-size: 12px; color: var(--muted, #6b7a6e); margin-top: 4px; }
+.spec-err { font-size: 12px; color: #B3261E; margin-top: 4px; font-weight: 600; }
+.spec-check { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.spec-preview { display: flex; align-items: center; gap: var(--sp-3); margin-top: 6px; }
+.spec-preview img { width: 96px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); }
+.spec-note { font-size: 12.5px; color: var(--muted, #6b7a6e); background: #F6F1E4; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+{% endblock %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">
+      {% if mode == "edit" %}Edit special{% else %}Add special{% endif %}
+    </h1>
+    <p class="muted" style="margin: 4px 0 0;">
+      Promo cards update on the customer specials page as soon as you save.
+    </p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="glass spec-form">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+  <div class="spec-err">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>
+  {% endif %}
+
+  <div class="spec-grid">
+    <div class="spec-field">
+      <label for="{{ form.brand.id_for_label }}">Brand</label>
+      {{ form.brand }}
+      {% for e in form.brand.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+    </div>
+    <div class="spec-field">
+      <label for="{{ form.outlet.id_for_label }}">Outlet (blank = whole brand)</label>
+      {{ form.outlet }}
+      {% for e in form.outlet.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+    </div>
+  </div>
+
+  <div class="spec-grid">
+    <div class="spec-field">
+      <label for="{{ form.kind.id_for_label }}">Card section</label>
+      {{ form.kind }}
+      <p class="spec-help">Signature dishes and offers may carry a price. Weekend specials never show one.</p>
+      {% for e in form.kind.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+    </div>
+    <div class="spec-field">
+      <label for="{{ form.display_order.id_for_label }}">Order in section</label>
+      {{ form.display_order }}
+      <p class="spec-help">Lower numbers slide first.</p>
+      {% for e in form.display_order.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+    </div>
+  </div>
+
+  <div class="spec-field">
+    <label for="{{ form.title_en.id_for_label }}">Dish name</label>
+    {{ form.title_en }}
+    {% for e in form.title_en.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+  </div>
+
+  <div class="spec-field">
+    <label for="{{ form.title_ar.id_for_label }}">Dish name (Arabic)</label>
+    {{ form.title_ar }}
+    {% for e in form.title_ar.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+  </div>
+
+  <div class="spec-field">
+    <label for="{{ form.description.id_for_label }}">Short description</label>
+    {{ form.description }}
+    <p class="spec-help">One line works best on the card.</p>
+    {% for e in form.description.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+  </div>
+
+  <div class="spec-field">
+    <label for="{{ form.image.id_for_label }}">Dish photo</label>
+    {{ form.image }}
+    <p class="spec-help">Landscape photos (4:3) look best. Cards without a photo use branded art.</p>
+    {% if special and special.image %}
+    <div class="spec-preview">
+      <img src="{{ special.image.url }}" alt="Current photo for {{ special.title_en }}">
+      <label class="spec-check" for="{{ form.image_clear.id_for_label }}">
+        {{ form.image_clear }} Remove current photo
+      </label>
+    </div>
+    {% endif %}
+    {% for e in form.image.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+  </div>
+
+  <div class="spec-grid--3">
+    <div class="spec-field">
+      <label for="{{ form.original_price.id_for_label }}">Original price</label>
+      {{ form.original_price }}
+      {% for e in form.original_price.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+    </div>
+    <div class="spec-field">
+      <label for="{{ form.offer_price.id_for_label }}">Offer price</label>
+      {{ form.offer_price }}
+      {% for e in form.offer_price.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+    </div>
+    <div class="spec-field">
+      <label for="{{ form.discount_label.id_for_label }}">Badge label</label>
+      {{ form.discount_label }}
+      {% for e in form.discount_label.errors %}<p class="spec-err">{{ e }}</p>{% endfor %}
+    </div>
+  </div>
+  <p class="spec-note">
+    Leave both prices blank to publish the card without a price. Offers with two prices show the
+    original struck through; the badge fills in automatically (for example 22% OFF) if left empty.
+  </p>
+
+  <label class="spec-check" for="{{ form.active.id_for_label }}">
+    {{ form.active }} Live on the customer page
+  </label>
+
+  <div style="display: flex; gap: var(--sp-2);">
+    <button type="submit" class="btn btn-primary">{% if mode == "edit" %}Save changes{% else %}Save special{% endif %}</button>
+    <a href="{% url 'panel_specials' %}" class="btn btn-outline">Cancel</a>
+  </div>
+</form>
+{% endblock %}

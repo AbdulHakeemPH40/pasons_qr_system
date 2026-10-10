@@ -4,7 +4,7 @@
 {% block title %}Write a Review · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
 {% block description %}Write your review here, polish it, and post it on Google.{% endblock %}
 {% block body_class %}theme-warm{% endblock %}
-{% block page_class %}page--device{% endblock %}
+{% block page_class %}page--device page--glass{% endblock %}
 
 {% block content %}
 <div class="device-stage">
@@ -55,8 +55,8 @@
 
       {# ---- the Google hand-off ---- #}
       <section class="composer-actions reveal" style="--i: 2" aria-label="Post your review">
-        <a class="btn btn-primary btn-block" id="google-open" href="{{ google_open_url }}"
-          target="_blank" rel="noopener">Open Google &amp; post my review</a>
+        <a class="btn btn-primary btn-block composer-google" id="google-open" href="{{ google_open_url }}"
+          target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>Open Google &amp; post my review</a>
         <a class="composer-link" href="{{ google_open_url }}" target="_blank" rel="noopener">Open Google without text</a>
         <p class="composer-hint composer-hint--fine">Your review is copied when you tap the button &mdash; paste it into Google&rsquo;s review box.</p>
         <p class="composer-status" id="composer-status" aria-live="polite"></p>

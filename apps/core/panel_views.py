@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
@@ -395,50 +395,93 @@ def models_Q_outlet_or_brand(user, outlets):
     return Q(outlet__in=outlets) | (Q(outlet__isnull=True) & Q(brand__in=brands))
 
 
+def _special_form_context(user):
+    outlets = scoped_outlets(user)
+    brands = scoped_brands(user)
+    return outlets, brands
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def panel_special_add(request):
-    user = request.user
-    outlets = scoped_outlets(user)
-    brands = scoped_brands(user)
-    if request.method == "POST":
-        title = (request.POST.get("title_en") or "").strip()
-        kind = request.POST.get("kind") or SpecialItem.Kind.SIGNATURE
-        brand = get_object_or_404(brands, pk=request.POST.get("brand"))
-        outlet = None
-        outlet_id = request.POST.get("outlet")
-        if outlet_id:
-            outlet = get_object_or_404(outlets, pk=outlet_id, brand=brand)
-        if not title:
-            messages.error(request, "A title is required.")
-        else:
-            special = SpecialItem(
-                brand=brand,
-                outlet=outlet,
-                kind=kind,
-                title_en=title,
-                title_ar=(request.POST.get("title_ar") or "").strip(),
-                description=(request.POST.get("description") or "").strip(),
-                discount_label=(request.POST.get("discount_label") or "").strip(),
-                active=True,
-            )
-            if kind != SpecialItem.Kind.WEEKEND:
-                if request.POST.get("original_price"):
-                    special.original_price = request.POST.get("original_price")
-                if request.POST.get("offer_price"):
-                    special.offer_price = request.POST.get("offer_price")
-            special.save()
-            log_change(user, "SPECIAL_CREATE", special.title_en, brand, outlet)
-            messages.success(request, f"Special “{special.title_en}” added.")
-            return redirect("panel_specials")
+    """Create one promo card (photo upload, optional price/offer)."""
+    from apps.menu.forms import SpecialItemForm
 
-    return render(request, "panel/special_add.html", {
+    user = request.user
+    outlets, brands = _special_form_context(user)
+    if request.method == "POST":
+        # Cross-scope submissions 404 instead of leaking a validation error.
+        outlet_id = request.POST.get("outlet")
+        if outlet_id and not outlets.filter(pk=outlet_id).exists():
+            raise Http404("Outlet is out of scope.")
+    form = SpecialItemForm(
+        request.POST or None, request.FILES or None,
+        brands=brands, outlets=outlets.select_related("brand"),
+    )
+    if request.method == "POST" and form.is_valid():
+        special = form.save()
+        log_change(user, "SPECIAL_CREATE", special.title_en, special.brand, special.outlet)
+        messages.success(request, f"Special “{special.title_en}” added.")
+        return redirect("panel_specials")
+
+    return render(request, "panel/special_form.html", {
         "nav_active": "specials",
         "is_head_office": is_head_office(user),
-        "brands": brands,
-        "outlets": outlets.select_related("brand"),
-        "kinds": SpecialItem.Kind.choices,
+        "form": form,
+        "mode": "add",
+        "special": None,
     })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def panel_special_edit(request, pk):
+    """Update one promo card — staff refresh cards dynamically as needed."""
+    from apps.menu.forms import SpecialItemForm
+
+    user = request.user
+    outlets, brands = _special_form_context(user)
+    special = get_object_or_404(
+        SpecialItem.objects.filter(models_Q_outlet_or_brand(user, outlets)), pk=pk
+    )
+    form = SpecialItemForm(
+        request.POST or None, request.FILES or None,
+        instance=special, brands=brands, outlets=outlets.select_related("brand"),
+    )
+    if request.method == "POST" and form.is_valid():
+        special = form.save()
+        log_change(user, "SPECIAL_UPDATE", special.title_en, special.brand, special.outlet)
+        messages.success(request, f"Special “{special.title_en}” updated.")
+        return redirect("panel_specials")
+
+    return render(request, "panel/special_form.html", {
+        "nav_active": "specials",
+        "is_head_office": is_head_office(user),
+        "form": form,
+        "mode": "edit",
+        "special": special,
+    })
+
+
+@login_required
+@require_POST
+def panel_special_toggle(request, pk):
+    """Publish / unpublish a promo card without deleting it."""
+    user = request.user
+    outlets = scoped_outlets(user)
+    special = get_object_or_404(
+        SpecialItem.objects.filter(models_Q_outlet_or_brand(user, outlets)), pk=pk
+    )
+    special.active = not special.active
+    special.save(update_fields=["active", "updated_at"])
+    log_change(
+        user,
+        "SPECIAL_ACTIVE" if special.active else "SPECIAL_HIDDEN",
+        special.title_en, special.brand, special.outlet,
+    )
+    state = "live" if special.active else "hidden"
+    messages.success(request, f"Special “{special.title_en}” is now {state}.")
+    return redirect("panel_specials")
 
 
 @login_required
@@ -458,17 +501,28 @@ def panel_menus(request):
                 "Only Head Office can change the brand-wide menu. "
                 "Select your branch to edit its menu."
             )
-        menu_type = request.POST.get("menu_type") or MenuSource.MenuType.EXTERNAL_URL
+        menu_type = request.POST.get("menu_type") or MenuSource.MenuType.PAGES
+        defaults = {
+            "menu_type": menu_type,
+            "menu_url": (request.POST.get("menu_url") or "").strip(),
+            "ordering_url": (request.POST.get("ordering_url") or "").strip(),
+            "active": True,
+        }
+        upload = request.FILES.get("menu_file")
+        if upload and not upload.name.lower().endswith(".pdf"):
+            messages.error(request, "The menu file must be a PDF document.")
+            return redirect("panel_menus")
+        if upload:
+            defaults["menu_file"] = upload
         source, _ = MenuSource.objects.update_or_create(
             brand=brand,
             outlet=outlet,
-            defaults={
-                "menu_type": menu_type,
-                "menu_url": (request.POST.get("menu_url") or "").strip(),
-                "ordering_url": (request.POST.get("ordering_url") or "").strip(),
-                "active": True,
-            },
+            defaults=defaults,
         )
+        if request.POST.get("menu_file_clear") and source.menu_file:
+            source.menu_file.delete(save=False)
+            source.menu_file = ""
+            source.save(update_fields=["menu_file", "updated_at"])
         log_change(user, "MENU_SOURCE", str(source), brand, outlet)
         messages.success(request, "Menu source saved.")
         return redirect("panel_menus")

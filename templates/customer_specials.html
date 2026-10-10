@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load icon_tags %}
+{% load static icon_tags %}
 
 {% block title %}Specials · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
 {% block body_class %}theme-warm{% endblock %}
@@ -17,93 +17,129 @@
         </a>
         <div>
           <h1 class="sheet-title">Our specials</h1>
-          <span class="sheet-meta">{{ brand.name_en }}</span>
+          <span class="sheet-meta">
+            {{ brand.name_en }}
+            {% if last_updated %}<span class="sheet-updated">· updated {{ last_updated|date:"j M" }}</span>{% endif %}
+          </span>
         </div>
-        <span class="sheet-side"></span>
+        <span class="sheet-side">
+          {% if live_count %}<span class="chip chip--open chip--sm">{{ live_count }} live</span>{% endif %}
+        </span>
       </header>
 
-      <section aria-labelledby="sig-label">
-        <div class="section-head">
-          <h2 id="sig-label" class="section-label">Signature dishes</h2>
-          <span class="caption">Chef's pick</span>
-        </div>
-        <div class="dish-stack">
-          {% for item in signatures %}
-          <article class="dish-card glass glass--strong">
-            {% if item.image %}
-            <img src="{{ item.image.url }}" alt="" width="72" height="72" loading="lazy">
-            {% else %}
-            <span class="dish-photo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10h16v2a8 8 0 01-16 0v-2z"/><path d="M8 10V7M12 10V6M16 10V7"/></svg></span>
-            {% endif %}
-            <div class="dish-body">
-              <h3>{{ item.title_en }}</h3>
-              {% if item.description %}<p>{{ item.description }}</p>{% endif %}
-              {% if item.offer_price %}<p class="dish-price">AED {{ item.offer_price }}</p>{% endif %}
+      {% if spotlight %}
+      <section class="spot" aria-roledescription="carousel" aria-label="Featured specials today">
+        <div class="spot-track" data-spot-track>
+          {% for item in spotlight %}
+          <div class="spot-slide" role="group" aria-roledescription="slide"
+               aria-label="{{ forloop.counter }} of {{ spotlight|length }}: {{ item.title_en }}">
+            <div class="spot-media">
+              {% if item.image %}
+              {# eager: hero slides live in a horizontal scroller; lazy images decode too late and a fast swipe would show an empty slide #}
+              <img src="{{ item.image.url }}" alt="{{ item.title_en }}" loading="eager"{% if forloop.first %} fetchpriority="high"{% endif %}>
+              {% else %}
+              <span class="promo-art promo-art--{{ item.kind }}" aria-hidden="true">
+                {% if item.kind == "weekend" %}
+                <svg viewBox="0 0 24 24"><path d="M8 4v3M16 4v3M5 9h14v10a1 1 0 01-1 1H6a1 1 0 01-1-1V9z"/><path d="M5 13h14"/></svg>
+                {% elif item.kind == "offer" %}
+                <svg viewBox="0 0 24 24"><path d="M4 12l8-8h6v6l-8 8-6-6z"/><circle cx="15.5" cy="8.5" r="1"/></svg>
+                {% else %}
+                <svg viewBox="0 0 24 24"><path d="M4 10h16v2a8 8 0 01-16 0v-2z"/><path d="M8 10V7M12 10V6M16 10V7"/></svg>
+                {% endif %}
+              </span>
+              {% endif %}
             </div>
-          </article>
-          {% empty %}
-          <p class="empty-note glass">No signature dishes listed right now.</p>
+            <div class="spot-scrim" aria-hidden="true"></div>
+            <div class="spot-copy">
+              <span class="spot-kind">{{ item.get_kind_display }}</span>
+              <h2 class="spot-title">{{ item.title_en }}</h2>
+              {% if item.description %}<p class="spot-desc">{{ item.description }}</p>{% endif %}
+              <div class="spot-foot">{% if item.discount_label %}<span class="spot-badge">{{ item.discount_label }}</span>{% endif %}{% if item.offer_price %}<span class="spot-price">{{ item.currency }} {{ item.offer_price }}{% if item.original_price %} <del>{{ item.original_price }}</del>{% endif %}</span>{% endif %}</div>
+            </div>
+          </div>
           {% endfor %}
         </div>
-      </section>
-
-      <section aria-labelledby="week-label">
-        <div class="section-head">
-          <h2 id="week-label" class="section-label">Weekend specials</h2>
-          <span class="chip chip--gold chip--sm">This week</span>
-        </div>
-        <div class="dish-stack">
-          {% for item in weekend %}
-          <article class="dish-card glass glass--strong">
-            {% if item.image %}
-            <img src="{{ item.image.url }}" alt="" width="72" height="72" loading="lazy">
-            {% else %}
-            <span class="dish-photo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 4v3M16 4v3M5 9h14v10a1 1 0 01-1 1H6a1 1 0 01-1-1V9z"/><path d="M5 13h14"/></svg></span>
-            {% endif %}
-            <div class="dish-body">
-              <h3>{{ item.title_en }}</h3>
-              {% if item.description %}<p>{{ item.description }}</p>{% endif %}
-            </div>
-          </article>
-          {% empty %}
-          <p class="empty-note glass">No weekend special this week.</p>
+        {% if spotlight|length > 1 %}
+        <div class="spot-dots">
+          {% for item in spotlight %}
+          <button type="button" class="spot-dot" data-spot-dot
+                  aria-label="Show special {{ forloop.counter }}: {{ item.title_en }}"></button>
           {% endfor %}
         </div>
+        {% endif %}
       </section>
+      {% endif %}
 
-      <section aria-labelledby="offer-label">
+      {% for section in sections %}
+      <section class="spec-section" aria-labelledby="spec-label-{{ section.key }}">
         <div class="section-head">
-          <h2 id="offer-label" class="section-label">Limited offers</h2>
-          <span class="chip chip--open chip--sm">Save today</span>
+          <h2 id="spec-label-{{ section.key }}" class="section-label">{{ section.label }}</h2>
+          <span class="chip {{ section.chip_class }} chip--sm">{{ section.chip }}</span>
+          <span class="row-nav">
+            <button type="button" class="row-arrow" data-row-prev aria-label="Scroll {{ section.label }} left">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button type="button" class="row-arrow" data-row-next aria-label="Scroll {{ section.label }} right">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </span>
         </div>
-        <div class="dish-stack">
-          {% for item in offers %}
-          <article class="dish-card glass glass--strong">
-            {% if item.image %}
-            <img src="{{ item.image.url }}" alt="" width="72" height="72" loading="lazy">
-            {% else %}
-            <span class="dish-photo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12l8-8h6v6l-8 8-6-6z"/><circle cx="15.5" cy="8.5" r="1"/></svg></span>
-            {% endif %}
-            <div class="dish-body">
-              <div class="dish-top">
-                <h3>{{ item.title_en }}</h3>
-                {% if item.discount_label %}<span class="chip chip--gold chip--sm">{{ item.discount_label }}</span>{% endif %}
+
+        <div class="snap-wrap" data-row-wrap>
+          <div class="snap-row" data-row>
+            {% for item in section.items %}
+            <article class="promo-card" style="--i:{{ forloop.counter0 }}">
+              <div class="promo-media">
+                {% if item.image %}
+                <img src="{{ item.image.url }}" alt="{{ item.title_en }}" loading="lazy">
+                {% else %}
+                <span class="promo-art promo-art--{{ section.key }}" aria-hidden="true">
+                  {% if section.key == "weekend" %}
+                  <svg viewBox="0 0 24 24"><path d="M8 4v3M16 4v3M5 9h14v10a1 1 0 01-1 1H6a1 1 0 01-1-1V9z"/><path d="M5 13h14"/></svg>
+                  {% elif section.key == "offer" %}
+                  <svg viewBox="0 0 24 24"><path d="M4 12l8-8h6v6l-8 8-6-6z"/><circle cx="15.5" cy="8.5" r="1"/></svg>
+                  {% else %}
+                  <svg viewBox="0 0 24 24"><path d="M4 10h16v2a8 8 0 01-16 0v-2z"/><path d="M8 10V7M12 10V6M16 10V7"/></svg>
+                  {% endif %}
+                </span>
+                {% endif %}
+                {% if item.discount_label %}<span class="promo-badge">{{ item.discount_label }}</span>{% endif %}
               </div>
-              {% if item.description %}<p>{{ item.description }}</p>{% endif %}
-              <p class="dish-price">
-                {% if item.original_price %}<del>AED {{ item.original_price }}</del>{% endif %}
-                <span>AED {{ item.offer_price }}</span>
-              </p>
-            </div>
-          </article>
-          {% empty %}
-          <p class="empty-note glass">No offers this week.</p>
-          {% endfor %}
+              <div class="promo-body">
+                <h3 class="promo-title">{{ item.title_en }}</h3>
+                {% if item.description %}<p class="promo-desc">{{ item.description }}</p>{% endif %}
+                <div class="promo-foot">
+                  {% if item.offer_price %}
+                  <span class="promo-price">{{ item.currency }} {{ item.offer_price }}</span>
+                  {% if item.original_price %}<del class="promo-was">{{ item.currency }} {{ item.original_price }}</del>{% endif %}
+                  {% elif item.original_price %}
+                  <span class="promo-price">{{ item.currency }} {{ item.original_price }}</span>
+                  {% else %}
+                  <span class="promo-ask">Ask in store</span>
+                  {% endif %}
+                </div>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
         </div>
       </section>
+      {% empty %}
+      <div class="spec-empty glass">
+        <span class="spec-empty-art" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 10h16v2a8 8 0 01-16 0v-2z"/><path d="M8 10V7M12 10V6M16 10V7"/></svg>
+        </span>
+        <h2>No specials today</h2>
+        <p>New dishes and offers land here as soon as the kitchen publishes them.</p>
+      </div>
+      {% endfor %}
 
     </div>
     <div class="device-home-indicator" aria-hidden="true"></div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/specials_carousel.js' %}?v=2026-10-10-3" defer></script>
 {% endblock %}

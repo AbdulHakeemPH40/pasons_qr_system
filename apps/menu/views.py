@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.db.models import Q
 
 from apps.core.models import QrCode
-from apps.menu.models import SpecialItem, MenuSource
+from apps.menu.models import SpecialItem, MenuSource, items_for
 from apps.analytics.models import TapEvent
 
 
@@ -39,6 +39,41 @@ def customer_specials(request, key):
     weekends = resolve_specials_group(base_specials, SpecialItem.Kind.WEEKEND, outlet)
     offers = resolve_specials_group(base_specials, SpecialItem.Kind.OFFER, outlet)
 
+    # Sections drive the sliding card rows; empty sections stay hidden so the
+    # page only ever shows what staff have published today.
+    sections = [
+        {
+            "key": "signature",
+            "label": "Signature dishes",
+            "chip": "Chef's pick",
+            "chip_class": "chip--gold",
+            "items": signatures,
+        },
+        {
+            "key": "weekend",
+            "label": "Weekend specials",
+            "chip": "This week",
+            "chip_class": "chip--gold",
+            "items": weekends,
+        },
+        {
+            "key": "offer",
+            "label": "Limited offers",
+            "chip": "Save today",
+            "chip_class": "chip--open",
+            "items": offers,
+        },
+    ]
+    sections = [s for s in sections if s["items"]]
+
+    # Rotating spotlight: photo-first so the hero always leads with food.
+    live_items = [i for s in sections for i in s["items"]]
+    spotlight = sorted(live_items, key=lambda i: (not bool(i.image), i.display_order, i.id))[:6]
+
+    last_updated = max(
+        (i.updated_at for i in live_items), default=None
+    )
+
     lang = request.GET.get("lang", "en")
     dir_rtl = (lang == "ar")
 
@@ -50,6 +85,10 @@ def customer_specials(request, key):
         "weekends": weekends,
         "weekend": weekends,
         "offers": offers,
+        "sections": sections,
+        "spotlight": spotlight,
+        "live_count": len(live_items),
+        "last_updated": last_updated,
         "lang": lang,
         "dir": "rtl" if dir_rtl else "ltr",
         "brand_colors": brand.brand_colors or {},
@@ -86,18 +125,31 @@ def customer_menu(request, key):
     elif brand.default_ordering_url:
         ordering_url = brand.default_ordering_url
 
+    # Only a genuine external menu leaves the platform. PDFs and booklets are
+    # served as cards inside this page so guests never land on a raw file or a
+    # dead placeholder domain.
     if menu_source:
         if menu_source.menu_type == MenuSource.MenuType.EXTERNAL_URL and menu_source.menu_url:
             return redirect(menu_source.menu_url)
-        if menu_source.menu_type == MenuSource.MenuType.PDF and menu_source.menu_file:
-            return redirect(menu_source.menu_file.url)
 
     if not menu_source:
         direct_url = (outlet.menu_url if outlet else "") or brand.default_menu_url
         if direct_url:
             return redirect(direct_url)
 
-    pages = menu_source.pages.all().order_by("page_number") if menu_source else []
+    pages = list(menu_source.pages.all().order_by("page_number")) if menu_source else []
+    pdf_url = menu_source.menu_file.url if (menu_source and menu_source.menu_file) else ""
+
+    # Dish cards: brand base menu with this outlet's overrides folded in
+    # (spec section 6/10), grouped by category in category order.
+    groups = {}
+    for item in items_for(brand, outlet):
+        if not item.available or not item.category.active:
+            continue
+        group = groups.setdefault(item.category_id, {"category": item.category, "items": []})
+        group["items"].append(item)
+    categories = sorted(groups.values(), key=lambda g: (g["category"].sort_order, g["category"].id))
+    item_count = sum(len(g["items"]) for g in categories)
 
     lang = request.GET.get("lang", "en")
     dir_rtl = (lang == "ar")
@@ -108,6 +160,10 @@ def customer_menu(request, key):
         "outlet": outlet,
         "menu_source": menu_source,
         "pages": pages,
+        "pdf_url": pdf_url,
+        "categories": categories,
+        "item_count": item_count,
+        "total_pages": len(pages),
         "ordering_url": ordering_url,
         "lang": lang,
         "dir": "rtl" if dir_rtl else "ltr",

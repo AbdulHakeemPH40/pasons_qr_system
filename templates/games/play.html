@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static icon_tags %}
+
+{% block title %}{{ game.name }} · Games Zone{% endblock %}
+{% block description %}{{ game.tagline }}. Quick free game, no ads, no sign-in.{% endblock %}
+{% block body_class %}theme-warm{% endblock %}
+{% block page_class %}page--device page--glass page--games page--play{% endblock %}
+
+{% block content %}
+{# GAMES_V also guards the vendored iframe src so a game update is not served from cache. Keep in sync with the scripts block below. #}
+{% with GAMES_V="2026-10-11-4" %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen">
+
+      <header class="sheet-head">
+        <a href="{{ back }}" class="sheet-back" aria-label="Exit game">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </a>
+        <div>
+          <h1 class="sheet-title">{{ game.name }}</h1>
+          <span class="sheet-meta">{{ game.howto }}</span>
+        </div>
+        <span class="sheet-side">
+          <button class="game-pause" id="game-restart" type="button" aria-label="Restart game">
+            {% icon "restart" %}
+          </button>
+        </span>
+      </header>
+
+      <div class="game-hud" aria-live="off">
+        <span class="game-hud__score" id="game-score" aria-label="Score">0</span>
+        <span class="game-hud__best" id="game-best" aria-label="Best score on this phone">Best —</span>
+      </div>
+
+      {# The vendored open-source game runs unmodified in this same-origin #}
+      {# iframe; core/shell.js reads score and game-over through the bridge. #}
+      <div class="game-host" id="game-host"
+           data-slug="{{ game.slug }}"
+           data-qr="{{ qr_key }}"
+           data-beacon="{% url 'games_event' %}"
+           data-csrf="{{ csrf_token }}">
+        <iframe id="game-frame" class="game-frame"
+                src="{% static game.embed %}?v={{ GAMES_V }}"
+                title="{{ game.name }} game area"
+                scrolling="no"
+                allow="autoplay"></iframe>
+        <div class="game-overlay" id="game-overlay" data-state="hidden"></div>
+      </div>
+
+      <p class="game-credit">
+        <span class="game-credit__lic">{{ game.license }}</span>
+        {{ game.credit }} · hosted on our own servers, no ads
+      </p>
+
+    </div>
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+
+  <p class="stage-caption">
+    <strong>{{ place_name }}</strong>
+  </p>
+</div>
+
+{# json_script escapes <, > and & as \uXXXX so the payload stays valid JSON inside the script tag. #}
+{# Plain variable autoescaping would HTML-escape the quotes and break JSON.parse in shell.js/theme.js. #}
+{{ theme_payload|json_script:"games-theme" }}
+{{ bridge_payload|json_script:"games-bridge" }}
+{% endwith %}
+{% endblock %}
+
+{% block scripts %}
+{# GAMES_V: bump whenever any script under static/games/ changes #}
+{% with GAMES_V="2026-10-11-4" %}
+<script src="{% static 'games/core/storage.js' %}?v={{ GAMES_V }}"></script>
+<script src="{% static 'games/core/theme.js' %}?v={{ GAMES_V }}"></script>
+<script src="{% static 'games/core/shell.js' %}?v={{ GAMES_V }}"></script>
+{% endwith %}
+{% endblock %}

@@ -13,10 +13,11 @@ Internal (staff) routes:
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 from apps.analytics import views as analytics_views
 from apps.core import views
+from apps.games import views as games_views
 from apps.menu import views as menu_views
 
 from django.contrib.auth import views as auth_views
@@ -44,11 +45,11 @@ urlpatterns = [
     path("q/<slug:key>/review/", views.qr_review_redirect, name="qr_review"),
     path("q/<slug:key>/instagram/", views.qr_instagram_redirect, name="qr_instagram_redirect"),
     path("q/<slug:key>/instagram/", views.qr_instagram_redirect, name="qr_instagram"),
-    # "Play a Game & Win a Discount" button target. Serves a branded
-    # "coming soon" page until game #1 lands (GAME_META_PROMPT.md) — swap the
-    # view, keep the name, so landing cards and printed QR sheets never break.
-    path("q/<slug:key>/game/", views.qr_game_coming_soon, name="qr_game"),
     path("q/<slug:key>/tap/", views.tap_beacon, name="tap_beacon"),
+    # Games Zone (GAMES_ZONE_PLAN.md): printed QR sheets and the landing card
+    # point at /q/<key>/game/ — the name stays, it now opens the games hub.
+    path("q/<slug:key>/game/", games_views.qr_game, name="qr_game"),
+    path("games/", include("apps.games.urls")),
 
     # Custom Panel routes (Spec Part D)
     path("panel/login/", auth_views.LoginView.as_view(template_name="panel/login.html"), name="login"),
@@ -67,6 +68,8 @@ urlpatterns = [
     path("panel/qrcodes/<int:pk>/regenerate/", panel_views.panel_qr_regenerate, name="panel_qr_regenerate"),
     path("panel/specials/", panel_views.panel_specials, name="panel_specials"),
     path("panel/specials/add/", panel_views.panel_special_add, name="panel_special_add"),
+    path("panel/specials/<int:pk>/edit/", panel_views.panel_special_edit, name="panel_special_edit"),
+    path("panel/specials/<int:pk>/toggle/", panel_views.panel_special_toggle, name="panel_special_toggle"),
     path("panel/menus/", panel_views.panel_menus, name="panel_menus"),
     path("panel/menus/items/", panel_views.panel_menu_items, name="panel_menu_items"),
     path("panel/menus/items/add/", panel_views.panel_menu_item_add, name="panel_menu_item_add"),

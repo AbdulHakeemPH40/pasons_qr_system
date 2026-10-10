@@ -284,6 +284,13 @@ body.theme-warm .identity-name { color: var(--ink); }
   border-radius: 50%;
   display: grid;
   place-items: center;
+  /* Depth lives on the round anchor, never as a filter on the icon.
+     filter: drop-shadow() promotes each img to its own compositor layer
+     whose backing store is the RECTANGULAR filter region; after a
+     back-navigation (bfcache restore) Chromium can composite that stale
+     rectangle — the tinted box guests briefly saw behind the badges.
+     box-shadow paints in the normal pass: same lift, no layer, no artifact. */
+  box-shadow: 0 8px 16px rgba(31, 55, 38, 0.22);
   transition: transform var(--t-press) var(--ease-spring);
 }
 
@@ -295,11 +302,11 @@ body.theme-warm .identity-name { color: var(--ink); }
 }
 
 .contact-circle--call {
-  background: rgba(46, 91, 62, 0.82);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
-  backdrop-filter: blur(12px) saturate(160%);
+  /* flat translucent green instead of backdrop-filter: same read over the
+     cream/wave canvas, but no compositor layer that can go stale on bfcache */
+  background: rgba(46, 91, 62, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 16px rgba(31, 55, 38, 0.22);
   color: #fff;
 }
 .contact-circle--call .icon { width: 28px; height: 28px; }
@@ -307,7 +314,6 @@ body.theme-warm .identity-name { color: var(--ink); }
 .contact-circle .icon--badge {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 8px 16px rgba(31, 55, 38, 0.22));
 }
 
 /* generated badge images (media/icons/*.png) inside the contact circles */
@@ -316,7 +322,6 @@ body.theme-warm .identity-name { color: var(--ink); }
   height: 100%;
   border-radius: 50%;
   object-fit: contain;
-  filter: drop-shadow(0 8px 16px rgba(31, 55, 38, 0.22));
 }
 
 /* --------------------------------------------------------------------------
@@ -405,15 +410,6 @@ body.theme-warm .btn-action--tint-pink {
 body.theme-warm .btn-action__icon--gold  { background: #F8EEC8; color: var(--gold-deep); }
 body.theme-warm .btn-action__icon--green { background: var(--tint-green); color: var(--wave-green); }
 body.theme-warm .btn-action__icon--rose  { background: var(--tint-pink); color: #B23A5B; }
-
-/* the game card keeps its gold accent ring (permanent entry point) */
-body.theme-warm .btn-action--game {
-  border: 1.5px solid rgba(194, 162, 75, 0.55);
-}
-body.theme-warm .btn-action--game .btn-action__icon {
-  background: linear-gradient(145deg, #F8EEC8, #EFD98F);
-  color: var(--gold-deep);
-}
 
 /* --------------------------------------------------------------------------
    Info strip + section furniture
@@ -582,9 +578,6 @@ body.theme-warm .menu-empty .glyph {
   color: var(--gold-deep);
 }
 
-body.theme-warm .game-note .icon,
-body.theme-warm .game-note svg { color: var(--gold-deep); }
-
 /* footer/CTA link tone */
 body.theme-warm .info-links a { color: var(--wave-green); font-weight: 700; }
 body.theme-warm .info-links svg { width: 18px; height: 18px; }
@@ -713,49 +706,81 @@ body.theme-warm .page--glass .dish-card:active {
    REVIEW COMPOSER — write here, polish, copy, post on Google (spec §39)
    ========================================================================== */
 
+/* Lead note: a frosted band, so the intro line never sits bare on the waves. */
 body.theme-warm .sheet-lead {
   margin: var(--sp-3) 0 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.44));
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
+  backdrop-filter: blur(14px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5),
+              0 12px 26px -20px rgba(23, 58, 36, 0.55);
   font-size: var(--fs-sm);
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--text-secondary);
   font-weight: 600;
 }
 
+/* The writing sheet: one deep liquid-glass surface. */
 body.theme-warm .composer-card {
   margin-top: var(--sp-3);
   padding: var(--sp-4);
-  border-radius: var(--r-xl);
-  background: var(--card-white, #fff);
-  border: 1px solid var(--glass-border-alpha);
-  box-shadow: var(--shadow-card);
+  border-radius: 28px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.56));
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65),
+              inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+              0 26px 50px -30px rgba(23, 58, 36, 0.55);
 }
 
 body.theme-warm .composer-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
 }
 
 body.theme-warm .composer-label {
   margin: 0;
-  font-size: var(--fs-h2);
-  font-weight: 800;
+  font-family: "Fraunces", Georgia, serif;
+  font-optical-sizing: auto;
+  font-size: 1.32rem;
+  font-weight: 600;
   letter-spacing: -0.015em;
+  line-height: 1.15;
   color: var(--ink);
+}
+
+/* Character counter as a frosted chip. */
+body.theme-warm .composer-count {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  font-size: var(--fs-caption);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 body.theme-warm .composer-hint {
   margin: var(--sp-1) 0 var(--sp-3);
   font-size: var(--fs-sm);
+  line-height: 1.5;
   color: var(--muted);
 }
 
 body.theme-warm .composer-hint--fine {
-  margin: var(--sp-2) 0 0;
+  margin: var(--sp-1) 0 0;
   font-size: var(--fs-caption);
   letter-spacing: 0.01em;
   text-transform: none;
+  color: var(--muted);
 }
 
 body.theme-warm .composer-hint--fine a {
@@ -763,26 +788,35 @@ body.theme-warm .composer-hint--fine a {
   font-weight: 700;
 }
 
+/* The box itself: an inset glass well inside the sheet. */
 body.theme-warm .composer-textarea {
   width: 100%;
   box-sizing: border-box;
   padding: var(--sp-3);
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  background: var(--white);
+  border-radius: 18px;
+  border: 1px solid rgba(28, 44, 32, 0.14);
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: inset 0 2px 6px rgba(23, 58, 36, 0.06);
   font-family: var(--font-body);
   font-size: var(--fs-body);
   line-height: var(--lh-body);
   color: var(--text-primary);
   resize: vertical;
   transition: border-color var(--t-quick) var(--ease-out),
-              box-shadow var(--t-quick) var(--ease-out);
+              box-shadow var(--t-quick) var(--ease-out),
+              background-color var(--t-quick) var(--ease-out);
+}
+
+body.theme-warm .composer-textarea::placeholder {
+  color: rgba(60, 74, 62, 0.45);
 }
 
 body.theme-warm .composer-textarea:focus {
   outline: none;
   border-color: var(--sage);
-  box-shadow: 0 0 0 3px var(--chip-ai-bg);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 1px 4px rgba(23, 58, 36, 0.05),
+              0 0 0 3px var(--chip-ai-bg);
 }
 
 body.theme-warm .composer-row {
@@ -811,17 +845,54 @@ body.theme-warm .composer-row--buttons .btn-primary {
   flex: 1 1 auto;
 }
 
-body.theme-warm .composer-count {
-  font-size: var(--fs-caption);
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+/* Frosted secondary (Copy review). */
+body.theme-warm .composer-row--buttons .btn-secondary {
+  background: rgba(255, 255, 255, 0.58);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55),
+              0 8px 18px -12px rgba(23, 58, 36, 0.4);
+  color: var(--ink);
+}
+
+/* Deep-green glass primary (Suggest + Google hand-off). */
+body.theme-warm .composer-card .btn-primary,
+body.theme-warm .composer-google {
+  background: linear-gradient(180deg, #357455, #1e4634);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28),
+              0 16px 30px -18px rgba(23, 58, 36, 0.65);
+  color: #fff;
+}
+
+body.theme-warm .composer-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+body.theme-warm .composer-google svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 body.theme-warm .composer-error {
   margin: var(--sp-2) 0 0;
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-chip);
-  background: rgba(179, 69, 47, 0.09);
+  background: rgba(179, 69, 47, 0.12);
+  border: 1px solid rgba(179, 69, 47, 0.28);
   color: #8c3a2b;
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -829,29 +900,51 @@ body.theme-warm .composer-error {
 
 body.theme-warm .composer-actions {
   display: grid;
+  justify-items: center;
   gap: var(--sp-3);
   margin-top: var(--sp-4);
 }
 
+body.theme-warm .composer-actions .composer-google {
+  width: 100%;
+}
+
+/* Secondary hand-off as a frosted outline pill. */
 body.theme-warm .composer-link {
-  display: block;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
   font-size: var(--fs-caption);
   font-weight: 700;
-  color: var(--leaf);
+  color: #2e6b4f;
   text-decoration: none;
 }
 
 body.theme-warm .composer-link:hover {
-  text-decoration: underline;
+  background: rgba(255, 255, 255, 0.6);
 }
 
+/* Status line as a centered glass toast. */
 body.theme-warm .composer-status {
-  margin: var(--sp-2) 0 0;
+  margin: 0;
   min-height: 1.2em;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--chip-ai-bg);
+  color: var(--chip-ai-fg);
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--chip-ai-fg);
+}
+
+body.theme-warm .composer-status:empty {
+  padding: 0;
+  background: transparent;
 }
 
 body.theme-warm .variant-list {
@@ -859,17 +952,50 @@ body.theme-warm .variant-list {
   gap: var(--sp-2);
 }
 
-/* Tap-to-use suggestion rows: one tap loads the text into the review box. */
+/* Suggestions head: Fraunces title + gold provider chip. */
+body.theme-warm .composer-variants .section-head h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-optical-sizing: auto;
+  font-size: 1.22rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+
+body.theme-warm #variants-provider {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(246, 216, 121, 0.92), rgba(217, 168, 60, 0.86));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: #4a3413;
+  white-space: nowrap;
+}
+
+body.theme-warm #variants-provider:empty {
+  display: none;
+}
+
+/* Tap-to-use suggestion rows: frosted glass, hint chip on the right. */
 body.theme-warm .variant-row {
   display: grid;
-  gap: var(--sp-1);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
   width: 100%;
   text-align: left;
   padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--r-xl);
-  background: var(--card-white, #fff);
-  border: 1px solid var(--glass-border-alpha);
-  box-shadow: var(--shadow-card);
+  border-radius: 22px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.5));
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
+              0 16px 32px -24px rgba(23, 58, 36, 0.5);
   font: inherit;
   cursor: pointer;
   transition: transform var(--t-press) var(--ease-out),
@@ -889,19 +1015,25 @@ body.theme-warm .variant-row__text {
 }
 
 body.theme-warm .variant-row__hint {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(23, 58, 36, 0.08);
   font-size: var(--fs-caption);
   font-weight: 700;
   letter-spacing: var(--track-caps);
   text-transform: uppercase;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 body.theme-warm .variant-row--used {
   border-color: var(--sage);
-  box-shadow: 0 0 0 2px var(--chip-ai-bg);
+  box-shadow: 0 0 0 2px var(--chip-ai-bg),
+              inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 body.theme-warm .variant-row--used .variant-row__hint {
+  background: var(--chip-ai-bg);
   color: var(--chip-ai-fg);
 }
 
@@ -911,10 +1043,1022 @@ body.theme-warm .variant-row--used .variant-row__hint {
 
 @media (prefers-reduced-motion: reduce) {
   body.theme-warm .composer-textarea,
-  body.theme-warm .variant-row {
+  body.theme-warm .variant-row,
+  body.theme-warm .composer-google,
+  body.theme-warm .composer-link {
     transition: none;
   }
   body.theme-warm .variant-row:active {
     transform: none;
+  }
+}
+
+/* Reduced transparency: solidify every composer material. */
+@media (prefers-reduced-transparency: reduce) {
+  body.theme-warm .sheet-lead,
+  body.theme-warm .composer-card,
+  body.theme-warm .composer-count,
+  body.theme-warm .composer-textarea,
+  body.theme-warm .variant-row,
+  body.theme-warm .composer-link,
+  body.theme-warm .composer-row--buttons .btn-secondary {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.96);
+  }
+}
+
+/* ==========================================================================
+   SPECIALS — iOS 26 liquid glass + typography pass (body.theme-warm .page--glass)
+   --------------------------------------------------------------------------
+   Second glass pass, dedicated to the specials sheet. Every surface the
+   guest sees becomes a liquid-glass material: a frosted floating header
+   pill, a dark tinted glass copy sheet over the hero photo, a glass dot
+   capsule, glass row arrows, and promo cards as frosted frames around the
+   dish photo. Each carries the material signature: translucent fill,
+   backdrop blur + saturate, a bright 1px top edge where light catches the
+   glass, and a forest-tinted depth shadow. Bigger surfaces read thicker
+   (more blur, deeper shadow) than the small controls.
+   Typography: Fraunces (bundled variable serif, latin subset) for display
+   names over the SF-native body stack — negative tracking and tight leading
+   as the size grows, tracked caps on micro labels, tabular figures on
+   prices. Vibrancy: text on glass is heavier and higher contrast, never
+   flat grey — the hero title stays white on the dark sheet, overriding the
+   theme's ink-on-h2 rule.
+   ========================================================================== */
+
+@font-face {
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/Fraunces-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+body.theme-warm .page--glass {
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, "Times New Roman", serif;
+}
+
+/* ---- header: floating frosted pill so the meta line stays legible over waves ----
+   Sticky again: the wave stack rule (device-screen > * = relative, z1) and the
+   desktop mock rule both out-specify the base sticky header, so the pill
+   re-claims position and z here (this selector beats both). */
+body.theme-warm .page--glass .sheet-head {
+  position: sticky;
+  top: 6px;
+  z-index: 6;
+  /* one compact row: glass circle left, left-aligned title block, chip right.
+     Re-claims align-items from the device-screen rule (end = sunken button). */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 var(--sp-3);
+  padding: 8px 10px 8px 8px;
+  background: rgba(255, 255, 255, 0.52);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 24px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(31, 55, 38, 0.05),
+    0 14px 34px -20px rgba(31, 55, 38, 0.45);
+}
+
+body.theme-warm .page--glass .sheet-head > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+/* iOS 26 glass back control: frosted circle, bright top edge, spring press. */
+body.theme-warm .page--glass .sheet-back {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 18px -10px rgba(31, 55, 38, 0.5);
+  transition: transform var(--t-hover) var(--ease-spring),
+    background var(--t-hover) ease;
+}
+body.theme-warm .page--glass .sheet-back:active {
+  transform: scale(0.88);
+  background: rgba(255, 255, 255, 0.78);
+}
+body.theme-warm .page--glass .sheet-back:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+body.theme-warm .page--glass .sheet-back svg {
+  width: 18px;
+  height: 18px;
+}
+
+body.theme-warm .page--glass .sheet-title {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: 1.22rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  text-align: left;
+}
+
+body.theme-warm .page--glass .sheet-meta {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: left;
+  /* one line, ellipsised: a wrapped meta is what made the bar tall */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* brand dash sits under the left-aligned meta, not centred */
+body.theme-warm .page--glass .sheet-meta::after {
+  margin: 5px 0 0;
+  width: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.theme-warm .page--glass .sheet-back {
+    transition: none;
+  }
+}
+
+/* ---- hero: deeper radius, calmer scrim, copy on a dark tinted glass sheet ---- */
+body.theme-warm .page--glass .spot-track {
+  border-radius: 30px;
+  box-shadow: 0 26px 60px -30px rgba(18, 30, 20, 0.6);
+  /* mid-swipe the 12px gutter shows this, not the raw wave: an intentional
+     cream canvas between cards, exactly like the promo rows below */
+  background: #F7F2E6;
+}
+
+body.theme-warm .page--glass .spot-slide {
+  min-height: 264px;
+  border-radius: 30px;
+  /* warm canvas while a hero photo decodes; never a flat green slab */
+  background: #F7F2E6;
+  /* promote the slide to its own compositor layer: photo and glass sheet
+     then raster and scroll as ONE texture, so the sheet's backdrop blur
+     below can never lag or detach from its photo during a live swipe */
+  transform: translateZ(0);
+}
+
+body.theme-warm .page--glass .spot-scrim {
+  background: linear-gradient(to top,
+    rgba(14, 22, 16, 0.68) 0%,
+    rgba(14, 22, 16, 0.26) 46%,
+    rgba(14, 22, 16, 0) 74%);
+}
+
+body.theme-warm .page--glass .spot-copy {
+  inset-inline: 10px;
+  bottom: 10px;
+  padding: 14px 16px 15px;
+  border-radius: 24px;
+  /* iOS 26 liquid glass: frosted dark material, specular top edge and a
+     lens highlight catching light at the top-left, all in one stack */
+  background:
+    radial-gradient(120% 70% at 16% 0%, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(to top, rgba(12, 18, 14, 0.74), rgba(12, 18, 14, 0.52) 62%, rgba(255, 255, 255, 0.08)),
+    rgba(14, 20, 16, 0.35);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 44px -22px rgba(0, 0, 0, 0.62);
+}
+
+/* kind label as a frosted chip with a gold pulse dot */
+body.theme-warm .page--glass .spot-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 4px 10px 4px 8px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  color: rgba(255, 248, 226, 0.96);
+}
+
+body.theme-warm .page--glass .spot-kind::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(230, 190, 80, 0.9);
+}
+
+body.theme-warm .page--glass .spot-title {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: 1.62rem;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  line-height: 1.05;
+  color: #fff; /* vibrancy on the dark sheet; beats the theme ink-on-h2 rule */
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.38);
+}
+
+body.theme-warm .page--glass .spot-desc {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* foot row: hairline separator, badge left, price right */
+body.theme-warm .page--glass .spot-foot {
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+body.theme-warm .page--glass .spot-foot:empty { display: none; }
+
+body.theme-warm .page--glass .spot-badge {
+  padding: 5px 11px;
+  background: linear-gradient(180deg, #F6D879, #D9A83C);
+  color: #2A1E04;
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 6px 16px -8px rgba(0, 0, 0, 0.5);
+}
+
+body.theme-warm .page--glass .spot-price {
+  color: #fff;
+  font-size: 1rem;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-warm .page--glass .spot-price del {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.8em;
+  text-decoration-color: rgba(255, 138, 101, 0.9);
+  text-decoration-thickness: 1.5px;
+}
+
+/* ---- dots: glass capsule, active dot a leaf pill ---- */
+body.theme-warm .page--glass .spot-dots {
+  gap: 7px;
+  width: max-content;
+  margin: 10px auto 0;
+  padding: 7px 9px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  backdrop-filter: blur(16px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 8px 20px -12px rgba(31, 55, 38, 0.35);
+}
+
+body.theme-warm .page--glass .spot-dot { background: rgba(31, 55, 38, 0.25); }
+body.theme-warm .page--glass .spot-dot[aria-current="true"] {
+  width: 18px;
+  background: var(--wave-green);
+}
+
+/* ---- section heads + glass row arrows ---- */
+body.theme-warm .page--glass .section-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.15em;
+  color: var(--ink);
+}
+
+body.theme-warm .page--glass .row-arrow {
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
+  backdrop-filter: blur(14px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 6px 16px -8px rgba(31, 55, 38, 0.4);
+  transition: transform var(--t-hover) var(--ease-spring),
+    box-shadow var(--t-hover) var(--ease-spring);
+}
+
+body.theme-warm .page--glass .row-arrow:active { transform: scale(0.9); }
+body.theme-warm .page--glass .row-arrow[disabled] { opacity: 0.35; transform: none; }
+
+/* ---- promo cards: frosted frames around the dish photo ---- */
+body.theme-warm .page--glass .promo-card {
+  padding: 7px;
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 28px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 20px 44px -24px rgba(31, 55, 38, 0.5);
+  transition: transform var(--t-hover) var(--ease-spring),
+    box-shadow var(--t-hover) var(--ease-spring);
+}
+
+body.theme-warm .page--glass .promo-card:active { transform: scale(0.985); }
+
+body.theme-warm .page--glass .promo-media {
+  border-radius: 21px;
+  overflow: hidden;
+}
+
+body.theme-warm .page--glass .promo-badge {
+  top: 8px;
+  inset-inline-start: 8px;
+  background: rgba(243, 228, 174, 0.82);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+body.theme-warm .page--glass .promo-body { padding: 12px 10px; }
+
+body.theme-warm .page--glass .promo-title {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+body.theme-warm .page--glass .promo-price {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--wave-green);
+}
+
+body.theme-warm .page--glass .spec-empty h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ---- reduced transparency: solidify the materials, keep the hierarchy ---- */
+@media (prefers-reduced-transparency: reduce) {
+  body.theme-warm .page--glass .sheet-head,
+  body.theme-warm .page--glass .spot-copy,
+  body.theme-warm .page--glass .spot-dots,
+  body.theme-warm .page--glass .row-arrow,
+  body.theme-warm .page--glass .promo-card,
+  body.theme-warm .page--glass .promo-badge {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  body.theme-warm .page--glass .sheet-head { background: rgba(255, 255, 255, 0.94); }
+  body.theme-warm .page--glass .spot-copy { background: rgba(16, 24, 18, 0.9); }
+  body.theme-warm .page--glass .spot-dots { background: rgba(255, 255, 255, 0.92); }
+  body.theme-warm .page--glass .row-arrow { background: #fff; }
+  body.theme-warm .page--glass .promo-card { background: rgba(255, 255, 255, 0.95); }
+  body.theme-warm .page--glass .promo-badge { background: #F3E4AE; }
+}
+
+/* ---- reduced motion: no press scaling on the glass ---- */
+@media (prefers-reduced-motion: reduce) {
+  body.theme-warm .page--glass .promo-card,
+  body.theme-warm .page--glass .row-arrow { transition: none; }
+  body.theme-warm .page--glass .promo-card:active,
+  body.theme-warm .page--glass .row-arrow:active { transform: none; }
+}
+
+/* ==========================================================================
+   MENU — iOS 26 liquid-glass dish cards (body.theme-warm .page--glass)
+   Frosted rows over the warm canvas: PDF hand-off card, category sections,
+   dish cards with plate fallback, booklet pages. Same material family as
+   the specials pass so the two pages read as one product.
+   ========================================================================== */
+
+/* ---- PDF hand-off card ---- */
+body.theme-warm .page--glass .menu-pdf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 12px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.28) 46%, rgba(255, 255, 255, 0.36)),
+    rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 10px 24px rgba(31, 55, 38, 0.12);
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+body.theme-warm .page--glass .menu-pdf:active { transform: scale(0.985); }
+
+body.theme-warm .page--glass .menu-pdf-ico {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #35684a, #24462f);
+  color: #F6D879;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+body.theme-warm .page--glass .menu-pdf-ico svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.theme-warm .page--glass .menu-pdf-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+body.theme-warm .page--glass .menu-pdf-copy strong {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+body.theme-warm .page--glass .menu-pdf-copy small {
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: rgba(31, 45, 32, 0.62);
+}
+body.theme-warm .page--glass .menu-pdf-cta {
+  flex: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #35684a, #2E5B3E);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 6px 14px rgba(31, 55, 38, 0.25);
+}
+
+/* ---- category sections ---- */
+body.theme-warm .page--glass .menu-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+body.theme-warm .page--glass .menu-cat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-inline: 4px;
+}
+body.theme-warm .page--glass .menu-cat-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.016em;
+  color: var(--ink);
+}
+body.theme-warm .page--glass .menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---- dish card: frosted row, plate left, copy right ---- */
+body.theme-warm .page--glass .menu-card {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.4));
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 10px 22px rgba(31, 55, 38, 0.1);
+}
+body.theme-warm .page--glass .menu-card-media {
+  width: 78px;
+  height: 78px;
+  border-radius: 16px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--tint-cream);
+}
+body.theme-warm .page--glass .menu-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+body.theme-warm .page--glass .menu-plate {
+  width: 42px;
+  height: 42px;
+  color: var(--gold-deep);
+}
+body.theme-warm .page--glass .menu-plate svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.theme-warm .page--glass .menu-card-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-block: 2px;
+}
+body.theme-warm .page--glass .menu-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+body.theme-warm .page--glass .menu-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.04rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+body.theme-warm .page--glass .menu-price {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+body.theme-warm .page--glass .menu-price del {
+  margin-inline-start: 5px;
+  font-size: 0.78em;
+  font-weight: 600;
+  color: rgba(178, 64, 52, 0.85);
+  text-decoration-thickness: 1.5px;
+}
+body.theme-warm .page--glass .menu-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: rgba(31, 45, 32, 0.72);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+body.theme-warm .page--glass .menu-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+body.theme-warm .page--glass .menu-chips:empty { display: none; }
+body.theme-warm .page--glass .chip--hot {
+  background: rgba(196, 74, 58, 0.14);
+  color: #A33A2B;
+  border: 1px solid rgba(196, 74, 58, 0.35);
+}
+/* retired dishes stay legible but recede (opacity only: no filter layers) */
+body.theme-warm .page--glass .menu-card.is-off { opacity: 0.6; }
+
+/* ---- booklet pages inside the menu page ---- */
+body.theme-warm .page--glass .booklet--menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+body.theme-warm .page--glass .booklet--menu .booklet-page {
+  margin: 0;
+  border-radius: 18px;
+  overflow: hidden;
+}
+body.theme-warm .page--glass .booklet--menu .booklet-page img {
+  width: 100%;
+  display: block;
+}
+body.theme-warm .page--glass .booklet--menu .caption {
+  padding: 7px 10px;
+  text-align: center;
+}
+
+/* ---- reduced transparency: solidify the menu materials ---- */
+@media (prefers-reduced-transparency: reduce) {
+  body.theme-warm .page--glass .menu-pdf,
+  body.theme-warm .page--glass .menu-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.94);
+  }
+}
+
+/* ---- reduced motion: no press scaling on the PDF card ---- */
+@media (prefers-reduced-motion: reduce) {
+  body.theme-warm .page--glass .menu-pdf { transition: none; }
+  body.theme-warm .page--glass .menu-pdf:active { transform: none; }
+}
+
+/* ================================================================
+   GAMES ZONE — hub cards and the full-bleed play surface
+   (GAMES_ZONE_PLAN.md). Same iOS 26 liquid-glass language as the
+   specials and menu sheets. Games are pure play: no reward,
+   discount or offer surfaces exist anywhere in this section.
+   ================================================================ */
+
+/* ---- hub: frosted lead band ---- */
+body.theme-warm .page--games .games-lead {
+  margin: 10px 10px 0;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
+  backdrop-filter: blur(14px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  color: rgba(42, 59, 46, 0.85);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* ---- hub: game cards ---- */
+body.theme-warm .page--games .games-grid {
+  display: grid;
+  gap: 10px;
+  padding: 12px 10px 4px;
+}
+
+body.theme-warm .page--games .game-card {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.62);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 10px 22px -12px rgba(31, 55, 38, 0.35);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-warm .page--games .game-card:active { transform: scale(0.97); }
+
+body.theme-warm .page--games .game-card__glyph {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+body.theme-warm .page--games .game-card__glyph svg {
+  width: 24px;
+  height: 24px;
+}
+
+body.theme-warm .page--games .game-card--gold .game-card__glyph {
+  background: rgba(217, 168, 60, 0.18);
+  color: #9a7420;
+}
+
+body.theme-warm .page--games .game-card--green .game-card__glyph {
+  background: rgba(127, 160, 107, 0.22);
+  color: #3f6b46;
+}
+
+body.theme-warm .page--games .game-card--red .game-card__glyph {
+  background: rgba(196, 87, 74, 0.16);
+  color: #a34437;
+}
+
+body.theme-warm .page--games .game-card--pink .game-card__glyph {
+  background: rgba(232, 121, 158, 0.16);
+  color: #b04a72;
+}
+
+body.theme-warm .page--games .game-card__name {
+  display: block;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--forest);
+}
+
+body.theme-warm .page--games .game-card__tag {
+  display: block;
+  font-size: 0.74rem;
+  color: rgba(42, 59, 46, 0.72);
+}
+
+body.theme-warm .page--games .game-card__lic {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(127, 160, 107, 0.16);
+  color: #3f6b46;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+body.theme-warm .page--games .game-card__play {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f6d879, #d9a83c);
+  color: #4a3608;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+body.theme-warm .page--games .games-note {
+  padding: 8px 18px 14px;
+  text-align: center;
+  font-size: 0.68rem;
+  color: rgba(42, 59, 46, 0.6);
+}
+
+/* ---- play page: column layout, frozen surface ---- */
+body.theme-warm .page--play .device-screen {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body.theme-warm .page--play .sheet-head { position: static; }
+
+body.theme-warm .page--play .game-hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 12px 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+
+body.theme-warm .page--play .game-hud__score {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--forest);
+}
+
+body.theme-warm .page--play .game-hud__best {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(42, 59, 46, 0.65);
+}
+
+body.theme-warm .page--play .game-host {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 10px 10px 12px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(31, 55, 38, 0.92), rgba(24, 40, 29, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 18px 34px -18px rgba(31, 55, 38, 0.6);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body.theme-warm .page--play .game-host canvas,
+body.theme-warm .page--play .game-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+/* the vendored open-source game runs unmodified inside this frame */
+body.theme-warm .page--play .game-frame {
+  border: 0;
+  background: transparent;
+}
+
+/* Real phones (<860px) have no device mock: the browser viewport IS the
+   screen, so the play surface must claim its own height or the flex
+   column collapses the host to nothing. */
+@media (max-width: 859px) {
+  body.theme-warm .page--play .game-host {
+    flex: none;
+    height: min(68dvh, 560px);
+  }
+}
+
+/* ---- play page: open-source credit line under the host ---- */
+body.theme-warm .page--play .game-credit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: -4px 14px 10px;
+  font-size: 0.62rem;
+  line-height: 1.4;
+  text-align: center;
+  color: rgba(42, 59, 46, 0.62);
+}
+
+body.theme-warm .page--play .game-credit__lic {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #3f6b46;
+  white-space: nowrap;
+}
+
+/* ---- play page: overlay (ready / paused / game over) ---- */
+body.theme-warm .page--play .game-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  color: #f7f2e6;
+  background: rgba(24, 40, 29, 0.62);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  transition: opacity 220ms ease;
+}
+
+body.theme-warm .page--play .game-overlay[data-state="hidden"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.theme-warm .page--play .game-overlay__title {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.7rem;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+body.theme-warm .page--play .game-overlay__sub {
+  max-width: 26ch;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: rgba(247, 242, 230, 0.82);
+}
+
+body.theme-warm .page--play .game-overlay__score {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 2.2rem;
+  font-variant-numeric: tabular-nums;
+  color: #f6d879;
+}
+
+body.theme-warm .page--play .game-overlay__row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+body.theme-warm .page--play .game-cta {
+  padding: 12px 26px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3e7a4e, #2e5b3e);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 20px -10px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-warm .page--play .game-cta:active { transform: scale(0.96); }
+
+body.theme-warm .page--play .game-cta--ghost {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #f7f2e6;
+  box-shadow: none;
+}
+
+/* ---- play page: pause button matches the glass back circle ---- */
+body.theme-warm .page--play .game-pause {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  color: var(--forest);
+  cursor: pointer;
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-warm .page--play .game-pause:active { transform: scale(0.88); }
+
+body.theme-warm .page--play .game-pause svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---- reduced motion: no press scaling, no overlay fade ---- */
+@media (prefers-reduced-motion: reduce) {
+  body.theme-warm .page--games .game-card,
+  body.theme-warm .page--play .game-cta,
+  body.theme-warm .page--play .game-pause { transition: none; }
+  body.theme-warm .page--games .game-card:active,
+  body.theme-warm .page--play .game-cta:active,
+  body.theme-warm .page--play .game-pause:active { transform: none; }
+  body.theme-warm .page--play .game-overlay { transition: none; }
+}
+
+/* ---- reduced transparency: solidify the games materials ---- */
+@media (prefers-reduced-transparency: reduce) {
+  body.theme-warm .page--games .games-lead,
+  body.theme-warm .page--games .game-card,
+  body.theme-warm .page--play .game-hud,
+  body.theme-warm .page--play .game-pause {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.94);
+  }
+  body.theme-warm .page--play .game-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(24, 40, 29, 0.92);
   }
 }

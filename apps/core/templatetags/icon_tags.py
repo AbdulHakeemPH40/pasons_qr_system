@@ -5,7 +5,7 @@ symbols on phones) with real, crisp SVG marks:
 
   - brand logos: Google G, Instagram, Facebook, TikTok, WhatsApp,
     YouTube, X — colored exactly like the reference design badges
-  - UI glyphs: phone, pin, book, sparkle, gamepad, star, clock, mail,
+  - UI glyphs: phone, pin, book, sparkle, star, clock, mail,
     arrow, chevron, search — single-color (currentColor), stroke-based
 
 Usage:
@@ -51,10 +51,6 @@ GLYPHS = {
         '9.25 10.85 4.5 9.1l4.75-1.75L11 2.6zM17.7 14.6l.95 2.55 2.55.95-2.55.95-.95 2.55'
         '-.95-2.55-2.55-.95 2.55-.95.95-2.55zM18.2 2.4l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9'
         '-1.9-.7 1.9-.7.7-1.9z"/>'
-    ),
-    "gamepad": (
-        f'<rect {_STROKE} x="2.5" y="7.5" width="19" height="10" rx="4.5"/>'
-        f'<path {_STROKE} d="M8 10.5v4M6 12.5h4M15.2 11.2h.01M17.8 13.8h.01"/>'
     ),
     "star": (
         '<path fill="currentColor" d="M12 2.5l2.6 5.55 6.1.72-4.5 4.12 1.22 6.01L12 16.9 '
@@ -103,6 +99,51 @@ GLYPHS = {
     "link": (
         f'<path {_STROKE} d="M10 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.2 1.2"/>'
         f'<path {_STROKE} d="M14 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.2-1.2"/>'
+    ),
+    # ---- Games Zone glyphs (hub cards + play chrome) ----
+    "grid": (
+        f'<rect {_STROKE} x="4" y="4" width="7" height="7" rx="1.6"/>'
+        f'<rect {_STROKE} x="13" y="4" width="7" height="7" rx="1.6"/>'
+        f'<rect {_STROKE} x="4" y="13" width="7" height="7" rx="1.6"/>'
+        f'<path {_STROKE} d="M16.5 13.5v6M13.5 16.5h6"/>'
+    ),
+    "snake": (
+        f'<path {_STROKE} d="M5 6.5h9a3 3 0 0 1 0 6h-4a3 3 0 0 0 0 6h9"/>'
+        f'<circle fill="currentColor" cx="6.4" cy="6.5" r="1.1"/>'
+    ),
+    "burger": (
+        f'<path {_STROKE} d="M4.5 10a7.5 7.5 0 0 1 15 0z"/>'
+        f'<path {_STROKE} d="M4.5 13.5h15"/>'
+        f'<path {_STROKE} d="M5.5 16.5h13v.5a2.5 2.5 0 0 1-2.5 2.5h-8a2.5 2.5 0 0 1-2.5-2.5z"/>'
+        f'<path {_STROKE} d="M9 7.2h.01M12 6.4h.01M15 7.2h.01"/>'
+    ),
+    "memory": (
+        f'<rect {_STROKE} x="3.5" y="5" width="10" height="14" rx="2"/>'
+        f'<path {_STROKE} d="M16.5 6.6l2.6.7a1.6 1.6 0 0 1 1.1 2l-2.5 9.3"/>'
+        f'<path {_STROKE} d="M8.5 9.5l1.4 2.5-1.4 2.5M6.6 12h3.8"/>'
+    ),
+    "stack": (
+        f'<rect {_STROKE} x="5" y="15.5" width="14" height="4" rx="1.6"/>'
+        f'<rect {_STROKE} x="6.5" y="11" width="11" height="4" rx="1.6"/>'
+        f'<rect {_STROKE} x="8" y="6.5" width="8" height="4" rx="1.6"/>'
+        f'<path {_STROKE} d="M12 3v1.6"/>'
+    ),
+    "pause": (
+        f'<path {_STROKE} d="M9.5 6.5v11M14.5 6.5v11"/>'
+    ),
+    "hex": (
+        f'<path {_STROKE} d="M12 3.2l7 4v9.6l-7 4-7-4V7.2z"/>'
+        f'<path {_STROKE} d="M12 8.6l3 1.7v3.4l-3 1.7-3-1.7v-3.4z"/>'
+    ),
+    "restart": (
+        f'<path {_STROKE} d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/>'
+        f'<path {_STROKE} d="M19.8 4.6v4.2h-4.2"/>'
+    ),
+    "gamepad": (
+        f'<rect {_STROKE} x="2.8" y="7.5" width="18.4" height="10" rx="4.4"/>'
+        f'<path {_STROKE} d="M8 10.6v3.8M6.1 12.5h3.8"/>'
+        f'<circle fill="currentColor" cx="15.4" cy="11.4" r="1.15"/>'
+        f'<circle fill="currentColor" cx="17.6" cy="13.8" r="1.15"/>'
     ),
 }
 

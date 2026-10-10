@@ -1,10 +1,21 @@
 {% extends "panel/base_panel.html" %}
 
+{% block extra_css %}
+.spec-thumb { width: 56px; height: 42px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); display: block; }
+.spec-thumb--none { display: flex; align-items: center; justify-content: center; background: #F6F1E4; color: #8a978c; }
+.spec-thumb--none svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.spec-actions { display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+.spec-kind { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5c6b5f; }
+{% endblock %}
+
 {% block panel_content %}
 <div class="panel-header">
   <div>
     <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">All Specials</h1>
-    <p class="muted" style="margin: 4px 0 0;">Manage Signature dishes, Weekend Specials, and Offers.</p>
+    <p class="muted" style="margin: 4px 0 0;">
+      Promo cards for the customer specials page. Add a photo, set a price or an offer,
+      and save — the sliding cards update immediately.
+    </p>
   </div>
   <div>
     <a href="{% url 'panel_special_add' %}" class="btn btn-primary btn-sm">+ Add Special</a>
@@ -15,38 +26,64 @@
   <table class="panel-table">
     <thead>
       <tr>
+        <th>Photo</th>
         <th>Title</th>
-        <th>Kind</th>
+        <th>Section</th>
         <th>Scope</th>
         <th>Price / Offer</th>
         <th>Status</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for s in specials %}
       <tr>
+        <td>
+          {% if s.image %}
+          <img class="spec-thumb" src="{{ s.image.url }}" alt="Photo of {{ s.title_en }}">
+          {% else %}
+          <span class="spec-thumb spec-thumb--none" title="No photo — branded art is shown">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v2a8 8 0 01-16 0v-2z"/><path d="M8 10V7M12 10V6M16 10V7"/></svg>
+          </span>
+          {% endif %}
+        </td>
         <td><strong>{{ s.title_en }}</strong></td>
-        <td>{{ s.get_kind_display }}</td>
+        <td><span class="spec-kind">{{ s.get_kind_display }}</span></td>
         <td>{{ s.outlet.official_name|default:"Whole Brand" }}</td>
         <td>
           {% if s.kind == "weekend" %}
             <span class="muted caption">NO PRICE (WEEKEND)</span>
           {% elif s.kind == "offer" %}
             <del>{{ s.original_price }}</del> <strong>{{ s.offer_price }} AED</strong>
-            <span class="caption" style="color: var(--leaf);">({{ s.discount_label }})</span>
+            {% if s.discount_label %}<span class="caption" style="color: var(--leaf);">({{ s.discount_label }})</span>{% endif %}
+          {% elif s.offer_price or s.original_price %}
+            {{ s.offer_price|default:s.original_price }} AED
           {% else %}
-            {{ s.offer_price|default:s.original_price|default:"—" }} AED
+            <span class="muted caption">NO PRICE</span>
           {% endif %}
         </td>
         <td>
           <span class="badge-status {% if s.active %}badge-active{% else %}badge-inactive{% endif %}">
-            {% if s.active %}Active{% else %}Inactive{% endif %}
+            {% if s.active %}Live{% else %}Hidden{% endif %}
           </span>
+        </td>
+        <td>
+          <div class="spec-actions">
+            <a class="btn btn-outline btn-sm" href="{% url 'panel_special_edit' s.pk %}">Edit</a>
+            <form method="post" action="{% url 'panel_special_toggle' s.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline btn-sm">
+                {% if s.active %}Hide{% else %}Publish{% endif %}
+              </button>
+            </form>
+          </div>
         </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="5" class="muted" style="text-align: center; padding: var(--sp-4);">No specials registered.</td>
+        <td colspan="7" class="muted" style="text-align: center; padding: var(--sp-4);">
+          No specials yet. Add the first promo card and it appears on the customer page right away.
+        </td>
       </tr>
       {% endfor %}
     </tbody>

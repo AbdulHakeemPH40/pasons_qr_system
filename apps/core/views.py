@@ -618,26 +618,6 @@ def qr_instagram_redirect(request, key):
     return redirect(ig_url)
 
 
-@require_GET
-def qr_game_coming_soon(request, key):
-    """
-    Target of the landing page's "Play a Game & Win a Discount" button.
-
-    The button is permanent customer UI (client plan: real games live here,
-    built one at a time per GAME_META_PROMPT.md). Until game #1 lands this
-    serves a branded "coming soon" page instead of a dead link. Replace the
-    body when the first game ships; keep the view name and URL.
-    """
-    qr = get_object_or_404(
-        QrCode.objects.select_related("outlet", "brand"), redirect_key=key, active=True
-    )
-    return render(
-        request,
-        "game_coming_soon.html",
-        {"qr": qr, "brand": qr.brand, "outlet": qr.outlet},
-    )
-
-
 @require_http_methods(["POST"])
 def tap_beacon(request, key):
     """

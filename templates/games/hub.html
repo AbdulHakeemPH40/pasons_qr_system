@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static icon_tags %}
+
+{% block title %}Games Zone · {{ place_name }}{% endblock %}
+{% block description %}Quick free games while you wait. No ads, no sign-in.{% endblock %}
+{% block body_class %}theme-warm{% endblock %}
+{% block page_class %}page--device page--glass page--games{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen">
+
+      <header class="sheet-head">
+        <a href="{{ back }}" class="sheet-back" aria-label="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </a>
+        <div>
+          <h1 class="sheet-title">Games Zone</h1>
+          <span class="sheet-meta">
+            {{ brand.name_en|default:"Pasons Group" }}
+            <span class="sheet-updated">· while you wait</span>
+          </span>
+        </div>
+        <span class="sheet-side">
+          <span class="chip chip--open chip--sm">{{ games|length }} games</span>
+        </span>
+      </header>
+
+      <p class="games-lead">
+        Quick, free games to play while your order arrives.
+        No ads, no sign-in, nothing to install.
+      </p>
+
+      <section class="games-grid" aria-label="Available games">
+        {% for game in games %}
+        <a class="game-card game-card--{{ game.tint }} reveal" style="--i: {{ forloop.counter }}"
+           href="{% url 'games_play' game.slug %}?back={{ back|urlencode }}">
+          <span class="game-card__glyph" aria-hidden="true">{% icon game.glyph %}</span>
+          <span class="game-card__text">
+            <span class="game-card__name">{{ game.name }}</span>
+            <span class="game-card__tag">{{ game.tagline }}</span>
+            <span class="game-card__lic">{{ game.license }}</span>
+          </span>
+          <span class="game-card__play" aria-hidden="true">Play</span>
+        </a>
+        {% endfor %}
+      </section>
+
+      <p class="games-note">
+        Open-source classics (MIT, Apache-2.0, GPL-3.0), hosted on our own
+        servers with no ads. Best scores are kept on this phone only.
+      </p>
+
+    </div>
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+
+  <p class="stage-caption">
+    <strong>{{ place_name }}</strong>
+  </p>
+</div>
+{% endblock %}

@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "apps.menu",
     "apps.engagement",
     "apps.analytics",
+    "apps.games",
 ]
 
 MIDDLEWARE = [

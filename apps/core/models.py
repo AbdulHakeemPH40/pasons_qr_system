@@ -235,7 +235,6 @@ class PageModule(TimeStampedModel):
         DIRECTIONS = "directions", "Directions"
         FEEDBACK = "feedback", "Feedback"
         FOOTER = "footer", "Footer"
-        GAME = "game", "Play a game & win a discount"
 
     page = models.ForeignKey(
         SmartPage, on_delete=models.CASCADE, related_name="modules"

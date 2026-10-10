@@ -102,13 +102,13 @@
         </a>
         {% endif %}
 
-        <a href="{% url 'qr_game' qr.redirect_key %}" class="btn-action btn-action--game reveal" style="--i: 5">
-          <span class="btn-action__icon" aria-hidden="true">
-            <img src="/media/icons/Golden%20Gamepad%20Emblem.png" alt="" width="54" height="54" decoding="async">
-          </span>
+        {# Games are pure play while guests wait: no discount or offer copy. #}
+        <a href="{% url 'qr_game' qr.redirect_key %}"
+          class="btn-action btn-action--tint-green reveal" style="--i: 5">
+          <span class="btn-action__icon btn-action__icon--gold" aria-hidden="true">{% icon "gamepad" %}</span>
           <span class="btn-action__text">
-            <span class="btn-action__title">Play a Game &amp; Win a Discount</span>
-            <span class="btn-action__sub">Real games are coming soon</span>
+            <span class="btn-action__title">PLAY A GAME</span>
+            <span class="btn-action__sub">Free games while you wait, no ads</span>
           </span>
           <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>

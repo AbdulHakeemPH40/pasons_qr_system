@@ -3,7 +3,7 @@
 
 {% block title %}Menu · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
 {% block body_class %}theme-warm{% endblock %}
-{% block page_class %}page--device{% endblock %}
+{% block page_class %}page--device page--glass{% endblock %}
 
 {% block content %}
 <div class="device-stage">
@@ -16,41 +16,106 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
         </a>
         <div>
-          <h1 class="sheet-title">Menu</h1>
-          <span id="page-counter" class="sheet-meta">Page 1 of {{ total_pages|default:1 }}</span>
+          <h1 class="sheet-title">Our menu</h1>
+          <span class="sheet-meta">
+            {{ brand.name_en }}
+            {% if outlet %}<span class="sheet-updated">· {{ outlet.official_name }}</span>{% endif %}
+          </span>
         </div>
         <span class="sheet-side">
-          {% if ordering_url %}
-          <a href="{{ ordering_url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Order</a>
-          {% endif %}
+          {% if item_count %}<span class="chip chip--open chip--sm">{{ item_count }} dishes</span>{% endif %}
         </span>
       </header>
 
-      {% if pages %}
-      <div id="booklet-container" class="booklet">
-        {% for p in pages %}
-        <figure class="booklet-page glass booklet-page-card" data-page-num="{{ p.page_number }}">
-          <img src="{{ p.image.url }}" alt="Menu page {{ p.page_number }}" {% if forloop.counter > 2 %}loading="lazy" decoding="async"{% endif %}>
-          <figcaption class="caption">Page {{ p.page_number }}</figcaption>
-        </figure>
-        {% endfor %}
-      </div>
-      {% elif pdf_url %}
-      <div class="menu-empty glass">
-        <div class="glyph" aria-hidden="true">
+      {% if pdf_url %}
+      <a class="menu-pdf" href="{{ pdf_url }}" target="_blank" rel="noopener">
+        <span class="menu-pdf-ico" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg>
+        </span>
+        <span class="menu-pdf-copy">
+          <strong>Full menu PDF</strong>
+          <small>Every page, exactly as printed</small>
+        </span>
+        <span class="menu-pdf-cta">Open</span>
+      </a>
+      {% endif %}
+
+      {% for group in categories %}
+      <section class="menu-cat" aria-labelledby="cat-{{ group.category.id }}">
+        <div class="menu-cat-head">
+          <h2 id="cat-{{ group.category.id }}" class="menu-cat-title">
+            {% if dir == "rtl" and group.category.name_ar %}{{ group.category.name_ar }}{% else %}{{ group.category.name_en }}{% endif %}
+          </h2>
+          <span class="chip chip--gold chip--sm">{{ group.items|length }}</span>
         </div>
-        <h2>The menu is a PDF</h2>
-        <p class="muted">Open it to read every page, including prices.</p>
-        <a href="{{ pdf_url }}" class="btn btn-primary" target="_blank" rel="noopener">Open PDF menu</a>
-      </div>
-      {% else %}
+        <div class="menu-list">
+          {% for item in group.items %}
+          <article class="menu-card{% if not item.available %} is-off{% endif %}">
+            <div class="menu-card-media">
+              {% if item.image %}
+              <img src="{{ item.image.url }}" alt="{{ item.name_en }}" loading="{% if forloop.first and forloop.parentloop.first %}eager{% else %}lazy{% endif %}" decoding="async">
+              {% else %}
+              <span class="menu-plate" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 10h16v2a8 8 0 01-16 0v-2z"/><path d="M8 10V7M12 10V6M16 10V7"/></svg>
+              </span>
+              {% endif %}
+            </div>
+            <div class="menu-card-body">
+              <div class="menu-card-top">
+                <h3 class="menu-name">
+                  {% if dir == "rtl" and item.name_ar %}{{ item.name_ar }}{% else %}{{ item.name_en }}{% endif %}
+                </h3>
+                <span class="menu-price">
+                  {{ item.currency }} {{ item.effective_price }}
+                  {% if item.offer_price is not None and item.regular_price %}<del>{{ item.regular_price }}</del>{% endif %}
+                </span>
+              </div>
+              {% if item.description_en or item.description_ar %}
+              <p class="menu-desc">
+                {% if dir == "rtl" and item.description_ar %}{{ item.description_ar }}{% else %}{{ item.description_en }}{% endif %}
+              </p>
+              {% endif %}
+              <div class="menu-chips">
+                {% if item.featured %}<span class="chip chip--gold chip--sm">Chef's pick</span>{% endif %}
+                {% if item.dietary_type == "veg" %}<span class="chip chip--open chip--sm">Vegetarian</span>{% endif %}
+                {% if item.dietary_type == "vegan" %}<span class="chip chip--open chip--sm">Vegan</span>{% endif %}
+                {% if item.spice_level != "none" %}<span class="chip chip--hot chip--sm">{{ item.get_spice_level_display }}</span>{% endif %}
+                {% if item.discount_pct %}<span class="chip chip--gold chip--sm">Save {{ item.discount_pct }}%</span>{% endif %}
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+
+      {% if pages %}
+      <section class="menu-cat" aria-label="Menu booklet">
+        <div class="menu-cat-head">
+          <h2 class="menu-cat-title">Menu booklet</h2>
+          <span class="chip chip--gold chip--sm">{{ total_pages }} pages</span>
+        </div>
+        <div id="booklet-container" class="booklet booklet--menu">
+          {% for p in pages %}
+          <figure class="booklet-page glass booklet-page-card" data-page-num="{{ p.page_number }}">
+            <img src="{{ p.image.url }}" alt="Menu page {{ p.page_number }}" {% if forloop.counter > 2 %}loading="lazy" decoding="async"{% endif %}>
+            <figcaption class="caption">Page {{ p.page_number }}</figcaption>
+          </figure>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if not categories and not pages and not pdf_url %}
       <div class="menu-empty glass">
         <div class="glyph" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M6 4h9a3 3 0 013 3v13H9a3 3 0 01-3-3V4z"/></svg>
         </div>
         <h2>Menu is being updated</h2>
-        <p class="muted">Ask the team for a printed copy while this location’s booklet is refreshed.</p>
+        <p class="muted">Ask the team for a printed copy while this location's menu is refreshed.</p>
+        {% if ordering_url %}
+        <a href="{{ ordering_url }}" target="_blank" rel="noopener" class="btn btn-primary">Order online instead</a>
+        {% endif %}
       </div>
       {% endif %}
 

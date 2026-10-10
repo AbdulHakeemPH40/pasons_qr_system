@@ -12,6 +12,7 @@ from unittest import mock
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -179,17 +180,18 @@ class QrFlowTests(AcceptanceFixtures):
         self.assertEqual(self.qr_intl.scan_count, 1)
         self.assertEqual(self.client.session["qr"], self.qr_intl.pk)
 
-    def test_game_button_stays_and_game_page_shows_coming_soon(self):
-        """The "Play a Game & Win a Discount" button is permanent customer UI."""
+    def test_landing_shows_play_card_without_offer_promise(self):
+        """Client decision 2026-10-10 (revised): games are play-only entertainment."""
         landing = self.client.get(reverse("qr_landing", args=["kcic-table-001"]))
-        self.assertContains(landing, "Play a Game")
-        game_page = self.client.get(reverse("qr_game", args=["kcic-table-001"]))
-        self.assertEqual(game_page.status_code, 200)
-        self.assertContains(game_page, "coming soon")
-        # Unknown keys still 404.
-        self.assertEqual(
-            self.client.get(reverse("qr_game", args=["does-not-exist"])).status_code, 404
-        )
+        self.assertEqual(landing.status_code, 200)
+        self.assertContains(landing, "PLAY A GAME")
+        self.assertContains(landing, reverse("qr_game", args=["kcic-table-001"]))
+        # Play-only: the card must never promise a discount or reward.
+        self.assertNotContains(landing, "Win a Discount")
+        # The printed-sheet URL keeps working and opens the games hub.
+        entry = self.client.get("/q/kcic-table-001/game/")
+        self.assertEqual(entry.status_code, 302)
+        self.assertIn(reverse("games_hub"), entry["Location"])
 
     def test_arabic_query_sets_rtl(self):
         response = self.client.get(reverse("qr_landing", args=["kcic-table-001"]) + "?lang=ar")
@@ -577,6 +579,83 @@ class MenuEditTests(AcceptanceFixtures):
         override = MenuItem.objects.get(outlet=self.intl, overrides=self.base_item)
         self.assertEqual(override.name_en, "Hummus")
         self.assertEqual(override.regular_price, self.base_item.regular_price)
+
+
+class MenuCardPageTests(AcceptanceFixtures):
+    """
+    The guest menu page renders dish cards and an uploaded PDF in-platform.
+    Only a genuine external URL may send guests off-site (the reserved
+    example-domain placeholder used to produce a DNS error in browsers).
+    """
+
+    PDF = SimpleUploadedFile("menu.pdf", b"%PDF-1.4 test menu", content_type="application/pdf")
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.category = MenuCategory.objects.create(brand=cls.brand, name_en="Mains")
+        cls.dish = MenuItem.objects.create(
+            category=cls.category, brand=cls.brand, name_en="Chicken mandi",
+            description_en="Slow-cooked rice, smoked chicken.",
+            regular_price=42, offer_price=36, featured=True, available=True,
+        )
+        cls.sold_out = MenuItem.objects.create(
+            category=cls.category, brand=cls.brand, name_en="Sold out kebab",
+            regular_price=50, available=False,
+        )
+
+    def _in_platform_source(self, menu_type):
+        source = MenuSource.objects.get(outlet=self.intl)
+        source.menu_type = menu_type
+        source.menu_url = ""
+        source.menu_file = SimpleUploadedFile(
+            "menu.pdf", b"%PDF-1.4 test menu", content_type="application/pdf"
+        )
+        source.save()
+        return source
+
+    def test_customer_menu_renders_dish_cards_and_pdf(self):
+        self._in_platform_source(MenuSource.MenuType.PAGES)
+        response = self.client.get(reverse("customer_menu", args=["kcic-table-001"]))
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        self.assertIn("Chicken mandi", body)
+        self.assertIn("Save 14%", body)          # offer chip from 42 -> 36
+        self.assertIn("Chef's pick", body)
+        self.assertIn("/media/menu/pdf/", body)  # PDF card links the upload
+        self.assertNotIn("Sold out kebab", body)  # unavailable dishes stay hidden
+
+    def test_pdf_source_stays_in_platform(self):
+        self._in_platform_source(MenuSource.MenuType.PDF)
+        response = self.client.get(reverse("customer_menu", args=["kcic-table-001"]))
+        self.assertEqual(response.status_code, 200)  # no blind redirect to a raw file
+        self.assertIn("Full menu PDF", response.content.decode())
+
+    def test_manager_uploads_menu_pdf_from_panel(self):
+        self.client.login(username="ic-manager", password="pass-ic")
+        response = self.client.post(reverse("panel_menus"), {
+            "brand": self.brand.pk,
+            "outlet": self.intl.pk,
+            "menu_type": "pages",
+            "menu_file": self.PDF,
+        })
+        self.assertEqual(response.status_code, 302)
+        source = MenuSource.objects.get(outlet=self.intl)
+        self.assertTrue(source.menu_file)
+        self.assertTrue(source.menu_file.name.endswith(".pdf"))
+
+    def test_panel_rejects_non_pdf_menu_file(self):
+        self.client.login(username="ic-manager", password="pass-ic")
+        png = SimpleUploadedFile("menu.png", b"\x89PNG fake", content_type="image/png")
+        response = self.client.post(reverse("panel_menus"), {
+            "brand": self.brand.pk,
+            "outlet": self.intl.pk,
+            "menu_type": "pages",
+            "menu_file": png,
+        })
+        self.assertEqual(response.status_code, 302)
+        source = MenuSource.objects.get(outlet=self.intl)
+        self.assertFalse(source.menu_file)
 
 
 class CrmTests(AcceptanceFixtures):

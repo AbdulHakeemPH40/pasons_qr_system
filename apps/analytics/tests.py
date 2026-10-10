@@ -4,7 +4,7 @@ aggregation (spec 24/50): staff gating, KPI rendering, brand scoping,
 day/outlet/source breakdowns, and top QR placements.
 """
 
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -79,9 +79,20 @@ class DashboardDataTests(TestCase):
         )
         cls.user = User.objects.create_superuser("admin", password="pw")
 
-    def _scan(self, qr, brand, hours_ago=0):
+    def _scan(self, qr, brand, hours_ago=0, days_ago=None):
         event = ScanEvent.objects.create(qr_code=qr, brand=brand)
-        if hours_ago:
+        if days_ago is not None:
+            # Anchor to local noon on the target calendar day so the scan
+            # always lands in the intended day bucket regardless of the
+            # wall-clock time the suite runs (hour offsets drift across
+            # midnight Asia/Dubai and made these tests flaky).
+            day = timezone.localdate() - timedelta(days=days_ago)
+            stamp = timezone.make_aware(
+                datetime.combine(day, time(12, 0)),
+                timezone.get_current_timezone(),
+            )
+            ScanEvent.objects.filter(pk=event.pk).update(scanned_at=stamp)
+        elif hours_ago:
             ScanEvent.objects.filter(pk=event.pk).update(
                 scanned_at=timezone.now() - timedelta(hours=hours_ago)
             )
@@ -90,8 +101,8 @@ class DashboardDataTests(TestCase):
     def test_kpis_count_scans_and_campaigns(self):
         from apps.core.models import Campaign
 
-        self._scan(self.qr, self.brand)
-        self._scan(self.qr, self.brand, hours_ago=2)
+        self._scan(self.qr, self.brand, days_ago=0)
+        self._scan(self.qr, self.brand, days_ago=0)
         Campaign.objects.create(
             name="Live offer",
             brand=self.brand,
@@ -134,9 +145,9 @@ class DashboardDataTests(TestCase):
         self.assertEqual(rows[0]["pct"], 0)
 
     def test_scans_by_day_bars_scale_to_peak(self):
-        self._scan(self.qr, self.brand, hours_ago=26)  # yesterday
-        self._scan(self.qr, self.brand)
-        self._scan(self.qr, self.brand)
+        self._scan(self.qr, self.brand, days_ago=1)  # yesterday
+        self._scan(self.qr, self.brand, days_ago=0)
+        self._scan(self.qr, self.brand, days_ago=0)
         rows = aggregates.scans_by_day(days=7)
         self.assertEqual(rows[-1]["count"], 2)
         self.assertEqual(rows[-1]["pct"], 100)  # busiest day = full bar
