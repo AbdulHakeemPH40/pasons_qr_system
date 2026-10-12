@@ -66,6 +66,26 @@ ALLOWED_HOSTS = [
     h for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h
 ]
 
+# Hosts added on top of ALLOWED_HOSTS for sharing the dev server through a
+# tunnel (ngrok, cloudflared, localtunnel...). Kept as a *separate* key because
+# .env is authoritative for the keys it sets, so an ALLOWED_HOSTS override on
+# the command line would be discarded when .env loads.
+ALLOWED_HOSTS += [h for h in os.environ.get("ALLOWED_HOSTS_EXTRA", "").split(",") if h]
+
+# Origins trusted for unsafe (POST) requests arriving through a tunnel, e.g.
+# https://<name>.ngrok-free.dev . A tunnel terminates HTTPS and forwards plain
+# HTTP, so without this the panel login and the analytics/game beacons are
+# rejected with 403 (CSRF origin mismatch).
+CSRF_TRUSTED_ORIGINS = [
+    o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o
+]
+
+# Tell Django the request is really HTTPS when it arrives behind a proxy that
+# sets X-Forwarded-Proto (ngrok does). Only enabled when asked via the env, so
+# local runs are unaffected.
+if os.environ.get("USE_X_FORWARDED_PROTO", "") == "1":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # --- applications --------------------------------------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
