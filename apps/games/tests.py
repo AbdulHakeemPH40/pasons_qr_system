@@ -48,7 +48,7 @@ class GamesZoneFixtures(TestCase):
             official_name="King Chef — International City",
             brand=cls.brand,
             city="International City",
-            address="France Cluster, International City, Dubai",
+            address="Italy Cluster, International City, Dubai",
             phone="04 220 0011",
             opening_hours=_hours_open_all_day(),
             active=True,

@@ -81,7 +81,7 @@ BRANDS = [
                 "official_name": "King Chef — International City",
                 "city": "International City",
                 "emirate": "Dubai",
-                "address": "France Cluster, International City, Dubai",
+                "address": "Italy Cluster, International City, Dubai",
                 "maps": "",
                 "phone": "04 220 0011",
                 "whatsapp": "97142200011",
