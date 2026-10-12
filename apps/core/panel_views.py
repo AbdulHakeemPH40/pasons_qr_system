@@ -18,12 +18,14 @@ from django.utils.text import slugify
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from apps.analytics.models import ScanEvent, TapEvent
-from apps.core.models import Brand, ChangeLog, Outlet, OutletManager, QrCode, SmartPage
+from apps.core.models import Brand, ChangeLog, Department, Outlet, OutletManager, QrCode, SmartPage
 from apps.core.panel_permissions import (
+    apply_role_to_user,
     can_manage_structure,
     check_outlet_permission,
     is_head_office,
     log_change,
+    role_label,
     scoped_brands,
     scoped_outlets,
 )
@@ -544,18 +546,6 @@ def panel_menus(request):
 # Staff users management (Head Office only — higher authority)
 # ---------------------------------------------------------------------------
 
-def _user_role_label(user):
-    if is_head_office(user):
-        return "Head Office"
-    profile = getattr(user, "outlet_manager_profile", None)
-    if not profile:
-        return "No access"
-    if profile.role == OutletManager.Role.BRAND:
-        return f"Brand Manager · {profile.brand.name_en if profile.brand else '—'}"
-    names = ", ".join(profile.outlets.values_list("official_name", flat=True)) or "—"
-    return f"Outlet Manager · {names}"
-
-
 @login_required
 @require_GET
 def panel_users(request):
@@ -567,7 +557,7 @@ def panel_users(request):
         .prefetch_related("outlet_manager_profile__outlets")
         .order_by("username")
     )
-    rows = [{"u": u, "role_label": _user_role_label(u)} for u in users]
+    rows = [{"u": u, "role_label": role_label(u)} for u in users]
     return render(request, "panel/users_list.html", {
         "nav_active": "users",
         "is_head_office": True,
@@ -575,27 +565,20 @@ def panel_users(request):
     })
 
 
-def _apply_role_to_user(user, role, brand, outlets):
-    """Attach/refresh the manager profile for a non-head-office role."""
-    if role == "head_office":
-        user.is_staff = True
-        user.is_superuser = False
-        user.save(update_fields=["is_staff", "is_superuser"])
-        OutletManager.objects.filter(user=user).delete()
-        return
-    user.is_staff = False
-    user.is_superuser = False
-    user.save(update_fields=["is_staff", "is_superuser"])
-    profile, _ = OutletManager.objects.get_or_create(user=user)
-    if role == "brand_manager":
-        profile.role = OutletManager.Role.BRAND
-        profile.brand = brand
-        profile.outlets.clear()
-    else:
-        profile.role = OutletManager.Role.OUTLET
-        profile.brand = None
-        profile.outlets.set(outlets)
-    profile.save()
+def _email_taken(email, exclude_pk=None):
+    """True when another account already uses this email (case-insensitive).
+
+    auth.User.email is not unique in Django, so duplicates are possible at the
+    database level. Staff sign in by email, so a shared address would make an
+    account ambiguous. This keeps one address tied to one account.
+    """
+    email = (email or "").strip()
+    if not email:
+        return False
+    qs = User.objects.filter(email__iexact=email)
+    if exclude_pk:
+        qs = qs.exclude(pk=exclude_pk)
+    return qs.exists()
 
 
 @login_required
@@ -607,21 +590,29 @@ def panel_user_add(request):
     if request.method == "POST":
         username = (request.POST.get("username") or "").strip()
         password = request.POST.get("password") or ""
+        email = (request.POST.get("email") or "").strip()
         role = request.POST.get("role") or "outlet_manager"
         if not username or not password:
             messages.error(request, "Username and password are required.")
         elif User.objects.filter(username=username).exists():
             messages.error(request, f"Username {username} is already in use.")
+        elif not email:
+            messages.error(request, "An email address is required: staff sign in with it.")
+        elif _email_taken(email):
+            messages.error(request, f"Email {email} is already used by another account.")
         else:
             user = User.objects.create_user(
                 username=username,
                 password=password,
-                email=(request.POST.get("email") or "").strip(),
+                email=email,
                 first_name=(request.POST.get("first_name") or "").strip(),
                 last_name=(request.POST.get("last_name") or "").strip(),
             )
             brand = Brand.objects.filter(pk=request.POST.get("brand")).first()
             outlets = Outlet.objects.filter(pk__in=request.POST.getlist("outlets"))
+            department = Department.objects.filter(
+                pk=request.POST.get("department")
+            ).first()
             if role == "brand_manager" and brand is None:
                 messages.error(request, "Select a brand for a brand manager.")
                 user.delete()
@@ -630,7 +621,7 @@ def panel_user_add(request):
                 messages.error(request, "Select at least one branch for an outlet manager.")
                 user.delete()
                 return redirect("panel_user_add")
-            _apply_role_to_user(user, role, brand, list(outlets))
+            apply_role_to_user(user, role, brand, list(outlets), department)
             log_change(user=request.user, action="USER_CREATE",
                        object_repr=f"{username} ({role})",
                        brand=brand if role == "brand_manager" else None)
@@ -643,6 +634,7 @@ def panel_user_add(request):
         "target": None,
         "brands": Brand.objects.all().order_by("name_en"),
         "outlets": Outlet.objects.select_related("brand").order_by("official_name"),
+        "departments": Department.objects.filter(is_active=True).order_by("name_en"),
     })
 
 
@@ -668,7 +660,10 @@ def panel_user_edit(request, pk):
 
         target.first_name = (request.POST.get("first_name") or "").strip()
         target.last_name = (request.POST.get("last_name") or "").strip()
-        target.email = (request.POST.get("email") or "").strip()
+        # The form always posts the email. Only overwrite it when the key is
+        # present, so a partial POST cannot silently blank a login address.
+        if "email" in request.POST:
+            target.email = (request.POST.get("email") or "").strip()
         if action == "toggle_active":
             if target == request.user:
                 messages.error(request, "You cannot deactivate your own account.")
@@ -684,13 +679,18 @@ def panel_user_edit(request, pk):
         role = request.POST.get("role") or "outlet_manager"
         brand = Brand.objects.filter(pk=request.POST.get("brand")).first()
         outlets = Outlet.objects.filter(pk__in=request.POST.getlist("outlets"))
-        if role == "brand_manager" and brand is None:
+        department = Department.objects.filter(pk=request.POST.get("department")).first()
+        if not target.email:
+            messages.error(request, "An email address is required: staff sign in with it.")
+        elif _email_taken(target.email, exclude_pk=target.pk):
+            messages.error(request, f"Email {target.email} is already used by another account.")
+        elif role == "brand_manager" and brand is None:
             messages.error(request, "Select a brand for a brand manager.")
         elif role == "outlet_manager" and not outlets.exists():
             messages.error(request, "Select at least one branch for an outlet manager.")
         else:
             target.save()
-            _apply_role_to_user(target, role, brand, list(outlets))
+            apply_role_to_user(target, role, brand, list(outlets), department)
             new_password = request.POST.get("password") or ""
             if new_password:
                 target.set_password(new_password)
@@ -703,6 +703,7 @@ def panel_user_edit(request, pk):
     current_role = "outlet_manager"
     current_brand = None
     current_outlets = []
+    current_department = getattr(profile, "department", None)
     if is_head_office(target):
         current_role = "head_office"
     elif profile:
@@ -717,8 +718,10 @@ def panel_user_edit(request, pk):
         "current_role": current_role,
         "current_brand": current_brand,
         "current_outlets": current_outlets,
+        "current_department": current_department,
         "brands": Brand.objects.all().order_by("name_en"),
         "outlets": Outlet.objects.select_related("brand").order_by("official_name"),
+        "departments": Department.objects.filter(is_active=True).order_by("name_en"),
     })
 
 

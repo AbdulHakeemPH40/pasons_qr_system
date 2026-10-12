@@ -31,14 +31,14 @@
     </div>
 
     <div>
-      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Email</label>
-      <input type="email" name="email" value="{{ target.email|default:'' }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Email (used to sign in)</label>
+      <input type="email" name="email" value="{{ target.email|default:'' }}" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
     </div>
 
     <div>
       <label style="display: block; font-weight: 600; margin-bottom: 4px;">Role</label>
       <select name="role" id="role-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-        <option value="head_office" {% if current_role == "head_office" %}selected{% endif %}>Head Office — full access, creates brands &amp; branches</option>
+        <option value="head_office" {% if current_role == "head_office" %}selected{% endif %}>Head Office — brands, branches and staff; scope set by department</option>
         <option value="brand_manager" {% if current_role == "brand_manager" %}selected{% endif %}>Brand Manager — all branches of one brand</option>
         <option value="outlet_manager" {% if not target or current_role == "outlet_manager" %}selected{% endif %}>Outlet Manager — selected branches only</option>
       </select>
@@ -61,6 +61,17 @@
         <option value="{{ o.pk }}" {% if o.pk in current_outlets %}selected{% endif %}>{{ o.brand.name_en }} — {{ o.official_name }}</option>
         {% endfor %}
       </select>
+    </div>
+
+    <div id="department-field">
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Department (for Head Office)</label>
+      <select name="department" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        <option value="">— no department (full access) —</option>
+        {% for d in departments %}
+        <option value="{{ d.pk }}" {% if current_department and current_department.pk == d.pk %}selected{% endif %}>{{ d.name_en }}</option>
+        {% endfor %}
+      </select>
+      <p class="muted caption" style="margin: 4px 0 0;">A department limits which panel sections this person can open. Leave blank for full access.</p>
     </div>
 
     <div>
@@ -95,10 +106,12 @@
     var roleSelect = document.getElementById('role-select');
     var brandField = document.getElementById('brand-field');
     var outletsField = document.getElementById('outlets-field');
+    var departmentField = document.getElementById('department-field');
     function sync() {
       var role = roleSelect.value;
       brandField.style.display = role === 'brand_manager' ? '' : 'none';
       outletsField.style.display = role === 'outlet_manager' ? '' : 'none';
+      departmentField.style.display = role === 'head_office' ? '' : 'none';
     }
     roleSelect.addEventListener('change', sync);
     sync();

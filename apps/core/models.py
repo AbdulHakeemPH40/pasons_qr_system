@@ -449,6 +449,34 @@ class QrCode(TimeStampedModel):
         super().save(*args, **kwargs)
 
 
+class Department(TimeStampedModel):
+    """Head Office function: Marketing, Operations, Finance, HR, IT and Admin.
+
+    The code selects a capability set defined in
+    ``apps.core.panel_permissions.DEPARTMENT_CAPABILITIES``. Keeping the
+    capability mapping in code means head office can rename or retire a
+    department here without a migration, and the mapping stays reviewable in
+    one place. A Head Office account with no department keeps full access.
+    """
+
+    code = models.SlugField(
+        max_length=30,
+        unique=True,
+        help_text="MARKETING, OPERATIONS, FINANCE, HR, IT",
+    )
+    name_en = models.CharField(max_length=80)
+    name_ar = models.CharField(max_length=80, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Department"
+        verbose_name_plural = "Departments"
+        ordering = ["name_en"]
+
+    def __str__(self):
+        return self.name_en
+
+
 class OutletManager(TimeStampedModel):
     """
     Manager profile for role-based scoping in /panel/.
@@ -478,6 +506,14 @@ class OutletManager(TimeStampedModel):
     )
     outlets = models.ManyToManyField(Outlet, related_name="managers", blank=True)
     can_edit_contact = models.BooleanField(default=False)
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managers",
+        help_text="Head Office only: limits the panel sections this person may open",
+    )
 
     class Meta:
         verbose_name = "Outlet Manager"

@@ -118,23 +118,41 @@
   <aside class="panel-sidebar glass glass--md">
     <div style="padding: var(--sp-2); margin-bottom: var(--sp-2); border-bottom: 1px solid rgba(0,0,0,0.08);">
       <h2 style="font-size: 1.1rem; margin: 0; color: var(--forest);">Pasons Panel</h2>
-      <p class="muted caption" style="margin: 2px 0 0;">{{ user.username }} · {% if is_head_office %}Head Office{% else %}Outlet Manager{% endif %}</p>
+      <p class="muted caption" style="margin: 2px 0 0;">{{ user.username }} · {{ role_label|default:"No access" }}</p>
     </div>
     <nav class="panel-nav">
+      {% if "dashboard" in nav_caps %}
       <a href="{% url 'panel_dashboard' %}" class="{% if nav_active == 'dashboard' %}active{% endif %}">📊 Dashboard</a>
-      {% if is_head_office %}
+      {% endif %}
+      {% if is_head_office and "brands" in nav_caps %}
       <a href="{% url 'panel_brands' %}" class="{% if nav_active == 'brands' %}active{% endif %}">🏢 Brands</a>
       {% endif %}
+      {% if "outlets" in nav_caps %}
       <a href="{% url 'panel_outlets' %}" class="{% if nav_active == 'outlets' %}active{% endif %}">📍 Outlets</a>
+      {% endif %}
+      {% if "qrcodes" in nav_caps %}
       <a href="{% url 'panel_qrcodes' %}" class="{% if nav_active == 'qrcodes' %}active{% endif %}">🏁 QR Codes</a>
+      {% endif %}
+      {% if "specials" in nav_caps %}
       <a href="{% url 'panel_specials' %}" class="{% if nav_active == 'specials' %}active{% endif %}">🌟 Specials</a>
+      {% endif %}
+      {% if "menus" in nav_caps %}
       <a href="{% url 'panel_menus' %}" class="{% if nav_active == 'menus' %}active{% endif %}">📖 Menus</a>
       <a href="{% url 'panel_menu_items' %}" class="{% if nav_active == 'menu_items' %}active{% endif %}">🍽️ Menu Items</a>
+      {% endif %}
+      {% if "leads" in nav_caps %}
       <a href="{% url 'panel_leads' %}" class="{% if nav_active == 'leads' %}active{% endif %}">📥 Leads</a>
+      {% endif %}
+      {% if "feedback" in nav_caps %}
       <a href="{% url 'panel_feedback' %}" class="{% if nav_active == 'feedback' %}active{% endif %}">💬 Feedback</a>
+      {% endif %}
+      {% if "analytics" in nav_caps %}
       <a href="{% url 'panel_analytics' %}" class="{% if nav_active == 'analytics' %}active{% endif %}">📈 Analytics</a>
-      {% if is_head_office %}
+      {% endif %}
+      {% if is_head_office and "users" in nav_caps %}
       <a href="{% url 'panel_users' %}" class="{% if nav_active == 'users' %}active{% endif %}">👥 Users</a>
+      {% endif %}
+      {% if is_head_office and "changelog" in nav_caps %}
       <a href="{% url 'panel_changelog' %}" class="{% if nav_active == 'changelog' %}active{% endif %}">📋 Change Log</a>
       {% endif %}
       <form method="post" action="{% url 'logout' %}" style="margin-top: var(--sp-3); padding-top: var(--sp-2); border-top: 1px solid rgba(0,0,0,0.08);">

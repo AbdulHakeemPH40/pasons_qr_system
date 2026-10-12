@@ -7,12 +7,14 @@ and panel scope.
 """
 
 import json
+from io import StringIO
 from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -21,13 +23,18 @@ from apps.analytics.models import ScanEvent, TapEvent
 from apps.core.models import (
     Brand,
     ChangeLog,
+    Department,
     Outlet,
     OutletManager,
     PageModule,
     QrCode,
     SmartPage,
 )
-from apps.core.panel_permissions import check_outlet_permission
+from apps.core.panel_permissions import (
+    check_outlet_permission,
+    scoped_brands,
+    scoped_outlets,
+)
 from apps.engagement.models import Feedback, Lead
 from apps.menu.models import MenuCategory, MenuItem, MenuSource, SpecialItem
 
@@ -67,7 +74,7 @@ class AcceptanceFixtures(TestCase):
             official_name="King Chef — International City",
             brand=cls.brand,
             city="International City",
-            address="France Cluster, International City, Dubai",
+            address="Italy Cluster, International City, Dubai",
             phone="04 220 0011",
             google_place_id="ChIJ-kingchef-intl-city-demo",
             google_review_url="https://search.google.com/local/writereview?placeid=ChIJ-kingchef-intl-city-demo",
@@ -133,8 +140,14 @@ class AcceptanceFixtures(TestCase):
             title_en="Family Biryani Bucket", original_price=89, offer_price=69,
             active=True,
         )
-        cls.head = User.objects.create_user("headoffice", password="pass-head", is_staff=True)
-        cls.manager = User.objects.create_user("ic-manager", password="pass-ic")
+        cls.head = User.objects.create_user(
+            "headoffice", password="pass-head", is_staff=True,
+            email="admin@pasonsgrp.com",
+        )
+        cls.manager = User.objects.create_user(
+            "ic-manager", password="pass-ic",
+            email="om.kingchef-intlcity@pasonsgrp.com",
+        )
         profile = OutletManager.objects.create(user=cls.manager, can_edit_contact=True)
         profile.outlets.add(cls.intl)
 
@@ -353,6 +366,632 @@ class PanelScopeTests(AcceptanceFixtures):
         self.assertFalse(SpecialItem.objects.filter(title_en="Should Not Land").exists())
 
 
+class BrandManagerScopeTests(AcceptanceFixtures):
+    """Locks the Brand Manager tier: confined to its own brand, on every screen.
+
+    The shared fixture holds a single brand, so this class adds a competing
+    brand (Paramount) with one special, lead and feedback that live only on it.
+    The contract locked here matches the live views exactly:
+
+      - panel_outlet_edit calls check_outlet_permission, so a foreign outlet
+        is a 403.
+      - special / lead / feedback detail views filter the row out of the
+        queryset, so a foreign row is a 404.
+      - Both mean "blocked". 200 would be the bug this guards against.
+
+    This tier had no test coverage before; the outlet-manager tier is covered
+    separately in PanelScopeTests.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.other_brand = Brand.objects.create(
+            name_en="Paramount Restaurant", code="PARAMOUNT", status="active",
+        )
+        cls.other_outlet = Outlet.objects.create(
+            code="PARAMOUNT-QUSAIS", slug="paramount-qusais",
+            official_name="Paramount \u2014 Al Qusais", brand=cls.other_brand,
+            city="Al Qusais", active=True,
+        )
+        cls.bm = User.objects.create_user("bm-kingchef", password="pass-bm")
+        OutletManager.objects.create(
+            user=cls.bm, role=OutletManager.Role.BRAND, brand=cls.brand,
+        )
+        cls.other_special = SpecialItem.objects.create(
+            brand=cls.other_brand, outlet=cls.other_outlet,
+            kind=SpecialItem.Kind.OFFER, title_en="Paramount Only Deal",
+            original_price=50, active=True,
+        )
+        cls.other_lead = Lead.objects.create(
+            brand=cls.other_brand, outlet=cls.other_outlet,
+            customer_name="Paramount Hall Booking",
+        )
+        cls.other_feedback = Feedback.objects.create(
+            brand=cls.other_brand, outlet=cls.other_outlet,
+            rating=2, category=Feedback.Category.SERVICE,
+            message="Paramount slow service",
+        )
+        cls.own_lead = Lead.objects.create(
+            brand=cls.brand, outlet=cls.intl, customer_name="King Chef Booking",
+        )
+        cls.own_feedback = Feedback.objects.create(
+            brand=cls.brand, outlet=cls.intl, rating=5,
+            category=Feedback.Category.FOOD, message="Great mandi",
+        )
+
+    def setUp(self):
+        self.client.login(username="bm-kingchef", password="pass-bm")
+
+    def test_brand_manager_sees_own_brand_outlets_only(self):
+        response = self.client.get(reverse("panel_outlets"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "International City")
+        self.assertNotContains(response, "Paramount")
+
+    def test_brand_manager_blocked_from_other_brand_outlet(self):
+        response = self.client.get(
+            reverse("panel_outlet_edit", args=[self.other_outlet.pk])
+        )
+        self.assertEqual(response.status_code, 403)
+        with self.assertRaises(PermissionDenied):
+            check_outlet_permission(self.bm, self.other_outlet)
+
+    def test_brand_manager_cannot_open_other_brand_special(self):
+        response = self.client.get(
+            reverse("panel_special_edit", args=[self.other_special.pk])
+        )
+        self.assertIn(response.status_code, (403, 404))
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_brand_manager_cannot_touch_other_brand_lead(self):
+        response = self.client.post(
+            reverse("panel_lead_update", args=[self.other_lead.pk]),
+            {"status": Lead.Status.CLOSED},
+        )
+        self.assertIn(response.status_code, (403, 404))
+        self.other_lead.refresh_from_db()
+        self.assertEqual(self.other_lead.status, Lead.Status.NEW)
+
+    def test_brand_manager_cannot_touch_other_brand_feedback(self):
+        response = self.client.post(
+            reverse("panel_feedback_update", args=[self.other_feedback.pk]),
+            {"status": Feedback.Status.RESOLVED},
+        )
+        self.assertIn(response.status_code, (403, 404))
+        self.other_feedback.refresh_from_db()
+        self.assertEqual(self.other_feedback.status, Feedback.Status.NEW)
+
+    def test_brand_manager_lists_hide_other_brand_rows(self):
+        leads = self.client.get(reverse("panel_leads"))
+        self.assertContains(leads, "King Chef Booking")
+        self.assertNotContains(leads, "Paramount Hall Booking")
+
+        feedback = self.client.get(reverse("panel_feedback"))
+        self.assertContains(feedback, "Great mandi")
+        self.assertNotContains(feedback, "Paramount slow service")
+
+    def test_brand_manager_can_reach_own_brand_outlet(self):
+        # Sanity: the same URL that 403s on a foreign outlet works on an own one.
+        response = self.client.get(reverse("panel_outlet_edit", args=[self.intl.pk]))
+        self.assertEqual(response.status_code, 200)
+
+
+class NoProfileScopeTests(AcceptanceFixtures):
+    """Locks the dangerous failure mode: a login with no profile must get an
+    EMPTY scope, never every outlet or brand. An unscoped account that sees
+    everything is the leak this guard exists to catch."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.orphan = User.objects.create_user("no-profile", password="pass-none")
+
+    def setUp(self):
+        self.client.login(username="no-profile", password="pass-none")
+
+    def test_scope_helpers_return_empty(self):
+        self.assertFalse(scoped_outlets(self.orphan).exists())
+        self.assertFalse(scoped_brands(self.orphan).exists())
+
+    def test_outlets_list_reveals_nothing(self):
+        # Phase 3 tightened this: a login with no role now gets 403 on the
+        # outlets screen rather than an empty list. The security intent is
+        # unchanged and the check is stricter, so assert the block directly.
+        # NB: assertNotContains defaults to expecting status 200, so the 403
+        # must be declared or it fails on the status rather than the content.
+        response = self.client.get(reverse("panel_outlets"))
+        self.assertEqual(response.status_code, 403)
+        self.assertNotContains(response, "International City", status_code=403)
+        self.assertNotContains(response, "Al Nahda", status_code=403)
+
+
+class EmailLoginTests(AcceptanceFixtures):
+    """Phase 1: staff sign in with their email address OR their username.
+
+    Identity matching is case-insensitive because email addresses are, and
+    the backend refuses rather than guesses when an address is ambiguous.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.email_user = User.objects.create_user(
+            "bm-email", password="pass-email", email="bm.kingchef@pasonsgrp.com",
+        )
+        OutletManager.objects.create(
+            user=cls.email_user, role=OutletManager.Role.BRAND, brand=cls.brand,
+        )
+
+    def test_login_with_email_address(self):
+        self.assertTrue(
+            self.client.login(
+                username="bm.kingchef@pasonsgrp.com", password="pass-email"
+            )
+        )
+
+    def test_login_with_email_is_case_insensitive(self):
+        self.assertTrue(
+            self.client.login(
+                username="BM.KingChef@PasonsGrp.com", password="pass-email"
+            )
+        )
+
+    def test_login_with_username_still_works(self):
+        self.assertTrue(self.client.login(username="bm-email", password="pass-email"))
+
+    def test_login_with_unknown_email_fails(self):
+        self.assertFalse(
+            self.client.login(username="nobody@pasonsgrp.com", password="pass-email")
+        )
+
+    def test_login_with_email_and_wrong_password_fails(self):
+        self.assertFalse(
+            self.client.login(
+                username="bm.kingchef@pasonsgrp.com", password="wrong-password"
+            )
+        )
+
+    def test_login_page_offers_email_or_username(self):
+        response = self.client.get(reverse("login"))
+        self.assertContains(response, "Email or username")
+
+    def test_email_login_reaches_the_right_scope(self):
+        self.client.login(username="bm.kingchef@pasonsgrp.com", password="pass-email")
+        listing = self.client.get(reverse("panel_outlets"))
+        self.assertEqual(listing.status_code, 200)
+        self.assertContains(listing, "International City")
+
+
+class StaffEmailValidationTests(AcceptanceFixtures):
+    """Phase 1: an email is required and unique, because it is a login identity."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.taken = User.objects.create_user(
+            "has-email", password="pass-x", email="taken@pasonsgrp.com",
+        )
+
+    def setUp(self):
+        self.client.login(username="headoffice", password="pass-head")
+
+    def test_add_user_without_email_is_rejected(self):
+        response = self.client.post(reverse("panel_user_add"), {
+            "username": "noemail",
+            "password": "Str0ng-Pass!42",
+            "role": "outlet_manager",
+            "outlets": [self.intl.pk],
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username="noemail").exists())
+
+    def test_add_user_with_duplicate_email_is_rejected(self):
+        response = self.client.post(reverse("panel_user_add"), {
+            "username": "dupe",
+            "password": "Str0ng-Pass!42",
+            "email": "TAKEN@pasonsgrp.com",  # same address, different case
+            "role": "outlet_manager",
+            "outlets": [self.intl.pk],
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username="dupe").exists())
+
+    def test_add_user_with_unique_email_succeeds(self):
+        response = self.client.post(reverse("panel_user_add"), {
+            "username": "fresh",
+            "password": "Str0ng-Pass!42",
+            "email": "fresh@pasonsgrp.com",
+            "role": "outlet_manager",
+            "outlets": [self.intl.pk],
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(username="fresh").exists())
+
+    def test_edit_user_to_a_taken_email_is_rejected(self):
+        response = self.client.post(
+            reverse("panel_user_edit", args=[self.manager.pk]),
+            {
+                "action": "save",
+                "email": "taken@pasonsgrp.com",
+                "role": "outlet_manager",
+                "outlets": [self.intl.pk],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.manager.refresh_from_db()
+        self.assertNotEqual(self.manager.email, "taken@pasonsgrp.com")
+
+    def test_edit_user_email_stays_when_the_field_is_absent(self):
+        # A partial POST must not silently blank an existing login address.
+        original = self.manager.email
+        response = self.client.post(
+            reverse("panel_user_edit", args=[self.manager.pk]),
+            {
+                "action": "save",
+                "role": "outlet_manager",
+                "outlets": [self.intl.pk],
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.manager.refresh_from_db()
+        self.assertEqual(self.manager.email, original)
+
+
+class SidebarRoleLabelTests(AcceptanceFixtures):
+    """Phase 2: the sidebar names the real role, and the nav is role-correct.
+
+    The bug this fixes: every non head office account was labelled "Outlet
+    Manager", so a brand manager and an account with no role at all both read
+    as a branch manager. Assertions use the 'username <middle dot> label'
+    form, which only the sidebar produces.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.bm = User.objects.create_user(
+            "bm-sidebar", password="pass-bm", email="bm.sidebar@pasonsgrp.com",
+        )
+        OutletManager.objects.create(
+            user=cls.bm, role=OutletManager.Role.BRAND, brand=cls.brand,
+        )
+        cls.orphan = User.objects.create_user(
+            "orphan-sidebar", password="pass-none", email="orphan@pasonsgrp.com",
+        )
+
+    def test_head_office_label(self):
+        self.client.login(username="headoffice", password="pass-head")
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertContains(response, "headoffice \u00b7 Head Office")
+
+    def test_outlet_manager_label_names_the_branch(self):
+        self.client.login(username="ic-manager", password="pass-ic")
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertContains(
+            response,
+            "ic-manager \u00b7 Outlet Manager \u00b7 King Chef \u2014 International City",
+        )
+
+    def test_brand_manager_label_names_the_brand(self):
+        self.client.login(username="bm-sidebar", password="pass-bm")
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertContains(
+            response, "bm-sidebar \u00b7 Brand Manager \u00b7 King Chef Restaurant"
+        )
+        self.assertNotContains(response, "bm-sidebar \u00b7 Outlet Manager")
+
+    def test_account_without_role_is_not_called_outlet_manager(self):
+        self.client.login(username="orphan-sidebar", password="pass-none")
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertContains(response, "orphan-sidebar \u00b7 No access")
+        self.assertNotContains(response, "orphan-sidebar \u00b7 Outlet Manager")
+
+    def test_outlet_manager_nav_hides_head_office_only_links(self):
+        self.client.login(username="ic-manager", password="pass-ic")
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertNotContains(response, reverse("panel_users"))
+        self.assertNotContains(response, reverse("panel_brands"))
+        self.assertNotContains(response, reverse("panel_changelog"))
+        self.assertContains(response, reverse("panel_outlets"))
+
+    def test_brand_manager_nav_hides_head_office_only_links(self):
+        self.client.login(username="bm-sidebar", password="pass-bm")
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertNotContains(response, reverse("panel_users"))
+        self.assertNotContains(response, reverse("panel_brands"))
+        self.assertContains(response, reverse("panel_outlets"))
+
+    def test_head_office_nav_shows_structure_links(self):
+        self.client.login(username="headoffice", password="pass-head")
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertContains(response, reverse("panel_users"))
+        self.assertContains(response, reverse("panel_brands"))
+        self.assertContains(response, reverse("panel_changelog"))
+
+
+class DepartmentCapabilityTests(AcceptanceFixtures):
+    """Phase 3: a department limits which panel sections a Head Office user
+    may open.
+
+    Head Office with no department keeps every section, so nothing changes for
+    existing accounts. An unknown department code grants nothing (fail closed),
+    so adding a Department row without mapping it restricts rather than
+    over-grants.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        # get_or_create: migration 0007 seeds these five codes, so the test food
+        # database may already hold them.
+        cls.marketing, _ = Department.objects.get_or_create(
+            code="MARKETING", defaults={"name_en": "Marketing"}
+        )
+        cls.finance, _ = Department.objects.get_or_create(
+            code="FINANCE", defaults={"name_en": "Finance"}
+        )
+        cls.it, _ = Department.objects.get_or_create(
+            code="IT", defaults={"name_en": "IT and Admin"}
+        )
+        cls.legal, _ = Department.objects.get_or_create(
+            code="LEGAL", defaults={"name_en": "Legal"}
+        )  # deliberately unmapped in DEPARTMENT_CAPABILITIES
+
+        def ho(username, department):
+            user = User.objects.create_user(
+                username, password="pw-ho", email=f"{username}@pasonsgrp.com",
+                is_staff=True,
+            )
+            OutletManager.objects.create(user=user, department=department)
+            return user
+
+        cls.ho_marketing = ho("ho-marketing", cls.marketing)
+        cls.ho_finance = ho("ho-finance", cls.finance)
+        cls.ho_it = ho("ho-it", cls.it)
+        cls.ho_legal = ho("ho-legal", cls.legal)
+        # Head Office with no department: full access (the existing behaviour).
+        cls.ho_full = User.objects.create_user(
+            "ho-full", password="pw-ho", email="ho.full@pasonsgrp.com", is_staff=True,
+        )
+
+    def _login(self, username):
+        self.client.login(username=username, password="pw-ho")
+
+    # -- marketing: specials, QR, analytics, leads, feedback ----------------
+
+    def test_marketing_may_open_its_own_sections(self):
+        self._login("ho-marketing")
+        for url in (
+            reverse("panel_dashboard"),
+            reverse("panel_specials"),
+            reverse("panel_qrcodes"),
+            reverse("panel_analytics"),
+            reverse("panel_leads"),
+            reverse("panel_feedback"),
+        ):
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    def test_marketing_is_blocked_from_users_brands_and_outlets(self):
+        self._login("ho-marketing")
+        for url in (
+            reverse("panel_users"),
+            reverse("panel_user_add"),
+            reverse("panel_brands"),
+            reverse("panel_outlets"),
+            reverse("panel_menus"),
+        ):
+            self.assertEqual(self.client.get(url).status_code, 403, url)
+
+    # -- finance: analytics only -------------------------------------------
+
+    def test_finance_may_open_analytics_only(self):
+        self._login("ho-finance")
+        self.assertEqual(self.client.get(reverse("panel_analytics")).status_code, 200)
+        for url in (
+            reverse("panel_specials"),
+            reverse("panel_outlets"),
+            reverse("panel_users"),
+            reverse("panel_leads"),
+        ):
+            self.assertEqual(self.client.get(url).status_code, 403, url)
+
+    # -- IT: everything -----------------------------------------------------
+
+    def test_it_may_open_everything(self):
+        self._login("ho-it")
+        for url in (
+            reverse("panel_brands"),
+            reverse("panel_outlets"),
+            reverse("panel_users"),
+            reverse("panel_specials"),
+            reverse("panel_menus"),
+            reverse("panel_leads"),
+            reverse("panel_feedback"),
+            reverse("panel_analytics"),
+            reverse("panel_changelog"),
+        ):
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    # -- unmapped department code fails closed ------------------------------
+
+    def test_unmapped_department_can_only_reach_the_dashboard(self):
+        self._login("ho-legal")
+        self.assertEqual(self.client.get(reverse("panel_dashboard")).status_code, 200)
+        for url in (
+            reverse("panel_users"),
+            reverse("panel_brands"),
+            reverse("panel_specials"),
+            reverse("panel_outlets"),
+        ):
+            self.assertEqual(self.client.get(url).status_code, 403, url)
+
+    # -- head office without a department is unchanged ----------------------
+
+    def test_head_office_without_department_keeps_full_access(self):
+        self._login("ho-full")
+        for url in (
+            reverse("panel_users"),
+            reverse("panel_brands"),
+            reverse("panel_outlets"),
+            reverse("panel_specials"),
+            reverse("panel_changelog"),
+        ):
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    # -- the label and the nav follow the department ------------------------
+
+    def test_label_names_the_department(self):
+        self._login("ho-marketing")
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertContains(response, "ho-marketing \u00b7 Head Office \u00b7 Marketing")
+
+    def _nav_html(self, response):
+        """The sidebar nav block only.
+
+        Page bodies also link to panel URLs (the dashboard's outlet rows link
+        to /panel/outlets/<pk>/edit/), so a whole-page search would report the
+        nav as leaking when it is not.
+        """
+        html = response.content.decode()
+        start = html.find('<nav class="panel-nav">')
+        self.assertNotEqual(start, -1, "sidebar nav not found in the response")
+        end = html.find("</nav>", start)
+        return html[start:end]
+
+    def test_nav_hides_sections_the_department_lacks(self):
+        self._login("ho-marketing")
+        nav = self._nav_html(self.client.get(reverse("panel_dashboard")))
+        self.assertIn(reverse("panel_specials"), nav)
+        self.assertNotIn(reverse("panel_users"), nav)
+        self.assertNotIn(reverse("panel_brands"), nav)
+        self.assertNotIn(reverse("panel_outlets"), nav)
+
+    def test_dashboard_stays_reachable_for_an_unroled_account(self):
+        # A login with no role must still land somewhere after sign-in.
+        User.objects.create_user(
+            "no-role-cap", password="pw-ho", email="norole@pasonsgrp.com",
+        )
+        self._login("no-role-cap")
+        self.assertEqual(self.client.get(reverse("panel_dashboard")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("panel_specials")).status_code, 403)
+
+
+class DepartmentFormTests(AcceptanceFixtures):
+    """Phase 3: Head Office can assign a department on the Users form."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.marketing, _ = Department.objects.get_or_create(
+            code="MARKETING", defaults={"name_en": "Marketing"}
+        )
+
+    def setUp(self):
+        self.client.login(username="headoffice", password="pass-head")
+
+    def test_create_head_office_user_with_department(self):
+        response = self.client.post(reverse("panel_user_add"), {
+            "username": "ho-mkt",
+            "password": "Str0ng-Pass!42",
+            "email": "ho.mkt@pasonsgrp.com",
+            "role": "head_office",
+            "department": self.marketing.pk,
+        })
+        self.assertEqual(response.status_code, 302)
+        user = User.objects.get(username="ho-mkt")
+        self.assertTrue(user.is_staff)
+        self.assertEqual(user.outlet_manager_profile.department, self.marketing)
+
+    def test_create_head_office_user_without_department_is_full_access(self):
+        response = self.client.post(reverse("panel_user_add"), {
+            "username": "ho-nodep",
+            "password": "Str0ng-Pass!42",
+            "email": "ho.nodep@pasonsgrp.com",
+            "role": "head_office",
+        })
+        self.assertEqual(response.status_code, 302)
+        user = User.objects.get(username="ho-nodep")
+        self.assertIsNone(user.outlet_manager_profile.department)
+
+    def test_switching_to_brand_manager_clears_the_department(self):
+        user = User.objects.create_user(
+            "ho-switch", password="pw", email="ho.switch@pasonsgrp.com", is_staff=True,
+        )
+        OutletManager.objects.create(user=user, department=self.marketing)
+        response = self.client.post(reverse("panel_user_edit", args=[user.pk]), {
+            "action": "save",
+            "email": "ho.switch@pasonsgrp.com",
+            "role": "brand_manager",
+            "brand": self.brand.pk,
+        })
+        self.assertEqual(response.status_code, 302)
+        user.refresh_from_db()
+        self.assertFalse(user.is_staff)
+        self.assertIsNone(user.outlet_manager_profile.department)
+
+
+class PanelCapabilityCoverageTests(TestCase):
+    """Phase 3: the gate cannot be forgotten.
+
+    Every panel route must either declare a capability or be an explicit
+    exemption (login / logout). Adding a new panel view without mapping it
+    fails this test rather than shipping an ungated screen.
+    """
+
+    @staticmethod
+    def _url_names():
+        from django.urls import get_resolver
+
+        names = set()
+
+        def walk(patterns):
+            for pattern in patterns:
+                if hasattr(pattern, "url_patterns"):
+                    walk(pattern.url_patterns)
+                elif pattern.name:
+                    names.add(pattern.name)
+
+        walk(get_resolver().url_patterns)
+        return names
+
+    def test_every_panel_view_is_gated_or_exempt(self):
+        from apps.core.middleware import (
+            CAPABILITY_EXEMPT_VIEWS,
+            INLINE_GATED_VIEWS,
+            VIEW_CAPABILITIES,
+        )
+
+        names = self._url_names()
+        panel_names = {n for n in names if n.startswith("panel_")}
+        declared = set(VIEW_CAPABILITIES) | set(INLINE_GATED_VIEWS)
+        unmapped = panel_names - declared - set(CAPABILITY_EXEMPT_VIEWS)
+        self.assertEqual(
+            unmapped, set(),
+            f"Panel views with no capability declared: {sorted(unmapped)}",
+        )
+
+    def test_the_bare_dashboard_route_is_also_gated(self):
+        # /dashboard/ is not under /panel/, so it must be declared as inline
+        # gated or it would silently escape the department gate.
+        from apps.core.middleware import INLINE_GATED_VIEWS
+
+        self.assertIn("dashboard", self._url_names())
+        self.assertIn("dashboard", INLINE_GATED_VIEWS)
+
+    def test_capability_keys_are_real(self):
+        from apps.core import panel_permissions as perms
+        from apps.core.middleware import VIEW_CAPABILITIES
+
+        unknown = {v for v in VIEW_CAPABILITIES.values() if v not in perms.ALL_CAPABILITIES}
+        self.assertEqual(unknown, set(), f"Unknown capability keys: {sorted(unknown)}")
+
+    def test_exempt_views_are_auth_endpoints_only(self):
+        from apps.core.middleware import CAPABILITY_EXEMPT_VIEWS
+
+        self.assertEqual(CAPABILITY_EXEMPT_VIEWS, {"panel_login", "panel_logout"})
+
+
 class UsersPanelTests(AcceptanceFixtures):
     def test_manager_cannot_open_users_panel(self):
         self.client.login(username="ic-manager", password="pass-ic")
@@ -374,6 +1013,7 @@ class UsersPanelTests(AcceptanceFixtures):
         response = self.client.post(reverse("panel_user_add"), {
             "username": "nahda-manager",
             "password": "pass-nahda",
+            "email": "om.kingchef-alnahda@pasonsgrp.com",
             "role": "outlet_manager",
             "outlets": [self.nahda.pk],
         })
@@ -395,6 +1035,7 @@ class UsersPanelTests(AcceptanceFixtures):
         response = self.client.post(reverse("panel_user_add"), {
             "username": "kc-brand",
             "password": "pass-brand",
+            "email": "bm.kingchef@pasonsgrp.com",
             "role": "brand_manager",
             "brand": self.brand.pk,
         })
@@ -930,3 +1571,102 @@ class ReviewComposerTests(AcceptanceFixtures):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "writereview?placeid=ChIJ-kingchef-intl-city-demo")
+
+
+class SeedStaffCommandTests(TestCase):
+    """seed_staff must be idempotent, must never touch a password twice, and
+    must give each role exactly the scope its account should have."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.brand_a = Brand.objects.create(
+            code="BRANDA", name_en="Brand A", status="active"
+        )
+        cls.brand_b = Brand.objects.create(
+            code="BRANDB", name_en="Brand B", status="active"
+        )
+        Outlet.objects.create(
+            code="BRANDA-ONE", official_name="Brand A One", brand=cls.brand_a,
+            slug="branda-one", active=True,
+        )
+        Outlet.objects.create(
+            code="BRANDA-TWO", official_name="Brand A Two", brand=cls.brand_a,
+            slug="branda-two", active=True,
+        )
+        Outlet.objects.create(
+            code="BRANDB-ONE", official_name="Brand B One", brand=cls.brand_b,
+            slug="brandb-one", active=True,
+        )
+
+    def _run(self, *args):
+        out = StringIO()
+        call_command("seed_staff", *args, stdout=out)
+        return out.getvalue()
+
+    def test_dry_run_writes_nothing(self):
+        output = self._run("--dry-run")
+        self.assertFalse(User.objects.exists(), "a dry run created a user")
+        self.assertIn("bm.branda", output)
+        self.assertIn("Dry run", output)
+
+    def test_run_creates_two_brand_three_outlet_and_three_head_office(self):
+        self._run("--password", "pw-123456")
+        self.assertEqual(User.objects.count(), 8)
+        roles = {u.username: u.outlet_manager_profile.role for u in User.objects.all()}
+        self.assertEqual(roles["bm.branda"], OutletManager.Role.BRAND)
+        self.assertEqual(roles["om.branda-one"], OutletManager.Role.OUTLET)
+
+    def test_brand_manager_scope_is_the_whole_brand(self):
+        self._run("--password", "pw-123456")
+        bm = User.objects.get(username="bm.branda")
+        self.assertEqual(
+            set(scoped_outlets(bm).values_list("code", flat=True)),
+            {"BRANDA-ONE", "BRANDA-TWO"},
+        )
+
+    def test_outlet_manager_scope_is_one_branch_and_never_staff(self):
+        self._run("--password", "pw-123456")
+        om = User.objects.get(username="om.branda-one")
+        self.assertEqual(scoped_outlets(om).count(), 1)
+        # is_staff would make is_head_office true and open everything (risk R1).
+        self.assertFalse(om.is_staff)
+
+    def test_head_office_account_gets_its_department(self):
+        self._run("--password", "pw-123456")
+        head = User.objects.get(username="ho.marketing")
+        self.assertTrue(head.is_staff)
+        self.assertEqual(head.outlet_manager_profile.department.code, "MARKETING")
+        self.assertEqual(head.email, "marketing@pasonsgrp.com")
+
+    def test_marketing_department_cannot_open_users(self):
+        self._run("--password", "pw-123456")
+        self.assertTrue(
+            self.client.login(username="ho.marketing", password="pw-123456")
+        )
+        self.assertEqual(self.client.get(reverse("panel_users")).status_code, 403)
+
+    def test_second_run_creates_nothing_and_keeps_the_password(self):
+        self._run("--password", "first-pass")
+        before = User.objects.get(username="bm.branda").password
+        output = self._run()
+        self.assertEqual(User.objects.count(), 8)
+        self.assertEqual(User.objects.get(username="bm.branda").password, before)
+        self.assertIn("refreshed 8", output)
+        self.assertTrue(self.client.login(username="bm.branda", password="first-pass"))
+
+    def test_brands_filter_leaves_a_brand_out(self):
+        self._run("--password", "pw-123456", "--brands", "BRANDA")
+        self.assertTrue(User.objects.filter(username="bm.branda").exists())
+        self.assertFalse(User.objects.filter(username="bm.brandb").exists())
+        self.assertFalse(User.objects.filter(username="om.brandb-one").exists())
+
+    def test_email_domain_is_configurable(self):
+        self._run("--password", "pw-123456", "--domain", "example.test")
+        self.assertEqual(
+            User.objects.get(username="bm.branda").email, "bm.branda@example.test"
+        )
+
+    def test_style_b_uses_the_manager_prefix(self):
+        self._run("--password", "pw-123456", "--style", "b")
+        self.assertTrue(User.objects.filter(username="manager.branda").exists())
+        self.assertTrue(User.objects.filter(username="manager.branda_one").exists())

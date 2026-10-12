@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from apps.core.models import Brand, Campaign
+from apps.core.panel_permissions import CAP_ANALYTICS, require_capability
 
 from . import aggregates
 from .models import ScanEvent
@@ -27,6 +28,11 @@ staff_required = user_passes_test(
 @staff_required
 def dashboard(request):
     """Internal KPI dashboard (spec 25). ?brand=<code> scopes to brand view."""
+    # This route is not under /panel/, so its capability is enforced here,
+    # after staff_required. That keeps the existing non-staff redirect to the
+    # admin login while still denying a Head Office department that has no
+    # analytics section (for example Operations).
+    require_capability(request.user, CAP_ANALYTICS)
     brand = None
     brand_code = request.GET.get("brand", "")
     if brand_code:
