@@ -22,23 +22,34 @@ body.theme-warm::before { display: none; }
 .ambient-waves,
 body.theme-warm .ambient-waves { display: none; }
 
-/* Generated art fills the phone screen only. The layer is PINNED
-   (position: fixed): the green corners stay on the frame edges while the
-   cards scroll over the cream middle — the background never scrolls with
-   the content. On real phones the fixed layer pins to the viewport (the
-   screen IS the viewport). Inside the desktop mock frame, .device carries
-   a translateZ(0) containing block (see the min-width: 860px block below)
-   so the layer pins to the phone body, box-matched to the screen. */
+/* Client-provided background art fills the phone screen only. The layer is
+   PINNED (position: fixed): the decorated corners stay on the frame edges
+   while the cards scroll over the cream middle — the background never
+   scrolls with the content. On real phones the fixed layer pins to the
+   viewport (the screen IS the viewport). Inside the desktop mock frame,
+   .device carries a translateZ(0) containing block (see the min-width:
+   860px block below) so the layer pins to the phone body, box-matched to
+   the screen. The flat colour is the image's own cream, so the pre-load
+   frame matches the art instead of flashing a different tone. */
 body.theme-warm .device-screen {
   background: transparent;
 }
 body.theme-warm .device-screen::before {
   content: "";
   position: fixed;
-  inset: 0;
+  /* Overscan 32px, then clip back to the exact box with the matching
+     clip-path. A blurred layer has no content past its own edge, so the
+     blur fades to transparent there and would show as a soft light ring
+     on the frame edges; painting beyond the edge and clipping the result
+     (filter runs BEFORE clip-path) removes that fringe. */
+  inset: -32px;
   z-index: 0;
   pointer-events: none;
-  background: #f5efe3 url("../img/phone-bg.jpg") center / cover no-repeat;
+  background: #f8edda url("../img/updated_phone_bg.png") center / cover no-repeat;
+  /* Slight softness so the art sits behind the cards instead of competing
+     with them. saturate(1.04) keeps the blur from reading grey. */
+  filter: blur(6px) saturate(1.04);
+  clip-path: inset(32px);
 }
 body.theme-warm .device-screen > * {
   position: relative;
@@ -55,7 +66,9 @@ body.theme-warm .device-screen > * {
     transform: translateZ(0);
   }
   body.theme-warm .device-screen::before {
-    border-radius: 46px;
+    /* Clip back to the screen box with the screen's own corner radius; the
+       blurred fringe in the 32px overscan is trimmed away. */
+    clip-path: inset(32px round 46px);
   }
 }
 
@@ -608,9 +621,11 @@ body.theme-warm h1, body.theme-warm h2, body.theme-warm h3 {
    ========================================================================== */
 
 /* Frost the phone screen a touch so the glass reads as one material layer.
-   Keep the wave art visible but cool it slightly behind the panels. */
+   Keep the wave art visible but cool it slightly behind the panels. The
+   blur matches the base layer (filter is one property, so it must be
+   repeated here or this more-specific rule would drop the softness). */
 body.theme-warm .page--glass .device-screen::before {
-  filter: saturate(1.05) brightness(1.02);
+  filter: blur(6px) saturate(1.05) brightness(1.02);
 }
 
 /* True glass: translucent white fill, backdrop blur + saturate, bright top
