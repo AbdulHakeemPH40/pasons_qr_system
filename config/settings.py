@@ -86,6 +86,65 @@ CSRF_TRUSTED_ORIGINS = [
 if os.environ.get("USE_X_FORWARDED_PROTO", "") == "1":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# --- dev tunnel (ngrok, cloudflared, localtunnel) -------------------------
+# A free ngrok URL is random and changes on every restart, so pinning one host
+# in ALLOWED_HOSTS means editing .env and restarting the server each time the
+# tunnel reconnects. In DEBUG the well-known tunnel domains are trusted by
+# wildcard instead: any "<name>.ngrok-free.app" is accepted without a config
+# change. The suffix list is overridable, and none of this applies when DEBUG
+# is off, so a production deploy still needs an explicit ALLOWED_HOSTS.
+TUNNEL_HOST_SUFFIXES = [
+    s.strip().lstrip(".")
+    for s in os.environ.get(
+        "TUNNEL_HOST_SUFFIXES",
+        "ngrok-free.app,ngrok-free.dev,ngrok.io,ngrok.app,"
+        "trycloudflare.com,loca.lt",
+    ).split(",")
+    if s.strip()
+]
+
+
+def tunnel_trusted_hosts(debug, suffixes):
+    """ALLOWED_HOSTS entries for tunnel domains; empty unless DEBUG.
+
+    A leading dot matches the domain and every subdomain of it, so one entry
+    covers every random name a provider hands out.
+    """
+    if not debug:
+        return []
+    return ["." + s for s in suffixes]
+
+
+def tunnel_trusted_origins(debug, suffixes):
+    """CSRF_TRUSTED_ORIGINS entries for tunnel domains; empty unless DEBUG.
+
+    Django reads a "*" in an origin as a subdomain pattern, and the scheme is
+    part of the match, so both schemes are listed for each suffix.
+    """
+    if not debug:
+        return []
+    return [
+        f"{scheme}://*.{suffix}"
+        for suffix in suffixes
+        for scheme in ("https", "http")
+    ]
+
+
+ALLOWED_HOSTS += tunnel_trusted_hosts(DEBUG, TUNNEL_HOST_SUFFIXES)
+
+for _origin in tunnel_trusted_origins(DEBUG, TUNNEL_HOST_SUFFIXES):
+    if _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
+
+# A tunnel terminates TLS and forwards plain HTTP to runserver. Without this,
+# request.is_secure() is False, so Django computes the good origin as
+# "http://<tunnel-host>" while the browser sent "https://<tunnel-host>", and
+# every POST (panel login, analytics and game beacons) is rejected with a 403
+# CSRF failure. runserver never sets X-Forwarded-Proto itself, so plain
+# localhost runs are unaffected.
+if DEBUG and TUNNEL_HOST_SUFFIXES:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # --- applications --------------------------------------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",

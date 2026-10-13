@@ -6,13 +6,16 @@ feedback capture, and the QR redirect engine with scan analytics.
 
 from datetime import timedelta
 
-from django.test import TestCase
+from django.conf import settings
+from django.core.exceptions import DisallowedHost
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.analytics.models import ScanEvent
 from apps.engagement.models import Feedback
 from apps.menu.models import MenuCategory, MenuItem, items_for
+from config.settings import tunnel_trusted_hosts, tunnel_trusted_origins
 
 from .models import Brand, Campaign, Outlet, PageModule, QrCode, SmartPage
 
@@ -383,3 +386,68 @@ class AccessibilityTemplateTests(TestCase):
         response = self.client.get(reverse("home"))
         self.assertContains(response, 'rel="preload"')
         self.assertContains(response, 'as="style"')
+
+
+class DevTunnelHostTests(TestCase):
+    """Sharing the dev server through ngrok must not need a config edit.
+
+    A free ngrok URL is random and changes on every reconnect, so the tunnel
+    domains are trusted by wildcard while DEBUG is on. These tests lock both
+    halves of that: a tunnel host is served, and an unrelated host still is
+    not, so the wildcard cannot quietly become "allow anything".
+    """
+
+    TUNNEL_HOST = "1f04-87-201-226-214.ngrok-free.app"
+
+    def test_tunnel_subdomain_is_served(self):
+        """request.get_host() is the check that raised DisallowedHost."""
+        request = RequestFactory().get("/", HTTP_HOST=self.TUNNEL_HOST)
+        self.assertEqual(request.get_host(), self.TUNNEL_HOST)
+
+        response = self.client.get(reverse("home"), HTTP_HOST=self.TUNNEL_HOST)
+        self.assertNotEqual(response.status_code, 400)
+
+    def test_unlisted_host_is_still_rejected(self):
+        """The wildcard must not turn into "allow anything"."""
+        request = RequestFactory().get("/", HTTP_HOST="evil.example")
+        with self.assertRaises(DisallowedHost):
+            request.get_host()
+
+        # A lookalike that merely ends with the suffix is not a subdomain.
+        lookalike = RequestFactory().get("/", HTTP_HOST="ngrok-free.app.evil.example")
+        with self.assertRaises(DisallowedHost):
+            lookalike.get_host()
+
+    def test_wildcard_helpers_are_debug_gated(self):
+        """Production (DEBUG off) must not inherit the tunnel wildcards."""
+        self.assertEqual(tunnel_trusted_hosts(False, ["ngrok-free.app"]), [])
+        self.assertEqual(tunnel_trusted_origins(False, ["ngrok-free.app"]), [])
+        self.assertEqual(
+            tunnel_trusted_hosts(True, ["ngrok-free.app"]), [".ngrok-free.app"]
+        )
+        self.assertEqual(
+            tunnel_trusted_origins(True, ["ngrok-free.app"]),
+            ["https://*.ngrok-free.app", "http://*.ngrok-free.app"],
+        )
+
+    def test_csrf_trusted_origins_cover_tunnel_subdomains(self):
+        """Without these, every POST through the tunnel is a 403."""
+        self.assertIn("https://*.ngrok-free.app", settings.CSRF_TRUSTED_ORIGINS)
+
+    def test_forwarded_proto_makes_tunnel_requests_secure(self):
+        """A tunnel terminates TLS, so is_secure() must trust its header.
+
+        Django compares the browser's https Origin against an origin it builds
+        from is_secure(); if that stays False the two never match and the
+        panel login and the game beacons are rejected.
+        """
+        self.assertEqual(
+            settings.SECURE_PROXY_SSL_HEADER, ("HTTP_X_FORWARDED_PROTO", "https")
+        )
+        request = RequestFactory().get(
+            "/", HTTP_HOST=self.TUNNEL_HOST, HTTP_X_FORWARDED_PROTO="https"
+        )
+        self.assertTrue(request.is_secure())
+
+        plain = RequestFactory().get("/", HTTP_HOST="localhost")
+        self.assertFalse(plain.is_secure())

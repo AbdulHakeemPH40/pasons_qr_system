@@ -20,6 +20,9 @@ venv/
 # Local runserver output
 server.log
 
+# Local ngrok tunnel output
+ngrok.log
+
 # Local database — not part of the repo
 db.sqlite3
 db.sqlite3-journal
