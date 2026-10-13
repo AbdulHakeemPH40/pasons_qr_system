@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load icon_tags %}
+{% load icon_tags media_tags %}
 
 {% block title %}Pasons Group — Restaurant Smart Pages{% endblock %}
 {% block body_class %}theme-warm{% endblock %}
@@ -30,7 +30,12 @@
           href="{% url 'smart_page' page.slug %}">
           <div class="avatar avatar--lg">
             {% if page.brand.logo %}
-            <img src="{{ page.brand.logo.url }}" alt="" width="56" height="56" loading="lazy" decoding="async">
+            {% with logo_webp=page.brand.logo|deriv_url:162 %}
+            <picture>
+              {% if logo_webp %}<source srcset="{{ logo_webp }}" type="image/webp">{% endif %}
+              <img src="{{ page.brand.logo.url }}" alt="" width="56" height="56" loading="lazy" decoding="async">
+            </picture>
+            {% endwith %}
             {% else %}
               {{ page.brand.name_en|slice:":1"|upper }}
             {% endif %}

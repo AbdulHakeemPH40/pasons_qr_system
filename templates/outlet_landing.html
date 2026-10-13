@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load icon_tags %}
+{% load icon_tags media_tags %}
 
 {% block title %}{{ outlet_title }} · {{ brand.name_en }}{% endblock %}
 {% block description %}{{ subtitle }}{% endblock %}
@@ -16,7 +16,20 @@
       <header class="scan-identity">
         <div class="avatar">
           {% if brand.logo %}
-          <img src="{{ brand.logo.url }}" alt="{{ brand.name_en }} logo" width="104" height="104" decoding="async">
+          {% comment %}
+          WebP derivative at 3x the rendered size; the img stays as the
+          no-WebP fallback and keeps its width/height so there is no CLS.
+          The source is emitted only when a derivative exists, so a
+          missing file can never produce an empty (invalid) srcset.
+          Multi-line prose uses {% comment %} because {# #} is single-line
+          only and would otherwise render as visible page text.
+          {% endcomment %}
+          {% with logo_webp=brand.logo|deriv_url:288 %}
+          <picture>
+            {% if logo_webp %}<source srcset="{{ logo_webp }}" type="image/webp">{% endif %}
+            <img src="{{ brand.logo.url }}" alt="{{ brand.name_en }} logo" width="104" height="104" decoding="async">
+          </picture>
+          {% endwith %}
           {% else %}
             {{ brand.name_en|slice:":1"|upper }}
           {% endif %}
@@ -31,18 +44,33 @@
       <nav class="contact-row" aria-label="Contact us">
         {% if phone_number %}
         <a class="contact-circle contact-circle--call" href="tel:{{ phone_number }}" aria-label="Call">
-          <img src="/media/icons/Green%20Circle%20Phone%20Icon.png" alt="" width="54" height="54" decoding="async">
+          {% with ico="icons/Green Circle Phone Icon.png"|deriv_url:162 %}
+          <picture>
+            {% if ico %}<source srcset="{{ ico }}" type="image/webp">{% endif %}
+            <img src="/media/icons/Green%20Circle%20Phone%20Icon.png" alt="" width="54" height="54" decoding="async">
+          </picture>
+          {% endwith %}
         </a>
         {% endif %}
         {% if whatsapp_url %}
         <a class="contact-circle" href="{{ whatsapp_url }}" target="_blank" rel="noopener" aria-label="WhatsApp">
-          <img src="/media/icons/Pale%20Mint%20WhatsApp%20Icon.png" alt="" width="54" height="54" decoding="async">
+          {% with ico="icons/Pale Mint WhatsApp Icon.png"|deriv_url:162 %}
+          <picture>
+            {% if ico %}<source srcset="{{ ico }}" type="image/webp">{% endif %}
+            <img src="/media/icons/Pale%20Mint%20WhatsApp%20Icon.png" alt="" width="54" height="54" decoding="async">
+          </picture>
+          {% endwith %}
         </a>
         {% endif %}
         {% if has_instagram %}
         <a class="contact-circle" href="{% url 'qr_instagram' qr.redirect_key %}" target="_blank" rel="noopener"
           aria-label="Instagram">
-          <img src="/media/icons/Instagram%20Gradient%20Badge.png" alt="" width="54" height="54" decoding="async">
+          {% with ico="icons/Instagram Gradient Badge.png"|deriv_url:162 %}
+          <picture>
+            {% if ico %}<source srcset="{{ ico }}" type="image/webp">{% endif %}
+            <img src="/media/icons/Instagram%20Gradient%20Badge.png" alt="" width="54" height="54" decoding="async">
+          </picture>
+          {% endwith %}
         </a>
         {% endif %}
       </nav>
@@ -53,7 +81,12 @@
         <a href="{% url 'qr_review_write' qr.redirect_key %}"
           class="btn-action reveal" style="--i: 1">
           <span class="btn-action__icon" aria-hidden="true">
-            <img src="/media/icons/Google%20Review%20Star%20Badge.png" alt="" width="54" height="54" decoding="async">
+            {% with ico="icons/Google Review Star Badge.png"|deriv_url:162 %}
+            <picture>
+              {% if ico %}<source srcset="{{ ico }}" type="image/webp">{% endif %}
+              <img src="/media/icons/Google%20Review%20Star%20Badge.png" alt="" width="54" height="54" decoding="async">
+            </picture>
+            {% endwith %}
           </span>
           <span class="btn-action__text">
             <span class="btn-action__title">REVIEW US ON GOOGLE</span>
@@ -78,7 +111,12 @@
         {% if has_menu %}
         <a href="{% url 'qr_menu' qr.redirect_key %}" class="btn-action reveal" style="--i: 3">
           <span class="btn-action__icon btn-action__icon--green" aria-hidden="true">
-            <img src="/media/icons/Minimal%20Sage%20Circle%20Open%20Book%20Icon.png" alt="" width="54" height="54" decoding="async">
+            {% with ico="icons/Minimal Sage Circle Open Book Icon.png"|deriv_url:162 %}
+            <picture>
+              {% if ico %}<source srcset="{{ ico }}" type="image/webp">{% endif %}
+              <img src="/media/icons/Minimal%20Sage%20Circle%20Open%20Book%20Icon.png" alt="" width="54" height="54" decoding="async">
+            </picture>
+            {% endwith %}
           </span>
           <span class="btn-action__text">
             <span class="btn-action__title">CHECKOUT OUR MENU</span>
@@ -92,7 +130,12 @@
         <a href="{% url 'qr_instagram' qr.redirect_key %}" target="_blank" rel="noopener"
           class="btn-action btn-action--tint-pink reveal" style="--i: 4">
           <span class="btn-action__icon" aria-hidden="true">
-            <img src="/media/icons/Instagram%20Gradient%20Badge.png" alt="" width="54" height="54" decoding="async">
+            {% with ico="icons/Instagram Gradient Badge.png"|deriv_url:162 %}
+            <picture>
+              {% if ico %}<source srcset="{{ ico }}" type="image/webp">{% endif %}
+              <img src="/media/icons/Instagram%20Gradient%20Badge.png" alt="" width="54" height="54" decoding="async">
+            </picture>
+            {% endwith %}
           </span>
           <span class="btn-action__text">
             <span class="btn-action__title">Follow Us on Instagram</span>

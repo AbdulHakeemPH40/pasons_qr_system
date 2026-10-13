@@ -16,6 +16,37 @@
   box-sizing: border-box;
 }
 
+/* --------------------------------------------------------------------------
+   Touch response — global, on purpose.
+
+   These two declarations used to live only inside `.btn`, which is a
+   panel-style pill that no guest page uses. The result on a phone: tapping a
+   landing action card, a contact circle, a promo card, a suggestion row or a
+   game card flashed the grey system "watermark", and every tap still waited
+   ~300ms for double-tap-to-zoom to time out before responding.
+
+   Removing the highlight is only half the fix. With no flash and nothing in
+   its place a tap feels dead, so every interactive component also carries an
+   `:active` press-scale (component rules below and in theme-warm.css).
+
+   `manipulation` — not `none` — is deliberate: it removes the double-tap-zoom
+   delay while still allowing pan and pinch-zoom, so scrolling carousels keep
+   swiping and pinch-zoom accessibility is preserved. The games canvas needs
+   `touch-action: none` and gets it from a more specific rule in
+   theme-warm.css, which loads after this file.
+   -------------------------------------------------------------------------- */
+a,
+button,
+[role="button"],
+summary,
+label,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
 }
@@ -2092,6 +2123,14 @@ h1, h2, h3, h4 {
 .spot-dot[aria-current="true"] {
   width: 20px;
   background: var(--forest);
+}
+
+/* Press feedback, because the global tap-highlight is now suppressed. Opacity
+   only: at 7px inside a compact glass capsule a scale transform reads as a
+   smudge, and opacity is theme-independent so it works over both the plain and
+   the warm glass dot colours. */
+.spot-dot:active {
+  opacity: 0.55;
 }
 
 /* Fallback art inside the hero fills the slide */

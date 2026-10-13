@@ -941,7 +941,16 @@ body.theme-warm .composer-link {
   text-decoration: none;
 }
 
-body.theme-warm .composer-link:hover {
+/* Hover only where a real pointer hovers: on touch this rule would otherwise
+   latch on after a tap and stay lit until something else was touched. The
+   :active twin keeps the same feedback on press, so touch loses nothing. */
+@media (hover: hover) and (pointer: fine) {
+  body.theme-warm .composer-link:hover {
+    background: rgba(255, 255, 255, 0.6);
+  }
+}
+
+body.theme-warm .composer-link:active {
   background: rgba(255, 255, 255, 0.6);
 }
 
@@ -1153,6 +1162,7 @@ body.theme-warm .page--glass .sheet-head > div {
 
 /* iOS 26 glass back control: frosted circle, bright top edge, spring press. */
 body.theme-warm .page--glass .sheet-back {
+  position: relative; /* anchor for the extended hit area below */
   width: 40px;
   height: 40px;
   flex: none;
@@ -1166,6 +1176,16 @@ body.theme-warm .page--glass .sheet-back {
     0 8px 18px -10px rgba(31, 55, 38, 0.5);
   transition: transform var(--t-hover) var(--ease-spring),
     background var(--t-hover) ease;
+}
+/* Apple's minimum tap target is 44px; the approved visual is a 40px circle.
+   Extend the hit area instead of the artwork: a transparent 2px outset ring
+   brings the tappable box to 44x44 while the frosted circle stays exactly the
+   size the client signed off. Paints nothing, so it cannot change the look. */
+body.theme-warm .page--glass .sheet-back::before {
+  content: "";
+  position: absolute;
+  inset: -2px; /* 40px + 2px each side = 44px */
+  border-radius: 50%;
 }
 body.theme-warm .page--glass .sheet-back:active {
   transform: scale(0.88);

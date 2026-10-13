@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static icon_tags %}
+{% load static icon_tags media_tags %}
 
 {% block title %}Specials · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
 {% block body_class %}theme-warm{% endblock %}
@@ -36,7 +36,13 @@
             <div class="spot-media">
               {% if item.image %}
               {# eager: hero slides live in a horizontal scroller; lazy images decode too late and a fast swipe would show an empty slide #}
-              <img src="{{ item.image.url }}" alt="{{ item.title_en }}" loading="eager"{% if forloop.first %} fetchpriority="high"{% endif %}>
+              {# 1080 = 3x the ~360px phone column, so the hero stays crisp on retina without shipping the full-size upload #}
+              {% with hero_webp=item.image|deriv_url:1080 %}
+              <picture>
+                {% if hero_webp %}<source srcset="{{ hero_webp }}" type="image/webp">{% endif %}
+                <img src="{{ item.image.url }}" alt="{{ item.title_en }}" loading="eager"{% if forloop.first %} fetchpriority="high"{% endif %}>
+              </picture>
+              {% endwith %}
               {% else %}
               <span class="promo-art promo-art--{{ item.kind }}" aria-hidden="true">
                 {% if item.kind == "weekend" %}
@@ -91,7 +97,24 @@
             <article class="promo-card" style="--i:{{ forloop.counter0 }}">
               <div class="promo-media">
                 {% if item.image %}
-                <img src="{{ item.image.url }}" alt="{{ item.title_en }}" loading="lazy">
+                {% comment %}
+                Same 1080 derivative as the hero above, deliberately. The
+                spotlight and the promo rows show the SAME dishes, so giving
+                them different widths made the browser download each photo
+                twice (522 KB / 8 requests). One shared URL is fetched once
+                and served from cache for the card, at full hero quality:
+                327 KB / 4 requests. A card-only item pays a little more
+                than it needs, which is cheaper than double-fetching.
+                NOTE: Django's {# #} comment is single-line only; a multi-line
+                {# #} block is rendered as literal page text, so prose comments
+                must use {% comment %}.
+                {% endcomment %}
+                {% with card_webp=item.image|deriv_url:1080 %}
+                <picture>
+                  {% if card_webp %}<source srcset="{{ card_webp }}" type="image/webp">{% endif %}
+                  <img src="{{ item.image.url }}" alt="{{ item.title_en }}" loading="lazy">
+                </picture>
+                {% endwith %}
                 {% else %}
                 <span class="promo-art promo-art--{{ section.key }}" aria-hidden="true">
                   {% if section.key == "weekend" %}

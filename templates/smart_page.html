@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load social_tags icon_tags %}
+{% load social_tags icon_tags media_tags %}
 
 {% block title %}{{ title }} · Pasons Smart QR{% endblock %}
 {% block description %}{{ hero_subtitle|truncatechars:150 }}{% endblock %}
@@ -18,7 +18,12 @@
       <section class="identity-card glass glass--lg reveal" style="--i: 0">
         <div class="avatar">
           {% if brand.logo %}
-          <img src="{{ brand.logo.url }}" alt="{{ brand.name_en }} logo" width="80" height="80" decoding="async">
+          {% with logo_webp=brand.logo|deriv_url:288 %}
+          <picture>
+            {% if logo_webp %}<source srcset="{{ logo_webp }}" type="image/webp">{% endif %}
+            <img src="{{ brand.logo.url }}" alt="{{ brand.name_en }} logo" width="80" height="80" decoding="async">
+          </picture>
+          {% endwith %}
           {% else %}
             {{ brand.name_en|slice:":1"|upper }}
           {% endif %}

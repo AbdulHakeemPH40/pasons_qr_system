@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load icon_tags %}
+{% load icon_tags media_tags %}
 
 {% block title %}Menu · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
 {% block body_class %}theme-warm{% endblock %}
@@ -53,7 +53,12 @@
           <article class="menu-card{% if not item.available %} is-off{% endif %}">
             <div class="menu-card-media">
               {% if item.image %}
-              <img src="{{ item.image.url }}" alt="{{ item.name_en }}" loading="{% if forloop.first and forloop.parentloop.first %}eager{% else %}lazy{% endif %}" decoding="async">
+              {% with dish_webp=item.image|deriv_url:640 %}
+              <picture>
+                {% if dish_webp %}<source srcset="{{ dish_webp }}" type="image/webp">{% endif %}
+                <img src="{{ item.image.url }}" alt="{{ item.name_en }}" loading="{% if forloop.first and forloop.parentloop.first %}eager{% else %}lazy{% endif %}" decoding="async">
+              </picture>
+              {% endwith %}
               {% else %}
               <span class="menu-plate" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4 10h16v2a8 8 0 01-16 0v-2z"/><path d="M8 10V7M12 10V6M16 10V7"/></svg>
@@ -98,7 +103,12 @@
         <div id="booklet-container" class="booklet booklet--menu">
           {% for p in pages %}
           <figure class="booklet-page glass booklet-page-card" data-page-num="{{ p.page_number }}">
-            <img src="{{ p.image.url }}" alt="Menu page {{ p.page_number }}" {% if forloop.counter > 2 %}loading="lazy" decoding="async"{% endif %}>
+            {% with page_webp=p.image|deriv_url:1080 %}
+            <picture>
+              {% if page_webp %}<source srcset="{{ page_webp }}" type="image/webp">{% endif %}
+              <img src="{{ p.image.url }}" alt="Menu page {{ p.page_number }}" {% if forloop.counter > 2 %}loading="lazy" decoding="async"{% endif %}>
+            </picture>
+            {% endwith %}
             <figcaption class="caption">Page {{ p.page_number }}</figcaption>
           </figure>
           {% endfor %}
