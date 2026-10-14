@@ -1,0 +1,4445 @@
+{
+ "outlet": "KINGCHEF-INTLCITY",
+ "source_pdf": "media/PDF/KINGCHEF-INTLCITY.pdf",
+ "extracted_on": "2026-10-14",
+ "image_credit": "real dish photos cropped from the outlet menu PDF; other tiles are Spice Atlas generated art (menu-art/DISH_ART_PHILOSOPHY.md)",
+ "categories": {
+  "Biryani": {
+   "sort": 1,
+   "items": [
+    {
+     "name": "Beef Biriyani",
+     "price": 17.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Chilly Biriyani",
+     "price": 20.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Biriyani Rice",
+     "price": 8.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Charcoal Chicken Biriyani",
+     "price": 19.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chatty Choru",
+     "price": 15.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chemmeen Choru",
+     "price": 20.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Biriyani",
+     "price": 14.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-biriyani.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Chicken Pulao",
+     "price": 15.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Tikka Biriyani",
+     "price": 22.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-tikka-biriyani.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Curd Rice",
+     "price": 10.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Dal Kichadi",
+     "price": 10.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Egg Biriyani",
+     "price": 11.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Fish Biriyani",
+     "price": 18.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": "kcic-fish-biriyani.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Fry Chicken Biriyani",
+     "price": 15.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Garlic Rice",
+     "price": 10.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Ghee Rice",
+     "price": 8.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Irachi Choru Beef",
+     "price": 16.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Jeera Rice",
+     "price": 10.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kallummakkaya Choru",
+     "price": 16.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kashmiri Pulao",
+     "price": 15.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kerala Fish Currymeals",
+     "price": 10.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kerala Veg Meals",
+     "price": 10.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Kurmath Set",
+     "price": 16.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": "kcic-kurmath-set.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Leghorn Chicken Biriyani",
+     "price": 17.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Lemon Rice",
+     "price": 10.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mangalapora Kathe Biriyani",
+     "price": 24.0,
+     "desc": "24 / 26 / 28 (variants as printed)",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Biriyani",
+     "price": 20.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": "kcic-mutton-biriyani.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Mutton Pulao",
+     "price": 22.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Plain Rice Motta/Barik",
+     "price": 5.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Pothi Biriyani (Chi./Bf/Mt/Fs)",
+     "price": 16.0,
+     "desc": "16 / 19 / 22 / 20 (variants as printed)",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": "kcic-pothi-biriyani-chi-bf-mt-fs.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Pothi Choru",
+     "price": 15.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": "kcic-pothi-choru.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Prawns Biriyani",
+     "price": 24.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Sambar Rice",
+     "price": 10.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Tomato Rice",
+     "price": 10.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Veg Biriyani",
+     "price": 11.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Veg Pulao",
+     "price": 12.0,
+     "desc": "",
+     "section": "BIRIYANI & RICE",
+     "category": "Biryani",
+     "dietary_type": "veg",
+     "image": ""
+    }
+   ]
+  },
+  "Starters": {
+   "sort": 2,
+   "items": [
+    {
+     "name": "Arabic Salad",
+     "price": 10.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Chi.Lemon Coriander Soup",
+     "price": 13.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chi.Muaringakol Soup",
+     "price": 13.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Curry Veppila Soup",
+     "price": 11.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Manchow Soup",
+     "price": 14.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Mayonnaise Salad",
+     "price": 12.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chilly Garlic Crabsoup",
+     "price": 15.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Clear Soup Veg",
+     "price": 11.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Clear Soup Veg / Chicken",
+     "price": 13.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Cream Of Chicken",
+     "price": 13.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Cream Of Mushroom Soup",
+     "price": 11.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Cream Of Tomato",
+     "price": 11.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Cucumber Salad",
+     "price": 7.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Fattoush",
+     "price": 10.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Green Salad",
+     "price": 8.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Hot &Sour Chicken Soup",
+     "price": 13.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Hot &Sour Veg",
+     "price": 11.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Hummus",
+     "price": 7.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "King Chef Spl Green Mango Salad",
+     "price": 10.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Nadan Soup Chicken",
+     "price": 13.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Nadan Soup Mutton",
+     "price": 15.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Seafood Malabar I Soup",
+     "price": 15.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Sweet Corn Chicken Soup",
+     "price": 13.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Sweetcorn Vegsoup",
+     "price": 11.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Taboula",
+     "price": 10.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Thai Mango Salad",
+     "price": 14.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": "kcic-thai-mango-salad.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Thoum",
+     "price": 4.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Veg Manchow Soup",
+     "price": 13.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Veg.Lemon Coriander Soup",
+     "price": 12.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Vegetableyogurt Salad",
+     "price": 7.0,
+     "desc": "",
+     "section": "SOUP & SALAD",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Barbecue Honey Wings",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Dry Fry",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chi.Lemon Pepperthawagrill",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken 65",
+     "price": 18.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-65.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Chicken Lollipop",
+     "price": 18.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-lollipop.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Chicken Mulakidicha Tawa",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Shaappu Fry",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Thai Grill",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-thai-grill.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Dragon Chicken",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": "kcic-dragon-chicken.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Eripori Chicken",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Fish Finger",
+     "price": 23.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Fish Kanthari Tawa",
+     "price": 25.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": "kcic-fish-kanthari-tawa.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Fish Thai Tawa",
+     "price": 22.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "French Fries",
+     "price": 6.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Gobi 65",
+     "price": 16.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Golden Fried Squid",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": "kcic-golden-fried-squid.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "King Chef Special Chi.Fry",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kunjan Mathi Pepper Fry",
+     "price": 12.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mushr00M65",
+     "price": 16.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroomkanthari Tawa",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Natholi Dry Fry",
+     "price": 22.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Paneer 65",
+     "price": 19.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Paneer Kantharitawa",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Prawnsmulakidicha Tawa",
+     "price": 20.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Spinach Delight",
+     "price": 15.0,
+     "desc": "",
+     "section": "STARTERS",
+     "category": "Starters",
+     "dietary_type": "veg",
+     "image": ""
+    }
+   ]
+  },
+  "Main Course": {
+   "sort": 3,
+   "items": [
+    {
+     "name": "Arayes (Chicken / Mutton)",
+     "price": 22.0,
+     "desc": "",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Kabab",
+     "price": 24.0,
+     "desc": "",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Tikka",
+     "price": 24.0,
+     "desc": "",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-tikka.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Garlic Tikka",
+     "price": 22.0,
+     "desc": "",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Green Chilli Chi.Charcoal",
+     "price": 24.0,
+     "desc": "24 / 42 (variants as printed)",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Grilled Chicken Wings",
+     "price": 20.0,
+     "desc": "",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Lamb Chops",
+     "price": 30.0,
+     "desc": "",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-lamb-chops.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Mix Grill",
+     "price": 45.0,
+     "desc": "45 / 80 (variants as printed)",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-mix-grill.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Mutton Kabab",
+     "price": 26.0,
+     "desc": "",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Tikka",
+     "price": 26.0,
+     "desc": "",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Normal Chicken Charcoal",
+     "price": 24.0,
+     "desc": "24 / 42 (variants as printed)",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Pepper Chicken Charcoal",
+     "price": 24.0,
+     "desc": "24 / 42 (variants as printed)",
+     "section": "ARABIC GRILL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Appam",
+     "price": 1.5,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chapathi",
+     "price": 1.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chemmeen Puttu",
+     "price": 5.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Egg Appam",
+     "price": 2.5,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Idiy Appam",
+     "price": 1.5,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-idiy-appam.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Kuboos",
+     "price": 1.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Madak Chapathi",
+     "price": 2.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Neypathil",
+     "price": 2.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Nice Pathiri",
+     "price": 1.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Nool Paratha",
+     "price": 2.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Orotti",
+     "price": 2.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Paratha",
+     "price": 1.5,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-paratha.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Poori",
+     "price": 1.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Puttu Rice/Wheat/Ragi",
+     "price": 2.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Wheat Dosa",
+     "price": 1.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Wheat Paratha",
+     "price": 2.0,
+     "desc": "",
+     "section": "BREADS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "3Types Of Uthappam",
+     "price": 10.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Appam-Egg Roast",
+     "price": 8.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Ayala Mulakittathu",
+     "price": 8.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Curry",
+     "price": 8.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Fry",
+     "price": 10.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Bhaji",
+     "price": 4.5,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-bhaji.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Butter Masala Dosa",
+     "price": 8.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chena Masala",
+     "price": 4.5,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Chettinad Dosa",
+     "price": 9.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Curry",
+     "price": 7.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Egg Kurma",
+     "price": 5.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Egg Roast",
+     "price": 5.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-egg-roast.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Ghee Roast",
+     "price": 6.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-ghee-roast.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Greenpeas Kurma",
+     "price": 4.5,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Idly Set",
+     "price": 6.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-idly-set.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Idly Vada Set",
+     "price": 6.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kadala Curry",
+     "price": 4.5,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Kingfish Mulakittathu",
+     "price": 10.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Maharaja Masala Dosa",
+     "price": 8.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Masala Dosa",
+     "price": 7.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Masala Uthappam",
+     "price": 8.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mysoremasala Dosa",
+     "price": 8.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Neypathil- Beef Curry",
+     "price": 10.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Onion Dosa",
+     "price": 7.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Onion Uthappam",
+     "price": 7.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Paper Dosa",
+     "price": 6.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Payar Curry",
+     "price": 4.5,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Plain Dosa",
+     "price": 6.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Podi Dosa",
+     "price": 6.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Poori - Bhaji",
+     "price": 7.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Poori -Chena",
+     "price": 7.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Poratta-Fish Curry",
+     "price": 8.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Puttukadala Set",
+     "price": 7.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Tomato Uthappam",
+     "price": 7.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Vada Set",
+     "price": 6.0,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Veg Kurma",
+     "price": 4.5,
+     "desc": "",
+     "section": "BREAKFAST",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Burger",
+     "price": 9.0,
+     "desc": "",
+     "section": "BURGER & SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Burger Chicken",
+     "price": 9.0,
+     "desc": "",
+     "section": "BURGER & SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chi.Thighs/Tandoori Burger",
+     "price": 12.0,
+     "desc": "",
+     "section": "BURGER & SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Double Burger",
+     "price": 14.0,
+     "desc": "",
+     "section": "BURGER & SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Double Zinker Burger",
+     "price": 15.0,
+     "desc": "",
+     "section": "BURGER & SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Jumbo Prawns Burger",
+     "price": 12.0,
+     "desc": "",
+     "section": "BURGER & SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Khaleeji Burger",
+     "price": 12.0,
+     "desc": "",
+     "section": "BURGER & SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Spicy Zinker Burger",
+     "price": 12.0,
+     "desc": "",
+     "section": "BURGER & SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Tikka Burger",
+     "price": 10.0,
+     "desc": "",
+     "section": "BURGER & SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Americanchopsuey( Veg / Chicken )",
+     "price": 22.0,
+     "desc": "22 / 24 (variants as printed)",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Baby Corn Chilly Dry/Gravy",
+     "price": 15.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Ginger Dry / Gravy",
+     "price": 19.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Manchurian",
+     "price": 19.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Noodles",
+     "price": 16.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Oystersauce",
+     "price": 18.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beeffried Rice",
+     "price": 16.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chi, Manchurian Dry/Gravy",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Fried Rice",
+     "price": 15.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-fried-rice.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Chicken Noodles",
+     "price": 15.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Sweet &Sour",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chilly Beef Dry / Gravy",
+     "price": 19.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chilly Chicken Dry/Gravy",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chilly Fishdry/Gravy",
+     "price": 20.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chilly Gobi Dry/Gravy",
+     "price": 15.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Chilly Paneer",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Chinesechopsuey( Veg / Chicken )",
+     "price": 22.0,
+     "desc": "22 / 24 (variants as printed)",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Crispy Chilly Chicken",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Egg Fried Rice",
+     "price": 13.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Egg Noodles",
+     "price": 13.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Fish Manchurian Dry / Gravy",
+     "price": 20.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Garlic Chicken Dry/Gravy",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Garlic Fish",
+     "price": 20.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Ginger Chicken",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Ginger Fish",
+     "price": 20.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Gobi Manchurian Dry/Gravy",
+     "price": 15.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": "kcic-gobi-manchurian-dry-gravy.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Hakka Noodles [Veg/Chicken)",
+     "price": 16.0,
+     "desc": "16 / 18 (variants as printed)",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Hongkong Fried Rice ( Veg / Chicken )",
+     "price": 16.0,
+     "desc": "16 / 18 (variants as printed)",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "King Chefcrispychicken Fried Noodles",
+     "price": 20.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mix Fried Rice",
+     "price": 18.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mix Noodles",
+     "price": 18.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroom Chicken",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroom Chilly Dry / Gravy",
+     "price": 15.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroom Noodles",
+     "price": 14.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroomfried Rice",
+     "price": 14.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroommanchurian Dry/Gravy",
+     "price": 15.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Paneer Manchurian Dry / Gravy",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Paneerfried Rice",
+     "price": 14.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Pepper Chicken",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Prawns Chilly Dry / Gravy",
+     "price": 24.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Prawns Fried Rice",
+     "price": 18.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Prawns Manchurian Dry/Gravy",
+     "price": 24.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-prawns-manchurian-dry-gravy.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Prawns Noodles",
+     "price": 18.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Schezwan Chicken",
+     "price": 17.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Schezwan Fried Rice",
+     "price": 16.0,
+     "desc": "16 / 16 / 18 / 19 / 22 (variants as printed)",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Schezwan Noodles",
+     "price": 16.0,
+     "desc": "16 / 16 / 18 / 19 / 22 (variants as printed)",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-schezwan-noodles.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Sweet &Sour Fish",
+     "price": 20.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Tripple Fried Rice",
+     "price": 24.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-tripple-fried-rice.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Veg Fried Rice",
+     "price": 13.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Veg Noodles",
+     "price": 13.0,
+     "desc": "",
+     "section": "CHINESE CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Club",
+     "price": 15.0,
+     "desc": "",
+     "section": "CLUB SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Club",
+     "price": 15.0,
+     "desc": "",
+     "section": "CLUB SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Hotdog Club",
+     "price": 14.0,
+     "desc": "",
+     "section": "CLUB SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "King Chef Sp. Mega Club",
+     "price": 42.0,
+     "desc": "",
+     "section": "CLUB SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mix Club",
+     "price": 15.0,
+     "desc": "",
+     "section": "CLUB SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Vegetable Club",
+     "price": 14.0,
+     "desc": "",
+     "section": "CLUB SANDWICH",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Butterfly Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chi.Nuggets Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Lemon Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Egg Combo",
+     "price": 10.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Hotdog Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Jumbo Prawns Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kabab Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mathafi Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Sheesh Tawook Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Tikka Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Vegetable Combo",
+     "price": 8.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Zinker Combo",
+     "price": 13.0,
+     "desc": "",
+     "section": "COMBO MEALS",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Aloo Gobi",
+     "price": 10.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Aloo Jeera",
+     "price": 10.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Aloo Mutter",
+     "price": 10.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Aloo Palak",
+     "price": 10.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": "kcic-aloo-palak.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Beef Masala",
+     "price": 18.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Roast",
+     "price": 18.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Bhindi Fry / Masala",
+     "price": 11.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Butter Chicken",
+     "price": 19.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-butter-chicken.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Chicken Hydrebadi",
+     "price": 16.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Jalfrezi",
+     "price": 16.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Kadai",
+     "price": 16.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-kadai.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Chicken Kolhapuri",
+     "price": 16.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Mughlai",
+     "price": 16.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Pepper",
+     "price": 16.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Rogan Josh",
+     "price": 16.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Tikka Masala",
+     "price": 19.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Daal Gosh",
+     "price": 22.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Dal Fry",
+     "price": 8.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Dal Lasooni",
+     "price": 10.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Dal Makhani",
+     "price": 12.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": "kcic-dal-makhani.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Dal Tadka",
+     "price": 11.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Egg Burji",
+     "price": 8.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Egg Masala",
+     "price": 8.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Gobi Fry / Masala",
+     "price": 11.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Half Fry",
+     "price": 5.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Karela Fry / Masala",
+     "price": 11.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Malai Kofta",
+     "price": 15.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Masala Omelette",
+     "price": 7.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mix Veg",
+     "price": 8.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroom Kadai",
+     "price": 12.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroom Masala",
+     "price": 12.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroom Omelette",
+     "price": 10.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Dopyaza",
+     "price": 22.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Kadai",
+     "price": 22.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Kolhapuri",
+     "price": 22.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Mughlai",
+     "price": 22.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Rogan Josh",
+     "price": 22.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-mutton-rogan-josh.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Muttonkaali Mirchi",
+     "price": 22.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Omelette",
+     "price": 5.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Palak Chicken",
+     "price": 16.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-palak-chicken.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Paneer Burji",
+     "price": 15.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Paneer Butter Masala",
+     "price": 15.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Paneer Chutput",
+     "price": 15.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Paneer Kadai",
+     "price": 15.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Paneer Muttor Masala",
+     "price": 15.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Paneer Palak",
+     "price": 15.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Veg Jalfrezi",
+     "price": 11.0,
+     "desc": "",
+     "section": "INDIAN CUISINE",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Cherulli Tawa",
+     "price": 24.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-beef-cherulli-tawa.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Beef Kurumulak Tawa",
+     "price": 22.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Cherulli Tawa",
+     "price": 22.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Duck Roast",
+     "price": 20.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Duckkurumulak Varattiyathu",
+     "price": 25.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kaattupothu Varattiyathu",
+     "price": 22.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kaayal Konju",
+     "price": 24.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-kaayal-konju.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Kallumakaya Red Chilli Roast",
+     "price": 24.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kanthari Chicken Tawa",
+     "price": 24.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Maan Pepper Roast",
+     "price": 30.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Nadantharavu Curry",
+     "price": 22.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Ottakkam Varattiyathu",
+     "price": 22.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-ottakkam-varattiyathu.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Puttu Rumees",
+     "price": 19.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Sundhari Kozhi",
+     "price": 32.0,
+     "desc": "",
+     "section": "KING CHEF SPECIAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Butterfly Prawns",
+     "price": 18.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Chilly Paratha",
+     "price": 6.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mix Potato",
+     "price": 14.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Nuggets Paratha",
+     "price": 9.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Nuggets Plate",
+     "price": 18.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Omelette Paratha",
+     "price": 4.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Onion Rings",
+     "price": 12.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Potato Net",
+     "price": 12.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Potato Plate",
+     "price": 6.0,
+     "desc": "6 / 10 (variants as printed)",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Potato Rings",
+     "price": 12.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Potato Wedges",
+     "price": 12.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Tikka Paratha",
+     "price": 9.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Zinker Paratha",
+     "price": 10.0,
+     "desc": "",
+     "section": "PARATHA & KIDS MEAL",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Crab Fry",
+     "price": 20.0,
+     "desc": "",
+     "section": "SEAFOOD",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Crab Masala Fried",
+     "price": 20.0,
+     "desc": "",
+     "section": "SEAFOOD",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Crab Roast",
+     "price": 20.0,
+     "desc": "",
+     "section": "SEAFOOD",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Crab Shappu Curry",
+     "price": 20.0,
+     "desc": "",
+     "section": "SEAFOOD",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Koonthal Thengakothu",
+     "price": 20.0,
+     "desc": "",
+     "section": "SEAFOOD",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Squid Dry Fry",
+     "price": 20.0,
+     "desc": "",
+     "section": "SEAFOOD",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Squid Mulakittathu",
+     "price": 20.0,
+     "desc": "",
+     "section": "SEAFOOD",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Squid Roast Fresh",
+     "price": 20.0,
+     "desc": "",
+     "section": "SEAFOOD",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Alleppey Veg Curry",
+     "price": 12.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Alleppeychicken Curry",
+     "price": 17.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Chatty Curry",
+     "price": 23.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Chettinadu",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Coconut Fry",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Dry Fry",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Kizhi",
+     "price": 24.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-beef-kizhi.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Beef Kondattam",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Mappas",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Pachakuru Mulaku Varattiyathu",
+     "price": 22.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Shaappu Curry",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Stew",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Ularthiyathu",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beef Varattiyathu",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Beefpachakurumulakvarattiyathu",
+     "price": 22.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Chatty Curry",
+     "price": 20.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Chettinad U",
+     "price": 18.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Kondattam",
+     "price": 18.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Malabar Tawa",
+     "price": 20.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Mappas",
+     "price": 17.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-mappas.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Chicken Stew",
+     "price": 17.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-chicken-stew.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Chicken Ularthiyathu",
+     "price": 17.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Chicken Varutharachathu",
+     "price": 17.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Idi Irachi",
+     "price": 19.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kallummakkaya Choru",
+     "price": 16.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Koonkurumulakittathu",
+     "price": 14.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Kunjan Kozhi Kantharitawa",
+     "price": 32.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Malabar Chicken Kurma",
+     "price": 16.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroom Kuruma",
+     "price": 12.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroom Varatiyathu",
+     "price": 18.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mushroom Varutharachath",
+     "price": 18.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Coconut Fry",
+     "price": 22.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Mappas",
+     "price": 22.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Pachakurumulak Varattiyath",
+     "price": 25.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Roast",
+     "price": 22.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Stew",
+     "price": 22.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Mutton Varattiyathu",
+     "price": 22.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Nadan Chicken Roast",
+     "price": 17.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-nadan-chicken-roast.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Nadan Kozhi Curry",
+     "price": 16.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Nadan Mutton Kurma",
+     "price": 22.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Paneer Varatiyathu",
+     "price": 18.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Paneermango Curry",
+     "price": 18.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Payyoli Chicken Fry",
+     "price": 20.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": "kcic-payyoli-chicken-fry.jpg",
+     "image_kind": "photo"
+    },
+    {
+     "name": "Pothinte Kaal",
+     "price": 40.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Tomato Fry",
+     "price": 10.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "non_veg",
+     "image": ""
+    },
+    {
+     "name": "Veg Kuruma",
+     "price": 10.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Veg Malabar Kurma",
+     "price": 11.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Veg Stew",
+     "price": 10.0,
+     "desc": "",
+     "section": "SOUTH INDIAN",
+     "category": "Main Course",
+     "dietary_type": "veg",
+     "image": ""
+    }
+   ]
+  },
+  "Beverages": {
+   "sort": 4,
+   "items": [
+    {
+     "name": "Apple Juice (Red/Green)",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Avocado Juice",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Banana Juice",
+     "price": 8.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Carrot Juice",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Chickoo Juice",
+     "price": 8.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Grape Juice",
+     "price": 8.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Kiwi Juice",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Lemon Mint Juice",
+     "price": 8.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mango Juice",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": "kcic-mango-juice.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Orange Juice",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Pappaya Juice",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Pineapple Juice",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Pomegranate Juice",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Strawberry Juice",
+     "price": 10.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Sweet Melon Juice",
+     "price": 8.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Watermelon Juice",
+     "price": 8.0,
+     "desc": "",
+     "section": "FRESH JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Anti Oxidant",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Avil Milk",
+     "price": 12.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": "kcic-avil-milk.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "By Five",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Grape Soda",
+     "price": 10.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Hangover Cure",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Juice Salvation",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Lemon Juice",
+     "price": 7.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Liver Cure",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Milk Sarbath",
+     "price": 10.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Nannari Sarbath",
+     "price": 7.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Pacha Mango Kulukki",
+     "price": 10.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": "kcic-pacha-mango-kulukki.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Pineapple Soda",
+     "price": 10.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Power Booster",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Purple Pine",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Rapid Recovery",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Sugar Controller",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Weight Loss",
+     "price": 15.0,
+     "desc": "",
+     "section": "HEALTHY JUICE",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Boost",
+     "price": 4.0,
+     "desc": "",
+     "section": "HOT DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Chukku Kappi",
+     "price": 2.0,
+     "desc": "",
+     "section": "HOT DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Corn Flakes",
+     "price": 5.0,
+     "desc": "",
+     "section": "HOT DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Horlicks",
+     "price": 4.0,
+     "desc": "",
+     "section": "HOT DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Nescafe",
+     "price": 3.0,
+     "desc": "",
+     "section": "HOT DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Abbadi",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Abood",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Avocado With Icecream",
+     "price": 14.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Burj Alarab",
+     "price": 14.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Cocktail",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Cocktail Kuwaity",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Emirates",
+     "price": 14.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Galaxy",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mango Banana",
+     "price": 14.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mojito Blue Berry",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mojito Blue Curacao",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mojito Grape",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mojito Lemon",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mojito Mint",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mojito Passion Fruit",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mojito Strawberry",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Tender Coconut",
+     "price": 12.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": "kcic-tender-coconut.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Thabakath",
+     "price": 14.0,
+     "desc": "",
+     "section": "SPECIAL JUICES",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Black Coffee",
+     "price": 2.0,
+     "desc": "",
+     "section": "TEA & DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Black Tea",
+     "price": 1.0,
+     "desc": "",
+     "section": "TEA & DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Fresh Milk Tea",
+     "price": 2.0,
+     "desc": "",
+     "section": "TEA & DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Green Tea",
+     "price": 1.5,
+     "desc": "",
+     "section": "TEA & DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Lemon Tea",
+     "price": 1.5,
+     "desc": "",
+     "section": "TEA & DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Spl.Karak Tea",
+     "price": 1.5,
+     "desc": "",
+     "section": "TEA & DRINKS",
+     "category": "Beverages",
+     "dietary_type": "veg",
+     "image": ""
+    }
+   ]
+  },
+  "Desserts": {
+   "sort": 5,
+   "items": [
+    {
+     "name": "Caramel Pudding",
+     "price": 12.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": "kcic-caramel-pudding.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Falooda",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Fruit Cake Dessert",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Fruit Salad Plate",
+     "price": 20.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": "kcic-fruit-salad-plate.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Fruit Salad With Icecream",
+     "price": 33.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Icecream With Gulab Jamun",
+     "price": 6.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Kiwi Bricks",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mango Bricks",
+     "price": 12.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mango Falooda",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": "kcic-mango-falooda.png",
+     "image_kind": "art"
+    },
+    {
+     "name": "Mango Pudding",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Mix Fruit Bricks",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Pineapple Bricks",
+     "price": 12.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Pineapple Pudding",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Pomegranate Bricks",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Strawberry Falooda",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Tender Coconut Pudding",
+     "price": 15.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    },
+    {
+     "name": "Watermelon Bricks",
+     "price": 12.0,
+     "desc": "",
+     "section": "DESSERTS",
+     "category": "Desserts",
+     "dietary_type": "veg",
+     "image": ""
+    }
+   ]
+  }
+ },
+ "review_no_price": [
+  {
+   "section": "SPECIAL JUICES",
+   "name": "Computer"
+  },
+  {
+   "section": "SPECIAL JUICES",
+   "name": "Shikha"
+  },
+  {
+   "section": "DESSERTS",
+   "name": "Milkshake"
+  },
+  {
+   "section": "BURGER & SANDWICH",
+   "name": "Vegetable Burger"
+  },
+  {
+   "section": "BURGER & SANDWICH",
+   "name": "Zinker Burger"
+  },
+  {
+   "section": "CLUB SANDWICH",
+   "name": "Zinker Club"
+  },
+  {
+   "section": "PARATHA & KIDS MEAL",
+   "name": "Vegetable Paratha"
+  },
+  {
+   "section": "PARATHA & KIDS MEAL",
+   "name": "Kabab Paratha (Chi/Meat)"
+  },
+  {
+   "section": "PARATHA & KIDS MEAL",
+   "name": "Hotdog Paratha"
+  },
+  {
+   "section": "PARATHA & KIDS MEAL",
+   "name": "Mathafi Paratha"
+  },
+  {
+   "section": "PARATHA & KIDS MEAL",
+   "name": "Egg Paratha"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "Fish Mulakittathu"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "Fish Mango Chatty Curry"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "Fish Pollichathu"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "Fish Red Chilli Tawa"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "Fish Green Chilli Tawa"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "Fishgreen Mango Tawa"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "Fish Mappas"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "Fish Moli"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "Alleppey Fish Curry"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "King Fish Tawa Fry"
+  },
+  {
+   "section": "SEAFOOD",
+   "name": "King Fish Kondattam"
+  },
+  {
+   "section": "KING CHEF SPECIAL",
+   "name": "King Chef Spl Vanji Koottu Kizhi"
+  },
+  {
+   "section": "CHINESE CUISINE",
+   "name": "AH Glo JI"
+  },
+  {
+   "section": "ARABIC GRILL",
+   "name": "Andpeppercreatincatantalizing"
+  },
+  {
+   "section": "ARABIC GRILL",
+   "name": "Fish Grill"
+  },
+  {
+   "section": "ARABIC GRILL",
+   "name": "Seabream/Sherry/Pomfret/Hamour&Fillet"
+  },
+  {
+   "section": "FRESH JUICES",
+   "name": "Juiceisadrinkmadefromtheextractionorpressingofthenatu-"
+  },
+  {
+   "section": "FRESH JUICES",
+   "name": "Freshjuices"
+  },
+  {
+   "section": "FRESH JUICES",
+   "name": "Food Sources,Suchas Meat Or Seafood,Suchas Clamjuice."
+  },
+  {
+   "section": "FRESH JUICES",
+   "name": "Avocado"
+  },
+  {
+   "section": "FRESH JUICES",
+   "name": "Pineapple"
+  },
+  {
+   "section": "FRESH JUICES",
+   "name": "Orange"
+  },
+  {
+   "section": "FRESH JUICES",
+   "name": "Sweetmelon"
+  },
+  {
+   "section": "FRESH JUICES",
+   "name": "Grape"
+  },
+  {
+   "section": "FRESH JUICES",
+   "name": "Watermelon"
+  },
+  {
+   "section": "SPECIAL JUICES",
+   "name": "Specialjuices"
+  },
+  {
+   "section": "SPECIAL JUICES",
+   "name": "Computer"
+  },
+  {
+   "section": "SPECIAL JUICES",
+   "name": "Cocktailkuwaity"
+  },
+  {
+   "section": "DESSERTS",
+   "name": "Desserts"
+  },
+  {
+   "section": "DESSERTS",
+   "name": "Tendercoconut"
+  },
+  {
+   "section": "DESSERTS",
+   "name": "Strawberryfalooda"
+  },
+  {
+   "section": "DESSERTS",
+   "name": "Fruitcakedessert"
+  },
+  {
+   "section": "DESSERTS",
+   "name": "Pomegranate"
+  },
+  {
+   "section": "DESSERTS",
+   "name": "Milkshake"
+  },
+  {
+   "section": "DESSERTS",
+   "name": "Icecreamwithgulabjamun"
+  },
+  {
+   "section": "HEALTHY JUICE",
+   "name": "Iron Booster"
+  },
+  {
+   "section": "HEALTHY JUICE",
+   "name": "Healthyjuice"
+  },
+  {
+   "section": "HEALTHY JUICE",
+   "name": "Hangovercure"
+  },
+  {
+   "section": "HEALTHY JUICE",
+   "name": "Byfive"
+  },
+  {
+   "section": "HEALTHY JUICE",
+   "name": "Juicesalvation"
+  },
+  {
+   "section": "HEALTHY JUICE",
+   "name": "Grapesoda"
+  },
+  {
+   "section": "HEALTHY JUICE",
+   "name": "Kulki Sarbath"
+  },
+  {
+   "section": "HEALTHY JUICE",
+   "name": "Avilmilk"
+  },
+  {
+   "section": "BURGER & SANDWICH",
+   "name": "Andwiche"
+  },
+  {
+   "section": "BURGER & SANDWICH",
+   "name": "Burger"
+  },
+  {
+   "section": "BURGER & SANDWICH",
+   "name": "Vegetableburger"
+  },
+  {
+   "section": "BURGER & SANDWICH",
+   "name": "Zinker Burger"
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Combo"
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Thezinkercombosandwich,Featuringafillet"
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Mathafiandbutterfly Prawns ,Isadelicious"
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Andsatisfyingmealthatcombinesavarietyof"
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Flavorsandtextures.Thesandwichconsists"
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Aperfectlycookedfilletmathaf"
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Seasoned,Marinated Fish Filletthatis Crispy"
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Ontheoutsideandtenderontheinside."
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Sandwiches"
+  },
+  {
+   "section": "COMBO MEALS",
+   "name": "Mathaficombo"
+  },
+  {
+   "section": "CLUB SANDWICH",
+   "name": "Sandwiche"
+  },
+  {
+   "section": "CLUB SANDWICH",
+   "name": "Kingchefsp.Megaclub"
+  },
+  {
+   "section": "CLUB SANDWICH",
+   "name": "Mixclub"
+  },
+  {
+   "section": "CLUB SANDWICH",
+   "name": "Zinkerclub"
+  },
+  {
+   "section": "PARATHA & KIDS MEAL",
+   "name": "Andwiches"
+  },
+  {
+   "section": "PARATHA & KIDS MEAL",
+   "name": "Egg Paratha"
+  },
+  {
+   "section": "PARATHA & KIDS MEAL",
+   "name": "Kidsmeal"
+  },
+  {
+   "section": "PARATHA & KIDS MEAL",
+   "name": "Potatorings"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Banana Fry"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Kaipola"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Irachi Pathiri (Chi./ Beef"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Pazham Nirachathu"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Ilaada"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Kallumakkaya Nirachathu"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Cutlet"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Chicken Roll"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Elanchi"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Bread Pocket"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Parippu Vada"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Ullivada"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Pazham Bonda"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Samoosa"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Chicken Pola"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Unnakaya"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Ammayi Bonda"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Paratha Bomb"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Kalmas Chicken"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Pocket Shawarma"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Undam Pori"
+  },
+  {
+   "section": "TEA & SNACKS",
+   "name": "Kilikoodu"
+  }
+ ]
+}

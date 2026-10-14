@@ -9,13 +9,19 @@ Idempotent — safe to run multiple times. Creates:
     (the review link is built from the Place ID)
   - brand-level Smart Pages + outlet Smart Pages, with the full
     14-module set in the recommended order (spec sections 9-11)
-  - demo menus (Milan Veg vegetarian, Donar Istanbul grill-oriented)
+  - demo menus for brands whose real menu PDFs are not extracted yet;
+    King Chef's real per-outlet menus load from apps/menu/data/menu_*.json
+    (extracted from the outlets' own menu PDFs — names and printed prices
+    only, nothing assumed) via the load_menu_data command
   - live offer campaigns
   - QR codes following the naming convention (spec section 22)
 """
 
 from datetime import timedelta
+from pathlib import Path
 
+from django.conf import settings
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -129,7 +135,7 @@ BRANDS = [
                 "google_review_url": "",
             },
             {
-                "code": "KINGCHEF-ALQUOZ-PARSONS",
+                "code": "KINGCHEF-ALQUOZ-PASONS",
                 "slug": "al-quoz-pasons-building",
                 "official_name": "King Chef — Al Quoz – Pasons Building",
                 "city": "Al Quoz",
@@ -168,7 +174,7 @@ BRANDS = [
                 "google_review_url": "",
             },
             {
-                "code": "KINGCHEF-PARSONS-DIP2",
+                "code": "KINGCHEF-PASONS-DIP2",
                 "slug": "pasons-dip-2",
                 "official_name": "King Chef — Pasons – DIP-2",
                 "city": "Dubai Investment Park 2",
@@ -181,24 +187,11 @@ BRANDS = [
                 "google_review_url": "",
             },
         ],
-        "menu": {
-            "Starters": [
-                ("Hummus with Bread", "حمص بالخبز", 22.00, None, "veg", "none"),
-                ("Crispy Chicken Bites", "قطع دجاج مقرمشة", 28.00, None, "non_veg", "mild"),
-            ],
-            "Biryani": [
-                ("Chicken Biryani", "برياني دجاج", 38.00, 32.00, "non_veg", "medium"),
-                ("Mutton Biryani", "برياني لحم", 46.00, None, "non_veg", "medium"),
-            ],
-            "Main Course": [
-                ("Butter Chicken", "دجاج بالزبدة", 42.00, None, "non_veg", "mild"),
-                ("Dal Fry", "دال فراي", 26.00, None, "veg", "mild"),
-            ],
-            "Beverages": [
-                ("Karak Chai", "شاي كرك", 8.00, None, "veg", "none"),
-                ("Fresh Lime Mint", "ليمون بالنعناع", 14.00, None, "veg", "none"),
-            ],
-        },
+        # King Chef's menu is real per-outlet data extracted from the outlets'
+        # own menu PDFs (apps/menu/data/menu_*.json, loaded in handle()).
+        # Nothing here is assumed demo copy — the client requires the guest
+        # menu to show the printed names and prices only.
+        "menu": {},
     },
     {
         "code": "PARAMOUNT",
@@ -526,7 +519,25 @@ class Command(BaseCommand):
             if spec["code"] == "KINGCHEF":
                 self._seed_kingchef_fixtures(brand, now)
 
+        self._seed_menu_pdfs()
+        self._load_real_menus()
+
         self.stdout.write(self.style.SUCCESS("Seed complete — 4 brands ready."))
+
+    def _load_real_menus(self):
+        """Load per-outlet real menus extracted from the outlets' menu PDFs.
+
+        Each apps/menu/data/menu_<OUTLET-CODE>.json holds the printed dish
+        names and prices for one outlet (nothing assumed — rows whose price
+        is unreadable stay in the dataset's review_no_price list for staff).
+        """
+        data_dir = Path(settings.BASE_DIR) / "apps" / "menu" / "data"
+        datasets = sorted(data_dir.glob("menu_*.json")) if data_dir.exists() else []
+        if not datasets:
+            self.stdout.write("  (no real menu datasets found in apps/menu/data/)")
+            return
+        for dataset in datasets:
+            call_command("load_menu_data", str(dataset))
 
     def _seed_kingchef_fixtures(self, brand, now):
         """Acceptance fixtures: International City and Al Qusais."""
@@ -550,6 +561,8 @@ class Command(BaseCommand):
         # guest menu page. The previous external placeholder pointed at a
         # reserved example domain that can never resolve, so guests who
         # tapped MENU landed on a DNS error.
+        # Brand-level fallback (dish cards only). Outlet-level PDF menus are
+        # wired for every outlet in _seed_menu_pdfs() below.
         MenuSource.objects.update_or_create(
             brand=brand, outlet=None,
             defaults={
@@ -558,82 +571,8 @@ class Command(BaseCommand):
                 "active": True,
             },
         )
-        MenuSource.objects.update_or_create(
-            brand=brand, outlet=intl,
-            defaults={
-                "menu_type": MenuSource.MenuType.PAGES,
-                "menu_url": "",
-                "ordering_url": "",
-                "active": True,
-            },
-        )
-
-        starters, _ = MenuCategory.objects.update_or_create(
-            brand=brand, outlet=None, name_en="Starters",
-            defaults={"sort_order": 1, "active": True},
-        )
-        mains, _ = MenuCategory.objects.update_or_create(
-            brand=brand, outlet=None, name_en="Main courses",
-            defaults={"sort_order": 2, "active": True},
-        )
-        desserts, _ = MenuCategory.objects.update_or_create(
-            brand=brand, outlet=None, name_en="Desserts",
-            defaults={"sort_order": 3, "active": True},
-        )
-        MenuItem.objects.update_or_create(
-            category=starters, brand=brand, outlet=None, name_en="Hummus & warm khubz",
-            defaults={
-                "description_en": "Silky chickpea dip, olive oil, charcoal-baked bread.",
-                "regular_price": "18.00",
-                "dietary_type": MenuItem.DietaryType.VEGAN,
-                "available": True, "sort_order": 1,
-            },
-        )
-        MenuItem.objects.update_or_create(
-            category=starters, brand=brand, outlet=None, name_en="Crispy calamari",
-            defaults={
-                "description_en": "Golden squid rings with lemon aioli.",
-                "regular_price": "32.00",
-                "spice_level": MenuItem.SpiceLevel.MILD,
-                "available": True, "sort_order": 2,
-            },
-        )
-        MenuItem.objects.update_or_create(
-            category=mains, brand=brand, outlet=None, name_en="Chicken mandi",
-            defaults={
-                "description_en": "Slow-cooked rice, smoked chicken, tomato daqoos.",
-                "regular_price": "42.00",
-                "featured": True,
-                "available": True, "sort_order": 1,
-            },
-        )
-        MenuItem.objects.update_or_create(
-            category=mains, brand=brand, outlet=None, name_en="Mixed grill platter",
-            defaults={
-                "description_en": "Shish tawook, lamb kofta, beef kebab, grilled vegetables.",
-                "regular_price": "89.00",
-                "offer_price": "69.00",
-                "available": True, "sort_order": 2,
-            },
-        )
-        MenuItem.objects.update_or_create(
-            category=mains, brand=brand, outlet=intl,
-            name_en="International City Friday mandi",
-            defaults={
-                "description_en": "This branch's Friday mandi, extra smoke, family size.",
-                "regular_price": "45.00",
-                "available": True, "sort_order": 3,
-            },
-        )
-        MenuItem.objects.update_or_create(
-            category=desserts, brand=brand, outlet=None, name_en="Umm ali",
-            defaults={
-                "description_en": "Warm bread pudding, toasted nuts, rose cream.",
-                "regular_price": "24.00",
-                "dietary_type": MenuItem.DietaryType.VEG,
-                "available": True, "sort_order": 1,
-            },
-        )
+        # Real per-outlet dish data (extracted from media/PDF/<CODE>.pdf) is
+        # loaded in handle() via load_menu_data — nothing assumed here.
 
         SpecialItem.objects.update_or_create(
             brand=brand, outlet=None, title_en="House Chicken Biryani",
@@ -677,6 +616,34 @@ class Command(BaseCommand):
         )
 
     # ------------------------------------------------------------------ helpers
+    def _seed_menu_pdfs(self):
+        """
+        Wire each outlet's own menu PDF from media/PDF/<OUTLET-CODE>.pdf.
+
+        The files are maintained by staff in media/PDF/ (drop in a new file
+        under the same name to update a menu; re-run seed to re-wire). The
+        file path is stored on MenuSource.menu_file relative to MEDIA_ROOT,
+        so no copies are made. Outlets without a PDF file simply keep the
+        brand-level fallback menu.
+        """
+        from django.conf import settings
+
+        wired = 0
+        for outlet in Outlet.objects.select_related("brand").order_by("code"):
+            pdf_rel = f"PDF/{outlet.code}.pdf"
+            if not (settings.BASE_DIR / "media" / "PDF" / f"{outlet.code}.pdf").is_file():
+                continue
+            MenuSource.objects.update_or_create(
+                brand=outlet.brand, outlet=outlet,
+                defaults={
+                    "menu_type": MenuSource.MenuType.PDF,
+                    "menu_file": pdf_rel,
+                    "active": True,
+                },
+            )
+            wired += 1
+        self.stdout.write(f"  Outlet menu PDFs wired: {wired}")
+
     def _make_page(self, brand, outlet, slug, title, hero_title, hero_subtitle):
         page, _ = SmartPage.objects.update_or_create(
             slug=slug,

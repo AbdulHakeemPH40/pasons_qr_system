@@ -43,6 +43,7 @@ VIEW_CAPABILITIES = {
     "panel_menu_item_add": "menus",
     "panel_menu_item_edit": "menus",
     "panel_menu_item_toggle": "menus",
+    "panel_menu_item_delete": "menus",
     "panel_menu_item_override": "menus",
     "panel_leads": "leads",
     "panel_lead_update": "leads",

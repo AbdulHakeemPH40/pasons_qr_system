@@ -75,6 +75,7 @@ urlpatterns = [
     path("panel/menus/items/add/", panel_views.panel_menu_item_add, name="panel_menu_item_add"),
     path("panel/menus/items/<int:pk>/edit/", panel_views.panel_menu_item_edit, name="panel_menu_item_edit"),
     path("panel/menus/items/<int:pk>/toggle/", panel_views.panel_menu_item_toggle, name="panel_menu_item_toggle"),
+    path("panel/menus/items/<int:pk>/delete/", panel_views.panel_menu_item_delete, name="panel_menu_item_delete"),
     path("panel/menus/items/<int:pk>/override/", panel_views.panel_menu_item_override, name="panel_menu_item_override"),
     path("panel/leads/", panel_views.panel_leads, name="panel_leads"),
     path("panel/leads/<int:pk>/update/", panel_views.panel_lead_update, name="panel_lead_update"),

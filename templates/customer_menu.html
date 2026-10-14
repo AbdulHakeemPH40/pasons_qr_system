@@ -40,59 +40,36 @@
       </a>
       {% endif %}
 
-      {% for group in categories %}
-      <section class="menu-cat" aria-labelledby="cat-{{ group.category.id }}">
+      {# Client 2026-10-14: no full-menu dump here, just a small Most Popular strip. #}
+      {# Dish names only; photos appear once staff upload them via the panel. #}
+      {# The printed full menu lives in the Full menu PDF card above. #}
+      <section class="menu-cat" aria-labelledby="cat-popular">
         <div class="menu-cat-head">
-          <h2 id="cat-{{ group.category.id }}" class="menu-cat-title">
-            {% if dir == "rtl" and group.category.name_ar %}{{ group.category.name_ar }}{% else %}{{ group.category.name_en }}{% endif %}
-          </h2>
-          <span class="chip chip--gold chip--sm">{{ group.items|length }}</span>
+          <h2 id="cat-popular" class="menu-cat-title">Most Popular</h2>
+          <span class="chip chip--gold chip--sm">{{ popular|length }}</span>
         </div>
         <div class="menu-list">
-          {% for item in group.items %}
-          <article class="menu-card{% if not item.available %} is-off{% endif %}">
+          {% for item in popular %}
+          <article class="menu-card{% if not item.image %} menu-card--text{% endif %}">
+            {% if item.image %}
             <div class="menu-card-media">
-              {% if item.image %}
               {% with dish_webp=item.image|deriv_url:640 %}
               <picture>
                 {% if dish_webp %}<source srcset="{{ dish_webp }}" type="image/webp">{% endif %}
-                <img src="{{ item.image.url }}" alt="{{ item.name_en }}" loading="{% if forloop.first and forloop.parentloop.first %}eager{% else %}lazy{% endif %}" decoding="async">
+                <img src="{{ item.image.url }}" alt="{{ item.name_en }}" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}" decoding="async">
               </picture>
               {% endwith %}
-              {% else %}
-              <span class="menu-plate" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M4 10h16v2a8 8 0 01-16 0v-2z"/><path d="M8 10V7M12 10V6M16 10V7"/></svg>
-              </span>
-              {% endif %}
             </div>
+            {% endif %}
             <div class="menu-card-body">
-              <div class="menu-card-top">
-                <h3 class="menu-name">
-                  {% if dir == "rtl" and item.name_ar %}{{ item.name_ar }}{% else %}{{ item.name_en }}{% endif %}
-                </h3>
-                <span class="menu-price">
-                  {{ item.currency }} {{ item.effective_price }}
-                  {% if item.offer_price is not None and item.regular_price %}<del>{{ item.regular_price }}</del>{% endif %}
-                </span>
-              </div>
-              {% if item.description_en or item.description_ar %}
-              <p class="menu-desc">
-                {% if dir == "rtl" and item.description_ar %}{{ item.description_ar }}{% else %}{{ item.description_en }}{% endif %}
-              </p>
-              {% endif %}
-              <div class="menu-chips">
-                {% if item.featured %}<span class="chip chip--gold chip--sm">Chef's pick</span>{% endif %}
-                {% if item.dietary_type == "veg" %}<span class="chip chip--open chip--sm">Vegetarian</span>{% endif %}
-                {% if item.dietary_type == "vegan" %}<span class="chip chip--open chip--sm">Vegan</span>{% endif %}
-                {% if item.spice_level != "none" %}<span class="chip chip--hot chip--sm">{{ item.get_spice_level_display }}</span>{% endif %}
-                {% if item.discount_pct %}<span class="chip chip--gold chip--sm">Save {{ item.discount_pct }}%</span>{% endif %}
-              </div>
+              <h3 class="menu-name">
+                {% if dir == "rtl" and item.name_ar %}{{ item.name_ar }}{% else %}{{ item.name_en }}{% endif %}
+              </h3>
             </div>
           </article>
           {% endfor %}
         </div>
       </section>
-      {% endfor %}
 
       {% if pages %}
       <section class="menu-cat" aria-label="Menu booklet">
@@ -116,7 +93,7 @@
       </section>
       {% endif %}
 
-      {% if not categories and not pages and not pdf_url %}
+      {% if not popular and not pages and not pdf_url %}
       <div class="menu-empty glass">
         <div class="glyph" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M6 4h9a3 3 0 013 3v13H9a3 3 0 01-3-3V4z"/></svg>

@@ -140,16 +140,32 @@ def customer_menu(request, key):
     pages = list(menu_source.pages.all().order_by("page_number")) if menu_source else []
     pdf_url = menu_source.menu_file.url if (menu_source and menu_source.menu_file) else ""
 
-    # Dish cards: brand base menu with this outlet's overrides folded in
-    # (spec section 6/10), grouped by category in category order.
-    groups = {}
-    for item in items_for(brand, outlet):
-        if not item.available or not item.category.active:
-            continue
-        group = groups.setdefault(item.category_id, {"category": item.category, "items": []})
-        group["items"].append(item)
-    categories = sorted(groups.values(), key=lambda g: (g["category"].sort_order, g["category"].id))
-    item_count = sum(len(g["items"]) for g in categories)
+    # Most Popular strip (client ask 2026-10-14): show a handful of dishes
+    # only, never the whole menu (5-10 is enough). Featured items lead (staff
+    # set "Featured" in the panel), then one dish per category per pass so a
+    # large section cannot crowd the strip. The full menu stays behind the
+    # "Full menu PDF" card above.
+    visible = [
+        item for item in items_for(brand, outlet)
+        if item.available and item.category.active
+    ]
+    popular = [item for item in visible if item.featured][:10]
+    buckets = {}
+    for item in visible:
+        if not item.featured:
+            buckets.setdefault(item.category_id, []).append(item)
+    rows = sorted(
+        buckets.values(), key=lambda r: (r[0].category.sort_order, r[0].category_id)
+    )
+    depth = 0
+    while len(popular) < 10 and any(depth < len(row) for row in rows):
+        for row in rows:
+            if depth < len(row):
+                popular.append(row[depth])
+                if len(popular) >= 10:
+                    break
+        depth += 1
+    item_count = len(popular)
 
     lang = request.GET.get("lang", "en")
     dir_rtl = (lang == "ar")
@@ -161,7 +177,7 @@ def customer_menu(request, key):
         "menu_source": menu_source,
         "pages": pages,
         "pdf_url": pdf_url,
-        "categories": categories,
+        "popular": popular,
         "item_count": item_count,
         "total_pages": len(pages),
         "ordering_url": ordering_url,

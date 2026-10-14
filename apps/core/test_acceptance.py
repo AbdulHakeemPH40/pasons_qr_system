@@ -1289,11 +1289,28 @@ class MenuCardPageTests(AcceptanceFixtures):
         response = self.client.get(reverse("customer_menu", args=["kcic-table-001"]))
         self.assertEqual(response.status_code, 200)
         body = response.content.decode()
-        self.assertIn("Chicken mandi", body)
-        self.assertIn("Save 14%", body)          # offer chip from 42 -> 36
-        self.assertIn("Chef's pick", body)
-        self.assertIn("/media/menu/pdf/", body)  # PDF card links the upload
-        self.assertNotIn("Sold out kebab", body)  # unavailable dishes stay hidden
+        self.assertIn("Most Popular", body)         # curated strip label
+        self.assertIn("Chicken mandi", body)        # dish name shown
+        self.assertIn("/media/menu/pdf/", body)      # PDF card links the upload
+        self.assertNotIn("Sold out kebab", body)     # unavailable dishes stay hidden
+        self.assertNotIn("Save 14%", body)           # name-only cards: no offer chips
+        self.assertNotIn("Chef's pick", body)        # name-only cards: no badges
+
+    def test_menu_page_shows_five_to_ten_dishes_not_the_full_menu(self):
+        """Client 2026-10-14: a small Most Popular strip (5-10 dishes),
+        never the full menu dump."""
+        self._in_platform_source(MenuSource.MenuType.PAGES)
+        for n in range(20):
+            MenuItem.objects.create(
+                category=self.category, brand=self.brand,
+                name_en=f"Extra dish {n}", regular_price=10 + n, available=True,
+            )
+        response = self.client.get(reverse("customer_menu", args=["kcic-table-001"]))
+        body = response.content.decode()
+        cards = body.count('<article class="menu-card')
+        self.assertGreaterEqual(cards, 5)
+        self.assertLessEqual(cards, 10)
+        self.assertNotIn("Extra dish 19", body)   # tail of the menu never dumps
 
     def test_pdf_source_stays_in_platform(self):
         self._in_platform_source(MenuSource.MenuType.PDF)

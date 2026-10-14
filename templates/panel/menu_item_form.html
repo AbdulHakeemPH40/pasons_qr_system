@@ -60,6 +60,11 @@
       <textarea name="description_en" rows="2" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">{{ item.description_en|default:'' }}</textarea>
     </div>
 
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Description (Arabic)</label>
+      <textarea name="description_ar" rows="2" dir="rtl" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">{{ item.description_ar|default:'' }}</textarea>
+    </div>
+
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
       <div>
         <label style="display: block; font-weight: 600; margin-bottom: 4px;">Regular price (AED)</label>
@@ -92,6 +97,10 @@
 
     <div>
       <label style="display: block; font-weight: 600; margin-bottom: 4px;">Photo</label>
+      {% if item and item.image %}
+      <img src="{{ item.image.url }}" alt="Current photo" style="display: block; width: 96px; height: 72px; object-fit: cover; border-radius: 8px; margin-bottom: 6px;">
+      <p class="muted" style="margin: 0 0 6px;">Uploading a new photo replaces this one.</p>
+      {% endif %}
       <input type="file" name="image" accept="image/*">
     </div>
 

@@ -1615,6 +1615,11 @@ body.theme-warm .page--glass .menu-card-media {
   place-items: center;
   background: var(--tint-cream);
 }
+body.theme-warm .page--glass .menu-card--text {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  padding: 13px 16px;
+}
 body.theme-warm .page--glass .menu-card-media img {
   width: 100%;
   height: 100%;

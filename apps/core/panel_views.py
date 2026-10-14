@@ -901,6 +901,7 @@ def _menu_item_from_post(request, item, brand, outlet):
     item.name_en = (request.POST.get("name_en") or "").strip()
     item.name_ar = (request.POST.get("name_ar") or "").strip()
     item.description_en = (request.POST.get("description_en") or "").strip()
+    item.description_ar = (request.POST.get("description_ar") or "").strip()
     item.regular_price = request.POST.get("regular_price") or 0
     offer_price = (request.POST.get("offer_price") or "").strip()
     item.offer_price = offer_price or None
@@ -973,6 +974,23 @@ def panel_menu_item_toggle(request, pk):
                item.brand, item.outlet)
     messages.success(request, f"“{item.name_en}” is now "
                               f"{'available' if item.available else 'unavailable'}.")
+    return redirect("panel_menu_items")
+
+
+@login_required
+@require_POST
+def panel_menu_item_delete(request, pk):
+    """Remove a menu item (staff-managed menus: delete is a normal operation)."""
+    user = request.user
+    outlets = scoped_outlets(user)
+    item = get_object_or_404(
+        MenuItem.objects.filter(_menu_item_q(user, outlets)), pk=pk
+    )
+    _check_menu_item_permission(user, item)
+    name = item.name_en
+    log_change(user, "MENU_ITEM_DELETE", name, item.brand, item.outlet)
+    item.delete()
+    messages.success(request, f"“{name}” removed from the menu.")
     return redirect("panel_menu_items")
 
 
