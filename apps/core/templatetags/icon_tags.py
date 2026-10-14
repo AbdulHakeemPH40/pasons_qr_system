@@ -137,6 +137,11 @@ GLYPHS = {
         f'<circle fill="currentColor" cx="15.4" cy="11.4" r="1.15"/>'
         f'<circle fill="currentColor" cx="17.6" cy="13.8" r="1.15"/>'
     ),
+    "chess": (
+        f'<circle {_STROKE} cx="12" cy="6.4" r="2.6"/>'
+        f'<path {_STROKE} d="M9.3 20c0-3.6 1-5.4 2.7-7 1.7 1.6 2.7 3.4 2.7 7"/>'
+        f'<path {_STROKE} d="M7.5 20h9"/>'
+    ),
 }
 
 # ------------------------------------------------------------- brand badges

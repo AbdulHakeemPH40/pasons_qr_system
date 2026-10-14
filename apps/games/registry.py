@@ -15,13 +15,17 @@ Because of that model every entry carries:
           game code:
             score kinds: text   -> parseInt(element.textContent)
                            digits -> join alt attrs of child imgs
-                           objects-> count a global array's truthy named prop
-                                     (dot path in name), divided by divisor
+                    overSel -> optional selector holding the FINAL score at
+                               game-over, for games that erase their on-field
+                               score display when the scoreboard appears
+                               (flappy-burger empties #bigscore and re-renders
+                               the total into #currentscore)
             over  kinds: class   -> element carries class cls
                            visible-> any match has a layout box
 
-Games are pure play: no rewards, no discounts, no personal data. Best scores
-live on the guest's own device.
+Games pages carry no offer copy and no personal data. Best scores live on
+the guest's own device. The landing card's "Win a discount or dessert" perk
+(client copy 2026-10-14) is honoured by staff, not by this code.
 """
 
 from dataclasses import dataclass, field
@@ -72,39 +76,67 @@ GAMES = (
         license="Apache-2.0",
         credit="Flappy-style engine by Nebez Felkner, Apache-2.0, Pasons art",
         bridge={
-            "score": {"kind": "digits", "sel": "#bigscore"},
+            # Flappy Burger erases #bigscore when the scoreboard appears
+            # (showScore() -> setBigScore(true)) and re-renders the final
+            # total as #currentscore digits, so the shell takes its final
+            # reading from overSel before submitting the best score.
+            "score": {
+                "kind": "digits",
+                "sel": "#bigscore",
+                "overSel": "#currentscore",
+            },
             "over": {"kind": "visible", "sel": "#scoreboard"},
         },
     ),
     Game(
         slug="memory-match",
         name="Memory Match",
-        tagline="Flip the cards, find the pairs",
-        howto="Tap two cards at a time",
+        tagline="Find the pairs before the clock runs out",
+        howto="Match pairs, beat the clock",
         glyph="memory",
         tint="pink",
         embed="games/vendor/memory-match/index.html",
         license="MIT",
         credit="Memory Game by mmenavas, MIT licence",
         bridge={
-            # memory-match keeps matched cards in the DOM (it never removes
-            # them, so a children count can't see progress) and shows an empty
-            # board behind a difficulty modal until the guest starts. Its model
-            # global is exact: MemoryGame.cards[i].isRevealed is true for cards
-            # face up, i.e. 2 x matched pairs (plus at most one card mid-flip,
-            # which floor() drops). The model clears a mismatch immediately, so
-            # the score never sticks high while two wrong cards are still shown.
-            "score": {
-                "kind": "objects",
-                "name": "MemoryGame.cards",
-                "prop": "isRevealed",
-                "divisor": 2,
-            },
+            # Pasons extension: the game keeps its own points clock
+            # (match +100 with a streak bonus, -25 per miss, +15 per second
+            # left on a win). It renders the running total into
+            # #memory--points as bare digits, so the plain "text" reader
+            # picks it up. The timeout and win paths both show the
+            # end-game modal, so "over" is unchanged.
+            "score": {"kind": "text", "sel": "#memory--points"},
             "over": {
                 "kind": "class",
                 "sel": "#memory--end-game-modal",
                 "cls": "show",
             },
+        },
+    ),
+    Game(
+        slug="chess-master",
+        name="Chess Master",
+        tagline="Beat Stockfish at tough levels",
+        howto="Tap a piece, then tap a square",
+        glyph="chess",
+        tint="green",
+        embed="games/vendor/chess-master/index.html",
+        license="GPL-3.0",
+        credit=(
+            "Stockfish.js engine GPLv3 (nmrugg/stockfish.js), chess.js by "
+            "Jeff Hlywa (BSD-2), Pasons mobile port"
+        ),
+        bridge={
+            # Pasons score extension (chess-master/js/score.js): the human's
+            # capture points (10/30/30/50/90) climb during play, and a result
+            # bonus lands at game over (win 200x level, draw 50x level). The
+            # total is rendered as bare digits into #chess--score, and unlike
+            # flappy nothing erases it at game over, so no overSel is needed.
+            # Game-over is the setup-independent #gameover-modal (display:none
+            # until the game ends, so the "visible" reader sees a layout box
+            # only then).
+            "score": {"kind": "text", "sel": "#chess--score"},
+            "over": {"kind": "visible", "sel": "#gameover-modal"},
         },
     ),
 )

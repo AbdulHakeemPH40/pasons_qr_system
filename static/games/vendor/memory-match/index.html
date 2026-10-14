@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <title>Food Matcher</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="js/MemoryGame.js" type="text/javascript"></script>
-    <script src="js/Card.js" type="text/javascript"></script>
-    <link href="css/MemoryGame.css" type="text/css" rel="stylesheet" />
+    <script src="js/MemoryGame.js?v=2026-10-14-6" type="text/javascript"></script>
+    <script src="js/Card.js?v=2026-10-14-6" type="text/javascript"></script>
+    <link href="css/MemoryGame.css?v=2026-10-14-6" type="text/css" rel="stylesheet" />
   </head>
   <body>
     <section id="memory--settings-modal" class="valign-table modal show">
@@ -14,11 +14,12 @@
         <form>
           <h2 class="memory--settings-label">Difficulty level:</h2>
           <select id="memory--settings-grid">
-            <option value="2x3">Easy</option>
-            <option value="3x4" selected>Medium</option>
-            <option value="4x5">Hard</option>
-            <option value="5x6">Don't do it!</option>
+            <option value="2x3">Easy &mdash; 1:00</option>
+            <option value="3x4" selected>Medium &mdash; 1:45</option>
+            <option value="4x5">Hard &mdash; 2:45</option>
+            <option value="7x4">Don't do it! &mdash; 3:45</option>
           </select>
+          <p class="memory--settings-note">Match pairs for points. Beat the clock for a time bonus.</p>
           <input id="memory--settings-reset" type="submit" value="Start New Game" />
         </form>
       </div>
@@ -28,6 +29,7 @@
         <div class="wrapper">
           <h2 id="memory--end-game-message"></h2>
           <h3 id="memory--end-game-score"></h3>
+          <p id="memory--end-game-summary"></p>
         </div>
       </div>
     </section>
@@ -38,9 +40,19 @@
     <section class="memory--menu-bar">
       <div class="inner">
         <div class="left"><h1 class="memory--app-name">Food Matcher</h1></div>
-        <div class="right"><a href="#settings"><img id="memory--settings-icon" src="images/gear.png" /></a></div>
+        <div class="right">
+          <span class="memory--chip memory--chip--time" id="memory--timer-chip">
+            <span class="memory--chip-label">Time</span>
+            <span class="memory--chip-value" id="memory--timer">1:45</span>
+          </span>
+          <span class="memory--chip memory--chip--points">
+            <span class="memory--chip-label">Pts</span>
+            <span class="memory--chip-value" id="memory--points">0</span>
+          </span>
+          <a href="#settings" class="memory--gear-btn"><img id="memory--settings-icon" src="images/gear.png" alt="Game settings" /></a>
+        </div>
       </div>
     </section>
-    <script src="js/BrowserInterface.js" type="text/javascript"></script>
+    <script src="js/BrowserInterface.js?v=2026-10-14-6" type="text/javascript"></script>
   </body>
 </html>

@@ -62,7 +62,7 @@ BRANDS = [
         "whatsapp": "97142200001",
         "phone": "04 220 0001",
         "social": {
-            "instagram": "https://instagram.com/kingchefuae",
+            "instagram": "https://www.instagram.com/kingchef_restaurants",
             "instagram_followers": "12.4K",
             "facebook": "https://facebook.com/kingchefuae",
             "tiktok": "https://tiktok.com/@kingchefuae",
@@ -87,7 +87,7 @@ BRANDS = [
                 "whatsapp": "97142200011",
                 "google_place_id": "ChIJDX8qpTRnXz4RmYFym3s39bA",
                 "google_review_url": "",
-                "instagram_url": "https://instagram.com/kingchef.internationalcity",
+                "instagram_url": "",
             },
             {
                 "code": "KINGCHEF-MUHAISINAH",
@@ -266,7 +266,7 @@ BRANDS = [
         "whatsapp": "97144400001",
         "phone": "04 440 0001",
         "social": {
-            "instagram": "https://instagram.com/milanveguae",
+            "instagram": "https://www.instagram.com/milanvegrestaurants",
             "instagram_followers": "5.2K",
             "facebook": "https://facebook.com/milanveguae",
         },
@@ -343,7 +343,7 @@ BRANDS = [
         "whatsapp": "97145500001",
         "phone": "04 550 0001",
         "social": {
-            "instagram": "https://instagram.com/donaristanbuluae",
+            "instagram": "https://www.instagram.com/doneristanbul.ae",
             "instagram_followers": "6.7K",
             "tiktok": "https://tiktok.com/@donaristanbuluae",
             "facebook": "https://facebook.com/donaristanbuluae",

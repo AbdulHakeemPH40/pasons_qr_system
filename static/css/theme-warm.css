@@ -1863,26 +1863,76 @@ body.theme-warm .page--games .games-note {
   color: rgba(42, 59, 46, 0.6);
 }
 
-/* ---- play page: column layout, frozen surface ---- */
+/* ---- play page: the game is the hero ----
+   One compact glass sheet at the top (title bar + status strip), then the
+   game card claiming EVERY remaining pixel, top to bottom. The old layout
+   capped the host at min(68dvh, 560px) inside a page taller than the
+   viewport, so the card slid below the fold and games were cut mid-content
+   on short screens (2048's board, Flappy's splash). */
 body.theme-warm .page--play .device-screen {
   display: flex;
   flex-direction: column;
+  gap: 0;
   overflow: hidden;
 }
 
-body.theme-warm .page--play .sheet-head { position: static; }
+/* On real phones the play page IS the viewport: no page scroll, no side
+   gutters, no footer under the fold - the game gets the whole screen. */
+@media (max-width: 859px) {
+  body.theme-warm .page--play {
+    --page-max: none;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+  }
+  body.theme-warm .page--play .device-stage,
+  body.theme-warm .page--play .device {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+  }
+  body.theme-warm .page--play .device-screen {
+    flex: 1;
+    min-height: 0;
+  }
+  body.theme-warm:has(.page--play) .site-footer { display: none; }
+}
 
+/* Inside the desktop mock: keep the notch clearance, drop the reading
+   padding so the game fills the simulated screen too. */
+@media (min-width: 860px) {
+  body.theme-warm .page--play .device-screen {
+    padding: 2.55rem 0 1.35rem;
+    gap: 0;
+    overflow: hidden;
+  }
+}
+
+/* Title bar: first row of the sheet. */
+body.theme-warm .page--play .sheet-head {
+  position: static;
+  margin: max(8px, env(safe-area-inset-top)) 8px 0;
+  padding: 8px 10px;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+
+/* Status strip: second row of the same glass sheet (score left, best
+   right). Attached to the title bar - one material, two rows - so the
+   game keeps the height a floating pill used to waste. */
 body.theme-warm .page--play .game-hud {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin: 8px 12px 0;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.5);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
-  backdrop-filter: blur(12px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  align-items: baseline;
+  margin: 0 8px;
+  padding: 0 14px 7px;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  background: rgba(250, 252, 248, 0.82);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1904,7 +1954,7 @@ body.theme-warm .page--play .game-host {
   position: relative;
   flex: 1;
   min-height: 0;
-  margin: 10px 10px 12px;
+  margin: 8px 8px max(10px, env(safe-area-inset-bottom));
   border-radius: 24px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(31, 55, 38, 0.92), rgba(24, 40, 29, 0.96));
@@ -1934,41 +1984,13 @@ body.theme-warm .page--play .game-frame {
   background: transparent;
 }
 
-/* Real phones (<860px) have no device mock: the browser viewport IS the
-   screen, so the play surface must claim its own height or the flex
-   column collapses the host to nothing. */
-@media (max-width: 859px) {
-  body.theme-warm .page--play .game-host {
-    flex: none;
-    height: min(68dvh, 560px);
-  }
-}
+/* The host is flex: 1 on every screen size now (see the play page block
+   above): it claims all remaining height instead of a fixed 68dvh cap,
+   so nothing is cut on short screens and the card runs top to bottom. */
 
-/* ---- play page: open-source credit line under the host ---- */
-body.theme-warm .page--play .game-credit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: -4px 14px 10px;
-  font-size: 0.62rem;
-  line-height: 1.4;
-  text-align: center;
-  color: rgba(42, 59, 46, 0.62);
-}
-
-body.theme-warm .page--play .game-credit__lic {
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  font-size: 0.56rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #3f6b46;
-  white-space: nowrap;
-}
+/* ---- play page: credit line removed (client request, 2026-10-14).
+   Licence attribution lives in the source form (registry.py, CREDITS.md,
+   each vendored LICENSE); the hub card keeps its licence chip. ---- */
 
 /* ---- play page: overlay (ready / paused / game over) ---- */
 body.theme-warm .page--play .game-overlay {
@@ -2092,6 +2114,144 @@ body.theme-warm .page--play .game-pause svg {
     background: rgba(255, 255, 255, 0.94);
   }
   body.theme-warm .page--play .game-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(24, 40, 29, 0.92);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Instagram lucky-draw popup (client copy 2026-10-14)
+   "Follow and win a special gift": tapping the Instagram card celebrates
+   the entry first ("You are entered in the lucky draw!"), then hands off
+   to the tap-tracked Instagram redirect, which stays the single
+   draw-entry log. Pinned to the phone screen exactly like the background
+   art: .device is the containing block for fixed descendants on this page
+   (container-type, and translateZ(0) inside the desktop mock frame), so
+   the scrim covers the screen box on real phones and in the mock alike.
+   -------------------------------------------------------------------------- */
+body.theme-warm .device-screen > .ig-draw {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+/* the class rule sets display: grid, which would defeat the hidden
+   attribute's UA display: none — restore it explicitly */
+body.theme-warm .device-screen > .ig-draw[hidden] { display: none; }
+
+body.theme-warm .ig-draw__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(24, 40, 29, 0.55);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  animation: ig-draw-fade 180ms ease;
+}
+
+body.theme-warm .ig-draw__sheet {
+  position: relative;
+  width: min(320px, 100%);
+  padding: 26px 22px 18px;
+  border-radius: 26px;
+  background: var(--card-white);
+  border: 1px solid rgba(34, 48, 31, 0.055);
+  box-shadow:
+    0 2px 4px rgba(31, 55, 38, 0.05),
+    0 18px 44px rgba(31, 55, 38, 0.12);
+  text-align: center;
+  animation: ig-draw-rise 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-warm .ig-draw__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--tint-cream);
+  color: var(--gold-deep);
+}
+
+body.theme-warm .ig-draw__icon svg { width: 26px; height: 26px; }
+
+body.theme-warm .ig-draw__title {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.45rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+body.theme-warm .ig-draw__sub {
+  margin: 8px auto 0;
+  max-width: 30ch;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--link-sub);
+}
+
+body.theme-warm .ig-draw__cta {
+  display: block;
+  margin-top: 16px;
+  padding: 12px 26px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3e7a4e, #2e5b3e);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 20px -10px rgba(0, 0, 0, 0.5);
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-warm .ig-draw__cta:active { transform: scale(0.96); }
+
+body.theme-warm .ig-draw__close {
+  margin-top: 6px;
+  padding: 10px 18px;
+  border: 0;
+  background: none;
+  color: var(--link-sub);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@keyframes ig-draw-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ig-draw-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* desktop mock: a fixed layer is not clipped by the screen's overflow, so
+   round the scrim to the screen corners the same way the background art does */
+@media (min-width: 860px) {
+  body.theme-warm .device-screen > .ig-draw { clip-path: inset(0 round 46px); }
+}
+
+/* ---- reduced motion: no entrance animation, no press scaling ---- */
+@media (prefers-reduced-motion: reduce) {
+  body.theme-warm .ig-draw__backdrop,
+  body.theme-warm .ig-draw__sheet { animation: none; }
+  body.theme-warm .ig-draw__cta { transition: none; }
+  body.theme-warm .ig-draw__cta:active { transform: none; }
+}
+
+/* ---- reduced transparency: solidify the scrim ---- */
+@media (prefers-reduced-transparency: reduce) {
+  body.theme-warm .ig-draw__backdrop {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: rgba(24, 40, 29, 0.92);

@@ -1,14 +1,84 @@
-html {
-  width:100%;
-  height:100%;
-}
-body {
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
+/* ==========================================================================
+   Food Matcher (memory-match) — iOS 26 liquid-glass pass, 2026-10-14
+   Pasons redesign of the vendored game surface. The game runs in a
+   same-origin iframe and cannot inherit the platform tokens.css, so the
+   glass recipe is re-declared here with the same values. Design language:
+   deep-green felt board, frosted liquid-glass tiles and sheets, gold
+   hairline rims, critically damped spring motion (no overshoot).
+   Structural selectors and the layout math the JS depends on
+   (#memory--app-container sizing, .flip-container float grid, .flipper
+   90%/5%, .clicked flip contract, .back.card-N mapping) are unchanged.
+   ========================================================================== */
+
+:root {
+  /* palette (static/css/tokens.css, warm brand canvas) */
+  --mm-felt-1: #1F3726;
+  --mm-felt-2: #18281D;
+  --mm-cream: #F7F2E6;
+  --mm-cream-deep: #EDE4D2;
+  --mm-ink: #22301F;
+  --mm-gold: #C2A24B;
+  --mm-gold-deep: #A8893E;
+  --mm-gold-soft: #E8D48F;
+  --mm-green: #2E5B3E;
+  --mm-leaf: #6E8F57;
+
+  /* glass materials: blur + saturate, bright top edge, forest-tinted depth */
+  --mm-glass-fill: rgba(255, 255, 255, 0.1);
+  --mm-glass-fill-strong: rgba(255, 255, 255, 0.16);
+  --mm-sheet-fill: rgba(250, 247, 238, 0.88);
+  --mm-glass-border: rgba(255, 255, 255, 0.22);
+  --mm-glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --mm-shadow-glass: 0 2px 6px rgba(10, 20, 12, 0.18), 0 18px 40px rgba(10, 20, 12, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+
+  /* motion: critically damped default (no overshoot); interruptible */
+  --mm-ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --mm-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --mm-ease-flip: cubic-bezier(0.32, 0.72, 0, 1);
+  --mm-t-press: 110ms;
+  --mm-t-flip: 460ms;
+
+  --mm-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    Roboto, Helvetica, Arial, "Noto Sans", "Noto Kufi Arabic", sans-serif;
+  --mm-font-display: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
+/* The display face is served from the platform's static fonts folder
+   (four levels up = /static/fonts/). Same-origin, no external calls. */
+@font-face {
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../../../../fonts/Fraunces-var.woff2") format("woff2");
+}
+
+html {
+  width: 100%;
+  height: 100%;
+}
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  /* deep-green felt: continues under the menu bar so the glass bar has a
+     material to blur, and matches the shell's .game-host gradient so the
+     iframe seam disappears */
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(127, 160, 107, 0.22), transparent 60%),
+    linear-gradient(180deg, var(--mm-felt-1), var(--mm-felt-2));
+  background-attachment: fixed;
+  color: var(--mm-cream);
+  font-family: var(--mm-font-ui);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ==========================================================================
+   Modals — iOS 26 sheets: dark scrim, light liquid-glass card, spring pop
+   ========================================================================== */
 .modal {
   position: fixed;
   height: 90%;
@@ -17,225 +87,316 @@ body {
   z-index: 3;
   width: 100%;
   visibility: hidden;
-  opacity:0;
-  -webkit-transition:opacity 0.4s linear;
-  -moz-transition:opacity 0.4s linear;
-  -ms-transition:opacity 0.4s linear;
-  -o-transition:opacity 0.4s linear;
-  transition:opacity 0.4s linear;
+  opacity: 0;
+  background: rgba(20, 34, 22, 0.46);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-transition: opacity 240ms ease, visibility 0s linear 240ms;
+  transition: opacity 240ms ease, visibility 0s linear 240ms;
 }
 .modal.show {
   visibility: visible;
-  opacity:1;
+  opacity: 1;
+  -webkit-transition: opacity 240ms ease;
+  transition: opacity 240ms ease;
+}
+
+/* the sheet itself: materialize (scale + fade), not a bare fade */
+.modal .valign-cell > * {
+  -webkit-transform: scale(0.94) translateY(10px);
+  transform: scale(0.94) translateY(10px);
+  opacity: 0;
+  -webkit-transition: -webkit-transform 320ms var(--mm-ease-spring), opacity 220ms ease;
+  transition: transform 320ms var(--mm-ease-spring), opacity 220ms ease;
+}
+.modal.show .valign-cell > * {
+  -webkit-transform: none;
+  transform: none;
+  opacity: 1;
 }
 
 .valign-table {
   display: table;
   table-layout: fixed;
+  width: 100%;
 }
 .valign-cell {
   display: table-cell;
   vertical-align: middle;
+  text-align: center;
 }
 
 #memory--app-container {
-  background-color: #0061a8;
-  width:100%;
-  height:90%;
+  width: 100%;
+  height: 90%;
 }
 
+/* ==========================================================================
+   Bottom bar — floating glass: blur + saturate over the felt, bright top edge
+   ========================================================================== */
 .memory--menu-bar {
-  width:100%;
-  background-color: #222;
-  height:10%;
-  display:table;
+  width: 100%;
+  height: 10%;
+  display: table;
+  background: rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 -10px 26px rgba(10, 20, 12, 0.22);
 }
 
 .memory--menu-bar .inner {
-  display:table-cell;
-  vertical-align:middle;
+  display: table-cell;
+  vertical-align: middle;
 }
 .memory--menu-bar .left {
   text-align: left;
-  float:left;
-  width:50%;
+  float: left;
+  width: 50%;
 }
 .memory--menu-bar .right {
   text-align: right;
-  float:right;
-  width:50%;
+  float: right;
+  width: 50%;
+  /* Pasons: timer + points chips share the right half with the gear */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  box-sizing: border-box;
+  padding-right: 8px;
 }
 .memory--app-name {
-  color:#ccc;
-  font-size:26px;
-  margin:0;
-  padding:1px 4px;
-  text-transform: uppercase;
-  font-family: "Courier New";
-  letter-spacing: 2px;
+  margin: 0;
+  padding: 1px 12px;
+  font-family: var(--mm-font-display);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.012em;
+  color: var(--mm-cream);
 }
 @media screen and (max-width: 480px) {
   .memory--app-name {
-    font-size:16px;
+    font-size: 15px;
   }
 }
 
+/* gear: frosted glass circle (same button language as the shell chrome) */
+.memory--gear-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--mm-glass-fill-strong);
+  border: 1px solid var(--mm-glass-border);
+  box-shadow: var(--mm-glass-hi);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(160%);
+  transition: -webkit-transform var(--mm-t-press) var(--mm-ease-out);
+  transition: transform var(--mm-t-press) var(--mm-ease-out);
+}
+.memory--gear-btn:active {
+  -webkit-transform: scale(0.9);
+  transform: scale(0.9);
+}
 #memory--settings-icon {
-  height: 24px;
+  height: 18px;
+  width: 18px;
   display: block;
-  padding:4px 8px;
-  float: right;
+  padding: 0;
+  float: none;
+  /* the PNG gear is gray; draw it in cream to sit on dark glass */
+  filter: brightness(0) saturate(100%) invert(97%) sepia(8%) saturate(366%)
+    hue-rotate(7deg) brightness(103%) contrast(96%);
+  opacity: 0.95;
 }
 
-#memory--end-game-modal .wrapper {
-  background-color: rgba(0, 0, 0, .86);
-  text-align: center;
-  color:#ccc;
-  padding:8px 0;
+/* timer + points chips */
+.memory--chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
 }
-#memory--end-game-modal h2,
-#memory--end-game-modal h3 {
-  margin:0;
-  margin-bottom: 4px;
+.memory--chip-label {
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(247, 242, 230, 0.55);
 }
-
-#memory--settings-modal {
-  background-color: rgba(0, 0, 0, .86);
-  z-index: 4;
+.memory--chip-value {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--mm-cream);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  transition: color 200ms ease;
 }
-#memory--settings-modal form {
-  min-width:240px;
-  width:50%;
-  margin:0 auto;
-  text-align: center;
-  color:#ccc;
+.memory--chip--time .memory--chip-value {
+  color: var(--mm-gold-soft);
 }
-
-.memory--settings-label {
-  margin:8px 0;
+/* Last 10 seconds: the clock turns warm red. Pulse is decorative only.
+   The urgent class lands on the value span (#memory--timer). */
+.memory--chip--time .memory--chip-value.urgent {
+  color: #FF8A7A;
+  -webkit-animation: memory-timer-pulse 1s ease-in-out infinite;
+  animation: memory-timer-pulse 1s ease-in-out infinite;
 }
-
-#memory--settings-grid,
-#memory--settings-reset {
-  width:100%;
-  margin-bottom:16px;
-  font-size:18px;
-  background:transparent;
-  color:#ccc;
-  height:50px;
-  text-align: center;
+@keyframes memory-timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }
-
-#memory--settings-grid option {
-  padding-top:5px;
-  padding-bottom:5px;
+@media (prefers-reduced-motion: reduce) {
+  .memory--chip--time .memory--chip-value.urgent {
+    -webkit-animation: none;
+    animation: none;
+  }
 }
 
-#memory--settings-reset {
-  border-radius:5px;
-  border:2px solid #ccc;
-  cursor: pointer;
-}
-
+/* ==========================================================================
+   Board + cards — frosted tiles on felt
+   ========================================================================== */
 #memory--cards {
-  margin:0 auto;
-  padding:0;
-  height:100%;
+  margin: 0 auto;
+  padding: 0;
+  height: 100%;
   list-style-type: none;
   list-style-image: none;
-  position:relative;
+  position: relative;
 }
 /* entire container, keeps perspective */
 .flip-container {
   -webkit-perspective: 1000px;
   perspective: 1000px;
-  float:left;
+  float: left;
+}
+
+/* deal-in when a new board is laid out (class + delay set by the JS) */
+.flip-container.deal-in {
+  -webkit-animation: memory-deal-in 380ms var(--mm-ease-out) backwards;
+  animation: memory-deal-in 380ms var(--mm-ease-out) backwards;
+}
+@keyframes memory-deal-in {
+  from {
+    opacity: 0;
+    -webkit-transform: translateY(12px) scale(0.96);
+    transform: translateY(12px) scale(0.96);
+  }
 }
 
 /* flip the pane when clicked */
 .flip-container.clicked .front {
   -webkit-transform: rotateY(180deg);
-  -moz-transform: rotateY(180deg);
-  -ms-transform: rotateY(180deg);
-  -o-transform: rotateY(180deg);
   transform: rotateY(180deg);
 }
 .flip-container.clicked .back {
   -webkit-transform: rotateY(0deg);
-  -moz-transform: rotateY(0deg);
-  -ms-transform: rotateY(0deg);
-  -o-transform: rotateY(0deg);
   transform: rotateY(0deg);
 }
 
-/* flip speed goes here */
+/* flip timing lives on the faces; the flipper carries press + pop motion */
 .flipper {
-  width:90%;
-  height:90%;
-  margin:0% auto;
-  -webkit-transition: 0.5s;
-  -moz-transition: 0.5s;
-  -ms-transition: 0.5s;
-  -o-transition: 0.5s;
-  transition: 0.5s;
-  -webkit-transform-style: preserve-3d;
-  -moz-transform-style: preserve-3d;
-  transform-style: preserve-3d;
+  width: 90%;
+  height: 90%;
+  margin: 0 auto;
   position: relative;
-  top:5%;
-  bottom:5%;
+  top: 5%;
+  bottom: 5%;
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  transition: -webkit-transform var(--mm-t-press) var(--mm-ease-out);
+  transition: transform var(--mm-t-press) var(--mm-ease-out);
 }
 
 /* hide back of pane during swap */
 .front, .back {
-  width:100%;
-  height:100%;
+  width: 100%;
+  height: 100%;
   display: block;
   -webkit-backface-visibility: hidden;
-  -moz-backface-visibility: hidden;
   backface-visibility: hidden;
-  -webkit-transition: 0.5s;
-  -moz-transition: 0.5s;
-  -ms-transition: 0.5s;
-  -o-transition: 0.5s;
-  transition: 0.5s;
   -webkit-transform-style: preserve-3d;
-  -moz-transform-style: preserve-3d;
   transform-style: preserve-3d;
   position: absolute;
   top: 0;
   left: 0;
+  border-radius: 11px;
+  transition: -webkit-transform var(--mm-t-flip) var(--mm-ease-flip);
+  transition: transform var(--mm-t-flip) var(--mm-ease-flip);
 }
 
-/* front pane, placed above back */
+/* front pane (face-down), placed above back */
 .front {
-  /* for firefox 31 */
   -webkit-transform: rotateY(0deg);
-  -moz-transform: rotateY(0deg);
-  -ms-transform: rotateY(0deg);
-  -o-transform: rotateY(0deg);
   transform: rotateY(0deg);
-  background-color: #e12d00;
-  border-radius: 5%;
+  background-color: rgba(255, 255, 255, 0.5);
   background-image: url(../images/card.svg);
-  background-position:50% 50%;
-  background-repeat: no-repeat;
-  background-size: contain;
-
-}
-
-/* back, initially hidden pane */
-.back {
-  -webkit-transform: rotateY(-180deg);
-  -moz-transform: rotateY(-180deg);
-  -ms-transform: rotateY(-180deg);
-  -o-transform: rotateY(-180deg);
-  transform: rotateY(-180deg);
-  background-color: #fff;
-  border-radius: 5%;
-  background-position:50% 50%;
+  background-position: 50% 50%;
   background-repeat: no-repeat;
   background-size: cover;
+  box-shadow:
+    0 1px 2px rgba(10, 20, 12, 0.18),
+    0 8px 18px rgba(10, 20, 12, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+/* back pane (photo face), initially hidden */
+.back {
+  -webkit-transform: rotateY(-180deg);
+  transform: rotateY(-180deg);
+  background-color: var(--mm-cream-deep);
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-shadow:
+    0 1px 2px rgba(10, 20, 12, 0.18),
+    0 8px 18px rgba(10, 20, 12, 0.26),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+/* press feedback: respond on pointer-down (apple-design) */
+.flip-container:active .flipper {
+  -webkit-transform: scale(0.955);
+  transform: scale(0.955);
+}
+
+/* matched pair: gold ring + warm glow (persistent, restored after a
+   re-layout), and a settle pop that plays once (.just-matched, transient —
+   the JS drops it, so rotating the phone does not replay every pop) */
+.flip-container.matched .back {
+  box-shadow:
+    0 0 0 2.5px rgba(213, 201, 138, 0.95),
+    0 0 22px rgba(213, 201, 138, 0.35),
+    0 10px 22px rgba(10, 20, 12, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+.flip-container.just-matched .flipper {
+  -webkit-animation: memory-match-pop 520ms var(--mm-ease-spring) 220ms backwards;
+  animation: memory-match-pop 520ms var(--mm-ease-spring) 220ms backwards;
+}
+@keyframes memory-match-pop {
+  0% { -webkit-transform: scale(0.97); transform: scale(0.97); }
+  55% { -webkit-transform: scale(1.035); transform: scale(1.035); }
+  100% { -webkit-transform: scale(1); transform: scale(1); }
+}
+
+/* missed pair: brief shake + warm red ring before the cards conceal */
+.flip-container.miss .flipper {
+  -webkit-animation: memory-miss-shake 380ms var(--mm-ease-out);
+  animation: memory-miss-shake 380ms var(--mm-ease-out);
+}
+@keyframes memory-miss-shake {
+  0%, 100% { -webkit-transform: translateX(0); transform: translateX(0); }
+  25% { -webkit-transform: translateX(-5px); transform: translateX(-5px); }
+  55% { -webkit-transform: translateX(4px); transform: translateX(4px); }
+  80% { -webkit-transform: translateX(-2px); transform: translateX(-2px); }
+}
+.flip-container.miss .front,
+.flip-container.miss .back {
+  box-shadow:
+    0 0 0 2.5px rgba(214, 90, 66, 0.6),
+    0 8px 18px rgba(10, 20, 12, 0.26);
 }
 
 .back.card-1 {
@@ -280,10 +441,6 @@ body {
 .back.card-14 {
   background-image: url(../images/food/food-14.jpg);
 }
-.back.card-15 {
-  background-image: url(../images/food/food-15.jpg);
-}
-
 /** Matching Cards **/
 /**
  * If you wish to have custom matching images, you can do so
@@ -299,3 +456,187 @@ body {
  * }
  *
  */
+
+/* ==========================================================================
+   Sheets: settings + end-of-round (light liquid glass over the scrim)
+   ========================================================================== */
+#memory--end-game-summary {
+  margin: 6px 2px 2px;
+  font-size: 12.5px;
+  color: rgba(34, 48, 31, 0.62);
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+#memory--end-game-modal .wrapper {
+  margin: 0 auto;
+  width: min(320px, 84%);
+  padding: 22px 18px;
+  border-radius: 26px;
+  text-align: center;
+  color: var(--mm-ink);
+  background: var(--mm-sheet-fill);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: var(--mm-shadow-glass);
+}
+#memory--end-game-modal h2,
+#memory--end-game-modal h3 {
+  margin: 0;
+  margin-bottom: 4px;
+}
+#memory--end-game-message {
+  font-family: var(--mm-font-display);
+  font-weight: 650;
+  font-size: 21px;
+  line-height: 1.18;
+  letter-spacing: -0.015em;
+  color: var(--mm-ink);
+}
+#memory--end-game-score {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--mm-gold-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+#memory--settings-modal {
+  z-index: 4;
+}
+#memory--settings-modal form {
+  margin: 0 auto;
+  width: min(320px, 84%);
+  padding: 22px 18px 18px;
+  border-radius: 26px;
+  text-align: center;
+  color: var(--mm-ink);
+  background: var(--mm-sheet-fill);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: var(--mm-shadow-glass);
+}
+
+.memory--settings-label {
+  margin: 2px 0 12px;
+  font-family: var(--mm-font-display);
+  font-weight: 650;
+  font-size: 19px;
+  letter-spacing: -0.012em;
+  color: var(--mm-ink);
+}
+
+/* Pasons: one-line rules hint shown above the start button */
+.memory--settings-note {
+  margin: -2px 0 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(34, 48, 31, 0.62);
+}
+
+#memory--settings-grid,
+#memory--settings-reset {
+  width: 100%;
+  margin-bottom: 14px;
+  font-size: 16px;
+  height: 50px;
+  box-sizing: border-box;
+  text-align: center;
+  font-family: var(--mm-font-ui);
+}
+
+/* the difficulty picker: inset glass well */
+#memory--settings-grid {
+  padding: 0 40px 0 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  color: var(--mm-ink);
+  background: rgba(255, 255, 255, 0.66)
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%232E5B3E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 16px center;
+  box-shadow: inset 0 2px 6px rgba(49, 69, 45, 0.1), var(--mm-glass-hi);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#memory--settings-grid option {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  color: var(--mm-ink);
+  background: var(--mm-cream);
+}
+
+/* start button: deep-green glass pill with a press spring */
+#memory--settings-reset {
+  margin-bottom: 4px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--mm-cream);
+  background: linear-gradient(160deg, var(--mm-green), var(--mm-leaf));
+  box-shadow: 0 4px 14px rgba(46, 91, 62, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: -webkit-transform var(--mm-t-press) var(--mm-ease-out);
+  transition: transform var(--mm-t-press) var(--mm-ease-out);
+}
+#memory--settings-reset:active {
+  -webkit-transform: scale(0.965);
+  transform: scale(0.965);
+}
+
+/* ==========================================================================
+   Reduced transparency: near-solid surfaces, no blur
+   ========================================================================== */
+@media (prefers-reduced-transparency: reduce) {
+  .memory--menu-bar {
+    background: #1C2E22;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .memory--gear-btn {
+    background: rgba(255, 255, 255, 0.18);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .modal {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  #memory--end-game-modal .wrapper,
+  #memory--settings-modal form {
+    background: var(--mm-cream);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ==========================================================================
+   Reduced motion: static, fully playable. Flips switch state instantly;
+   no deal-in, pop, shake or pulse.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .front, .back, .flipper {
+    transition: none;
+  }
+  .flip-container.deal-in,
+  .flip-container.just-matched .flipper,
+  .flip-container.miss .flipper {
+    -webkit-animation: none;
+    animation: none;
+  }
+  .modal .valign-cell > * {
+    -webkit-transition: none;
+    transition: none;
+    -webkit-transform: none;
+    transform: none;
+    opacity: 1;
+  }
+  .memory--gear-btn:active,
+  #memory--settings-reset:active,
+  .flip-container:active .flipper {
+    -webkit-transform: none;
+    transform: none;
+  }
+}

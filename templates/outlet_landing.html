@@ -90,7 +90,6 @@
           </span>
           <span class="btn-action__text">
             <span class="btn-action__title">REVIEW US ON GOOGLE</span>
-            <span class="btn-action__sub">Write it here, polish it, post it on Google</span>
           </span>
           <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>
@@ -127,7 +126,12 @@
         {% endif %}
 
         {% if has_instagram %}
+        {# Card tap opens the lucky-draw popup first (client copy 2026-10-14: #}
+        {# "follow and win a special gift"); the popup's CTA keeps this      #}
+        {# tap-tracked redirect so the Instagram TapEvent list stays the     #}
+        {# single draw-entry list. Without JS the card navigates directly.   #}
         <a href="{% url 'qr_instagram' qr.redirect_key %}" target="_blank" rel="noopener"
+          id="ig-follow-card"
           class="btn-action btn-action--tint-pink reveal" style="--i: 4">
           <span class="btn-action__icon" aria-hidden="true">
             {% with ico="icons/Instagram Gradient Badge.png"|deriv_url:162 %}
@@ -139,23 +143,37 @@
           </span>
           <span class="btn-action__text">
             <span class="btn-action__title">Follow Us on Instagram</span>
-            <span class="btn-action__sub">New plates and stories</span>
+            <span class="btn-action__sub">Follow and win a special gift</span>
           </span>
           <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>
         {% endif %}
 
-        {# Games are pure play while guests wait: no discount or offer copy. #}
+        {# Perk promise per client copy 2026-10-14: staff honour the discount or dessert. #}
         <a href="{% url 'qr_game' qr.redirect_key %}"
           class="btn-action btn-action--tint-green reveal" style="--i: 5">
           <span class="btn-action__icon btn-action__icon--gold" aria-hidden="true">{% icon "gamepad" %}</span>
           <span class="btn-action__text">
             <span class="btn-action__title">PLAY A GAME</span>
-            <span class="btn-action__sub">Free games while you wait, no ads</span>
+            <span class="btn-action__sub">Win a discount or dessert</span>
           </span>
           <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>
       </section>
+
+      {# Lucky-draw popup (client copy 2026-10-14): celebrates the follow tap #}
+      {# first, then hands off to the tap-tracked Instagram redirect. The    #}
+      {# redirect is the ONE entry log, so the draw list never doubles.      #}
+      <div class="ig-draw" id="ig-draw-popup" hidden>
+        <div class="ig-draw__backdrop" data-draw-close></div>
+        <div class="ig-draw__sheet" role="dialog" aria-modal="true" aria-labelledby="ig-draw-title">
+          <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
+          <h2 class="ig-draw__title" id="ig-draw-title">You are entered in the lucky draw!</h2>
+          <p class="ig-draw__sub">Followers get exclusive gifts and surprises. Open Instagram to confirm your entry.</p>
+          <a class="ig-draw__cta" id="ig-draw-open" href="{% url 'qr_instagram' qr.redirect_key %}" target="_blank" rel="noopener">Open Instagram</a>
+          <button type="button" class="ig-draw__close" data-draw-close>Maybe later</button>
+        </div>
+      </div>
 
     </div>
 
@@ -166,4 +184,36 @@
     <strong>{{ brand.name_en }}</strong>{% if outlet %} · {{ outlet.official_name }}{% endif %}
   </p>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var card = document.getElementById("ig-follow-card");
+    var popup = document.getElementById("ig-draw-popup");
+    if (!card || !popup) return;
+
+    function openDraw(e) {
+      e.preventDefault();
+      popup.hidden = false;
+      var openBtn = document.getElementById("ig-draw-open");
+      if (openBtn) openBtn.focus();
+    }
+
+    function closeDraw() {
+      popup.hidden = true;
+      card.focus();
+    }
+
+    card.addEventListener("click", openDraw);
+
+    popup.addEventListener("click", function (e) {
+      if (e.target.closest("[data-draw-close]")) closeDraw();
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !popup.hidden) closeDraw();
+    });
+  })();
+</script>
 {% endblock %}

@@ -193,14 +193,17 @@ class QrFlowTests(AcceptanceFixtures):
         self.assertEqual(self.qr_intl.scan_count, 1)
         self.assertEqual(self.client.session["qr"], self.qr_intl.pk)
 
-    def test_landing_shows_play_card_without_offer_promise(self):
-        """Client decision 2026-10-10 (revised): games are play-only entertainment."""
+    def test_landing_shows_play_card_with_perk_promise(self):
+        """Client copy 2026-10-14 (via user): the card advertises the perk
+        'Win a discount or dessert', honoured by staff. Supersedes the
+        2026-10-10 play-only decision for the landing card copy."""
         landing = self.client.get(reverse("qr_landing", args=["kcic-table-001"]))
         self.assertEqual(landing.status_code, 200)
         self.assertContains(landing, "PLAY A GAME")
+        self.assertContains(landing, "Win a discount or dessert")
         self.assertContains(landing, reverse("qr_game", args=["kcic-table-001"]))
-        # Play-only: the card must never promise a discount or reward.
-        self.assertNotContains(landing, "Win a Discount")
+        # The promise is perk-only: no coupon language.
+        self.assertNotIn("coupon", landing.content.decode().lower())
         # The printed-sheet URL keeps working and opens the games hub.
         entry = self.client.get("/q/kcic-table-001/game/")
         self.assertEqual(entry.status_code, 302)
@@ -227,6 +230,32 @@ class QrFlowTests(AcceptanceFixtures):
         response = self.client.get(reverse("qr_instagram_redirect", args=["kcic-table-001"]))
         self.assertEqual(response.status_code, 302)
         self.assertIn("kingchef.internationalcity", response["Location"])
+
+    def test_instagram_card_promises_gift_with_lucky_draw_popup(self):
+        """Client copy 2026-10-14 (via user): the Instagram card sub-line
+        reads 'Follow and win a special gift' and tapping the card opens a
+        lucky-draw popup ('You are entered in the lucky draw!'). Instagram
+        never reports who followed, so the tap-tracked redirect stays the
+        single draw-entry log: the popup's CTA must point at it, and the
+        card keeps its href as the no-JS fallback."""
+        landing = self.client.get(reverse("qr_landing", args=["kcic-table-001"]))
+        self.assertEqual(landing.status_code, 200)
+        self.assertContains(landing, "Follow and win a special gift")
+        self.assertNotIn("New plates and stories", landing.content.decode())
+        # the popup celebrates the entry and is hidden until the card tap
+        self.assertContains(landing, "You are entered in the lucky draw")
+        self.assertContains(landing, 'id="ig-draw-popup" hidden')
+        # one entry log only: the three Instagram links (contact circle,
+        # card as no-JS fallback, popup CTA) all use the same redirect, so
+        # every tap is one TapEvent and the draw list never doubles.
+        tracked = reverse("qr_instagram_redirect", args=["kcic-table-001"])
+        self.assertEqual(landing.content.decode().count(f'href="{tracked}"'), 3)
+        self.assertEqual(
+            TapEvent.objects.filter(
+                qr_code=self.qr_intl, action=TapEvent.ActionType.INSTAGRAM
+            ).count(),
+            0,
+        )
 
     def test_specials_page_hides_weekend_price(self):
         response = self.client.get(reverse("customer_specials", args=["kcic-table-001"]))

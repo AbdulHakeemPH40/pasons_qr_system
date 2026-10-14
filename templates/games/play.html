@@ -8,7 +8,7 @@
 
 {% block content %}
 {# GAMES_V also guards the vendored iframe src so a game update is not served from cache. Keep in sync with the scripts block below. #}
-{% with GAMES_V="2026-10-13-2" %}
+{% with GAMES_V="2026-10-14-19" %}
 <div class="device-stage">
   <div class="device">
     <div class="device-island" aria-hidden="true"></div>
@@ -49,10 +49,18 @@
         <div class="game-overlay" id="game-overlay" data-state="hidden"></div>
       </div>
 
-      <p class="game-credit">
-        <span class="game-credit__lic">{{ game.license }}</span>
-        {{ game.credit }} · hosted on our own servers, no ads
-      </p>
+      {% comment %}
+      Visible open-source credit line removed at the client's request
+      (2026-10-14). Licence attribution is retained in the source form,
+      which is what Apache-2.0 4(c) / MIT require: see apps/games/registry.py
+      (Game.license / Game.credit), static/games/vendor/CREDITS.md and each
+      vendored LICENSE file. The hub card still shows the licence chip.
+
+      NB: use the comment-block tag for notes longer than one line. Django's
+      hash-comment tag is single-line only here: a multiline one renders as
+      LITERAL TEXT on the page and became a phantom flex item that stole
+      144px from the game card (2026-10-14 bug).
+      {% endcomment %}
 
     </div>
     <div class="device-home-indicator" aria-hidden="true"></div>
@@ -72,7 +80,7 @@
 
 {% block scripts %}
 {# GAMES_V: bump whenever any script under static/games/ changes #}
-{% with GAMES_V="2026-10-13-2" %}
+{% with GAMES_V="2026-10-14-19" %}
 <script src="{% static 'games/core/storage.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/theme.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/shell.js' %}?v={{ GAMES_V }}"></script>

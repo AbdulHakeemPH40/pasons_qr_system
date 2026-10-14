@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
    <head>
-      <title>Floppy Bird</title>
+      <title>Flappy Burger</title>
       <meta http-equiv="content-type" content="text/html; charset=utf-8" />
       <meta name="author" content="Nebez Briefkani" />
       <meta name="description" content="play floppy bird. a remake of popular game flappy bird built in html/css/js" />
@@ -9,23 +9,27 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
 
       <!-- Open Graph tags -->
-      <meta property="og:title" content="Floppy Bird" />
+      <meta property="og:title" content="Flappy Burger" />
       <meta property="og:description" content="play floppy bird. a remake of popular game flappy bird built in html/css/js" />
       <meta property="og:type" content="website" />
       <meta property="og:image" content="https://nebezb.com/floppybird/assets/thumb.png" />
       <meta property="og:url" content="https://nebezb.com/floppybird/" />
       <meta property="og:site_name" content="Floppy Bird" />
 
-      <!-- Style sheets -->
-      <link href="css/reset.css" rel="stylesheet">
-      <link href="css/main.css" rel="stylesheet">
+      <!-- Style sheets (Pasons: ?v= cache-busting, keep in step with GAMES_V) -->
+      <link href="css/reset.css?v=2026-10-14-10" rel="stylesheet">
+      <link href="css/main.css?v=2026-10-14-10" rel="stylesheet">
 
       <!-- Pasons: upstream analytics script removed (no third-party services). -->
    </head>
    <body>
       <div id="gamecontainer">
          <div id="gamescreen">
-            <div id="sky" class="animated">
+            <div id="sky">
+               <!-- Pasons: parallax cloud field (two seam-safe layers) over the
+                    gradient sky. .animated so game pause freezes the drift. -->
+               <div id="clouds-far" class="animated"></div>
+               <div id="clouds-near" class="animated"></div>
                <div id="flyarea">
                   <div id="ceiling" class="animated"></div>
                   <!-- This is the flying and pipe area container -->
@@ -33,13 +37,35 @@
 
                   <div id="bigscore"></div>
 
-                  <div id="splash"></div>
+                  <!-- Pasons: the splash is now a liquid-glass card with the
+                       client's transparent chicken-burger cutout floating on
+                       it. #splash itself is only faded by main.js; all copy
+                       lives inside .fb-card. -->
+                  <div id="splash">
+                     <div class="fb-card">
+                        <div class="fb-hero">
+                           <img src="assets/burger-cutout.webp" alt="Pasons chicken burger">
+                        </div>
+                        <div class="fb-copy">
+                           <h1 class="fb-title">Flappy Burger</h1>
+                           <p class="fb-sub">Tap to fly through the gaps</p>
+                        </div>
+                        <div class="fb-pill"><span class="fb-dot"></span>Tap to start</div>
+                     </div>
+                  </div>
 
+                  <!-- Pasons: scoreboard is a liquid-glass sheet. The ids and the
+                       digit <img alt> rows main.js fills are untouched contract. -->
                   <div id="scoreboard">
-                     <div id="medal"></div>
-                     <div id="currentscore"></div>
-                     <div id="highscore"></div>
-                     <div id="replay"><img src="assets/replay.png" alt="replay"></div>
+                     <p class="fb-kicker">Round over</p>
+                     <div class="fb-sheet-head">
+                        <div id="medal"></div>
+                        <div class="fb-rows">
+                           <div id="currentscore"></div>
+                           <div id="highscore"></div>
+                        </div>
+                     </div>
+                     <div id="replay"><img src="assets/replay.png" alt=""><span>Play again</span></div>
                   </div>
 
                   <!-- Pipes go here! -->
@@ -48,17 +74,21 @@
             <div id="land" class="animated"><div id="debug"></div></div>
          </div>
       </div>
-      <div id="footer">
-         <a href="https://www.dotgears.com/">original game/concept/art by dong nguyen</a>
-         <a href="https://nebezb.com/">recreated by nebez briefkani</a>
-         <a href="https://github.com/nebez/floppybird/">view github project</a>
-      </div>
+      <!-- Pasons (2026-10-14): the credit footer is removed from the visible
+           UI at the client's request. The attribution notices are retained
+           here in the Source form, which is what Apache-2.0 clause 4(c)
+           requires; the licence text travels in LICENSE and the change log
+           in CHANGES.md.
+           Original concept: Dong Nguyen (dotgears.com)
+           Engine: Nebez Briefkani (nebezb.com)
+           Source: github.com/nebez/floppybird -->
+
       <div class="boundingbox" id="playerbox"></div>
       <div class="boundingbox" id="pipebox"></div>
 
       <script src="js/jquery.min.js"></script>
       <script src="js/jquery.transit.min.js"></script>
       <script src="js/buzz.min.js"></script>
-      <script src="js/main.js"></script>
+      <script src="js/main.js?v=2026-10-14-10"></script>
    </body>
 </html>

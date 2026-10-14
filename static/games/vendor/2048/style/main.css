@@ -756,3 +756,17 @@ hr {
     margin-top: 90px !important; }
   .game-message .lower {
     margin-top: 30px !important; } }
+
+/* ==========================================================================
+   Pasons embed patch (2026-10-14) - hides the stock marketing text below
+   the board ("how to play" copy, the upstream site note and the credits
+   paragraphs). Inside the Pasons play card the board is the whole point,
+   the platform already explains the controls, and this text doubled the
+   page height so the board could never fill its card. Upstream
+   attribution is retained in the source form (LICENSE.txt, CHANGES.md,
+   static/games/vendor/CREDITS.md) as MIT requires. No JavaScript changed.
+   ========================================================================== */
+.game-explanation,
+.game-container ~ hr,
+.game-container ~ p {
+  display: none; }

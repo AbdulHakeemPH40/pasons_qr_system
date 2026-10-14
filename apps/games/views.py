@@ -7,8 +7,10 @@ Three public surfaces:
   /games/          hub listing the enabled games in the outlet's brand colours
   /games/<slug>/   full-screen play page with Exit back to the QR page
 
-Games are pure play: no rewards, no discounts, no personal data. The only
-server-side record is the existing TapEvent analytics row.
+The games pages themselves carry no offer copy and no personal data; the only
+server-side record is the existing TapEvent analytics row. The landing card
+advertises the perk "Win a discount or dessert" (client copy 2026-10-14),
+which staff honour manually; no in-game reward mechanism exists yet.
 """
 
 from django.http import JsonResponse

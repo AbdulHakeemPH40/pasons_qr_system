@@ -1,35 +1,76 @@
-@-webkit-keyframes animLand {
-   0% { background-position: 0px 0px; }
-   100% { background-position: -335px 0px; }
-}
-@-moz-keyframes animLand {
-   0% { background-position: 0px 0px; }
-   100% { background-position: -335px 0px; }
-}
-@-o-keyframes animLand {
-   0% { background-position: 0px 0px; }
-   100% { background-position: -335px 0px; }
-}
-@keyframes animLand {
-   0% { background-position: 0px 0px; }
-   100% { background-position: -335px 0px; }
+/* Flappy Burger — Pasons liquid-glass pass (iOS 26 design language).
+   Same warm palette + glass materials as Memory Match (MemoryGame.css) so the
+   two games read as one family. Gameplay rules (bird, pipes, flyarea, collision
+   geometry, animBird/animPipe) are untouched upstream mechanics; see CHANGES.md.
+   Keys step over the FULL tile width of each regenerated art tile. */
+
+:root
+{
+   /* palette (static/css/tokens.css, warm brand canvas) */
+   --fb-cream: #F7F2E6;
+   --fb-cream-deep: #EDE4D2;
+   --fb-ink: #22301F;
+   --fb-gold: #C2A24B;
+   --fb-gold-deep: #A8893E;
+   --fb-gold-soft: #E8D48F;
+   --fb-green: #2E5B3E;
+   --fb-leaf: #6E8F57;
+   --fb-felt: #1F3726;
+
+   /* glass materials: blur + saturate, bright top edge, forest-tinted depth */
+   --fb-glass-dark: rgba(31, 55, 38, 0.55);
+   --fb-sheet-fill: rgba(250, 247, 238, 0.88);
+   --fb-glass-border: rgba(255, 255, 255, 0.75);
+   --fb-glass-border-dark: rgba(255, 255, 255, 0.28);
+   --fb-shadow-glass: 0 2px 6px rgba(10, 20, 12, 0.18), 0 18px 40px rgba(10, 20, 12, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.24);
+
+   /* motion: critically damped default (no overshoot) */
+   --fb-ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+   --fb-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+   --fb-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+      Roboto, Helvetica, Arial, "Noto Sans", "Noto Kufi Arabic", sans-serif;
+   --fb-font-display: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
-@-webkit-keyframes animSky {
-   0% { background-position: 0px 100%; }
-   100% { background-position: -275px 100%; }
+/* Display face served from the platform's static fonts folder
+   (four levels up = /static/fonts/). Same-origin, no external calls. */
+@font-face
+{
+   font-family: "Fraunces";
+   font-style: normal;
+   font-weight: 400 700;
+   font-display: swap;
+   src: url("../../../../fonts/Fraunces-var.woff2") format("woff2");
 }
-@-moz-keyframes animSky {
+
+@-webkit-keyframes animLand {
    0% { background-position: 0px 100%; }
-   100% { background-position: -275px 100%; }
+   100% { background-position: -336px 100%; }
 }
-@-o-keyframes animSky {
+@-moz-keyframes animLand {
    0% { background-position: 0px 100%; }
-   100% { background-position: -275px 100%; }
+   100% { background-position: -336px 100%; }
 }
-@keyframes animSky {
+@-o-keyframes animLand {
    0% { background-position: 0px 100%; }
-   100% { background-position: -275px 100%; }
+   100% { background-position: -336px 100%; }
+}
+@keyframes animLand {
+   0% { background-position: 0px 100%; }
+   100% { background-position: -336px 100%; }
+}
+
+/* Cloud loops step over the FULL width of their tiles (far 276, near 336) */
+@keyframes animCloudsFar {
+   0% { background-position: 0px 0px; }
+   100% { background-position: -276px 0px; }
+}
+
+@keyframes animCloudsNear {
+   0% { background-position: 0px 0px; }
+   100% { background-position: -336px 0px; }
 }
 
 @-webkit-keyframes animBird {
@@ -68,19 +109,33 @@
 
 @-webkit-keyframes animCeiling {
    0% { background-position: 0px 0px; }
-   100% { background-position: -63px 0px; }
+   100% { background-position: -64px 0px; }
 }
 @-moz-keyframes animCeiling {
    0% { background-position: 0px 0px; }
-   100% { background-position: -63px 0px; }
+   100% { background-position: -64px 0px; }
 }
 @-o-keyframes animCeiling {
    0% { background-position: 0px 0px; }
-   100% { background-position: -63px 0px; }
+   100% { background-position: -64px 0px; }
 }
 @keyframes animCeiling {
    0% { background-position: 0px 0px; }
-   100% { background-position: -63px 0px; }
+   100% { background-position: -64px 0px; }
+}
+
+/* splash card materialize: spring scale + fade, settles with no overshoot */
+@keyframes fbMaterialize
+{
+   from { opacity: 0; transform: translateY(10px) scale(0.94); }
+   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* gentle gold pulse on the tap-to-start dot */
+@keyframes fbPulse
+{
+   0%, 100% { opacity: 1; transform: scale(1); }
+   50% { opacity: 0.45; transform: scale(0.82); }
 }
 
 
@@ -108,9 +163,9 @@ body
 {
    height: 100%;
    overflow: hidden;
-   font-family: monospace;
+   font-family: var(--fb-font-ui);
    font-size: 12px;
-   color: #fff;
+   color: var(--fb-ink);
 }
 
 #gamecontainer
@@ -118,7 +173,10 @@ body
    position: relative;
    width: 100%;
    height: 100%;
-   min-height: 525px;
+   /* Pasons 2026-10-14: min-height removed. The old 525px floor made the
+      splash card centre inside a box TALLER than the play card, so the
+      card bottom was cut on short screens. The game now fills its frame
+      exactly; the shell scales the frame to fit when space is tight. */
 }
 
 /*
@@ -137,13 +195,47 @@ Screen - Game
    top: 0;
    width: 100%;
    height: 80%;
-   background-image: url('../assets/sky.png');
-   background-repeat: repeat-x;
-   background-position: 0px 100%;
-   background-color: #4ec0ca;
+   /* Full-height warm gradient: cream at the top (seams with the shell),
+      sage arriving early so the upper cloud band has tint behind it (white
+      puffs over pure cream were the old invisibility bug). A gradient -
+      not a tile - so the sky fills any frame height with no flat band. */
+   background: linear-gradient(180deg,
+      #F7F2E6 0%, #E7EBC8 24%, #D3E0AC 55%, #BDD697 100%);
+}
 
-   -webkit-animation: animSky 7s linear infinite;
-   animation: animSky 7s linear infinite;
+/* Parallax cloud field: two seam-safe transparent tiles drifting at
+   different speeds (far slower than near) so the sky reads with depth.
+   Both sit BEHIND #flyarea pipes/player and freeze with .animated pause.
+   Tiles are 2x assets shown at CSS size. */
+#clouds-far,
+#clouds-near
+{
+   position: absolute;
+   left: 0;
+   width: 100%;
+   background-repeat: repeat-x;
+   background-position: 0px 0px;
+   pointer-events: none;
+}
+
+#clouds-far
+{
+   top: 9%;
+   height: 200px;
+   background-image: url('../assets/clouds-far.png?v=2026-10-14-10');
+   background-size: 276px 200px;
+
+   animation: animCloudsFar 16s linear infinite;
+}
+
+#clouds-near
+{
+   top: 54%;
+   height: 150px;
+   background-image: url('../assets/clouds-near.png?v=2026-10-14-10');
+   background-size: 336px 150px;
+
+   animation: animCloudsNear 8s linear infinite;
 }
 
 #flyarea
@@ -175,103 +267,388 @@ Screen - Game
    height: 20%;
    background-image: url('../assets/land.png');
    background-repeat: repeat-x;
-   background-position: 0px 0px;
-   background-color: #ded895;
+   /* grass scallops hug the screen bottom whatever the strip height */
+   background-position: 0px 100%;
+   background-color: var(--fb-cream-deep);
+   /* gold hairline at the horizon (border is inside the border-box height,
+      so collision geometry via offset().top is unchanged) */
+   border-top: 2px solid var(--fb-gold);
 
    -webkit-animation: animLand 2516ms linear infinite;
    animation: animLand 2516ms linear infinite;
 }
 
+/* live score: dark forest glass pill, cream digits (font_big sprites) */
 #bigscore
 {
    position: absolute;
-   top: 20px;
-   left: 150px;
+   top: 14px;
+   left: 50%;
+   -webkit-transform: translateX(-50%);
+   transform: translateX(-50%);
    z-index: 100;
+
+   display: -webkit-flex;
+   display: flex;
+   -webkit-align-items: center;
+   align-items: center;
+   gap: 1px;
+   padding: 6px 16px;
+   border-radius: 999px;
+
+   background: var(--fb-glass-dark);
+   -webkit-backdrop-filter: blur(14px) saturate(180%);
+   backdrop-filter: blur(14px) saturate(180%);
+   border: 1px solid var(--fb-glass-border-dark);
+   box-shadow: 0 8px 22px rgba(10, 20, 12, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+/* main.js empties the pill on game over; hide the empty shell */
+#bigscore:empty
+{
+   display: none;
 }
 
 #bigscore img
 {
-   display: inline-block;
-   padding: 1px;
+   display: block;
 }
 
+/*
+Splash - liquid-glass card with the client's chicken-burger photo.
+#splash itself is only faded by main.js (opacity), so the card may use any
+inner layout and its own materialize animation.
+*/
 #splash
 {
    position: absolute;
    opacity: 0;
-   top: 75px;
-   left: 65px;
-   width: 188px;
-   height: 170px;
-   background-image: url('../assets/splash.png');
-   background-repeat: no-repeat;
+   top: 0;
+   left: 0;
+   right: 0;
+   bottom: 0;
+   z-index: 200;
+
+   display: -webkit-flex;
+   display: flex;
+   -webkit-align-items: center;
+   align-items: center;
+   -webkit-justify-content: center;
+   justify-content: center;
+   padding: 12px;
 }
 
+.fb-card
+{
+   width: 100%;
+   /* Pasons 2026-10-14: card widened with the play surface (was 284px) so
+      the splash fills the bigger game card instead of floating small. */
+   max-width: min(340px, 92%);
+   padding: 12px 12px 16px;
+   border-radius: 26px;
+
+   background: var(--fb-sheet-fill);
+   -webkit-backdrop-filter: blur(22px) saturate(180%);
+   backdrop-filter: blur(22px) saturate(180%);
+   border: 1px solid var(--fb-glass-border);
+   box-shadow: var(--fb-shadow-glass);
+
+   -webkit-animation: fbMaterialize 700ms var(--fb-ease-spring) both;
+   animation: fbMaterialize 700ms var(--fb-ease-spring) both;
+}
+
+/* Hero: the client's transparent burger cutout floats on the glass card.
+   Warm lens glow behind it, grounded contact shadow under it. The shadow is
+   a gradient ellipse (pseudo-element), NOT filter: drop-shadow - platform
+   rule from the landing-page bfcache ghost-layer bug, no filter-based depth.
+   The idle float is decorative only and is disabled for reduced motion. */
+.fb-hero
+{
+   position: relative;
+   display: -webkit-flex;
+   display: flex;
+   -webkit-align-items: center;
+   align-items: center;
+   -webkit-justify-content: center;
+   justify-content: center;
+   padding: 10px 0 2px;
+
+   background: radial-gradient(58% 54% at 50% 42%,
+      rgba(232, 212, 143, 0.55), rgba(232, 212, 143, 0) 72%);
+}
+
+.fb-hero img
+{
+   display: block;
+   width: auto;
+   max-width: 88%;
+   height: auto;
+   /* aspect-safe height clamp: on short frames the burger shrinks instead
+      of pushing the card past the frame (no distortion - max-width keeps
+      the ratio, so the smaller constraint wins) */
+   max-height: min(46vh, 250px);
+
+   -webkit-animation: fbFloat 4s ease-in-out infinite;
+   animation: fbFloat 4s ease-in-out infinite;
+}
+
+.fb-hero::after
+{
+   content: "";
+   position: absolute;
+   left: 23%;
+   right: 23%;
+   bottom: 0;
+   height: 16px;
+
+   background: radial-gradient(50% 50% at 50% 50%,
+      rgba(34, 48, 31, 0.26), rgba(34, 48, 31, 0) 70%);
+
+   -webkit-animation: fbFloatShadow 4s ease-in-out infinite;
+   animation: fbFloatShadow 4s ease-in-out infinite;
+}
+
+/* gentle idle float: 6px rise, shadow tightens as the burger lifts */
+@keyframes fbFloat
+{
+   0%, 100% { transform: translateY(0); }
+   50% { transform: translateY(-6px); }
+}
+
+@keyframes fbFloatShadow
+{
+   0%, 100% { transform: scale(1); opacity: 1; }
+   50% { transform: scale(0.86); opacity: 0.72; }
+}
+
+.fb-copy
+{
+   text-align: center;
+   padding: 12px 6px 10px;
+}
+
+.fb-title
+{
+   margin: 0;
+   font-family: var(--fb-font-display);
+   font-size: 1.55rem;
+   font-weight: 600;
+   line-height: 1.08;
+   letter-spacing: -0.018em;
+   color: var(--fb-ink);
+}
+
+.fb-sub
+{
+   margin: 4px 0 0;
+   font-size: 0.82rem;
+   line-height: 1.35;
+   color: rgba(34, 48, 31, 0.72);
+}
+
+/* gold "tap to start" pill with a pulsing dot */
+.fb-pill
+{
+   display: -webkit-flex;
+   display: flex;
+   -webkit-align-items: center;
+   align-items: center;
+   -webkit-justify-content: center;
+   justify-content: center;
+   gap: 7px;
+   margin: 0 4px;
+   padding: 10px 16px;
+   border-radius: 999px;
+
+   background: linear-gradient(180deg, var(--fb-gold-soft), var(--fb-gold) 55%, var(--fb-gold-deep));
+   border: 1px solid rgba(255, 255, 255, 0.55);
+   box-shadow: 0 10px 22px rgba(168, 137, 62, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+
+   font-size: 0.72rem;
+   font-weight: 700;
+   letter-spacing: 0.08em;
+   text-transform: uppercase;
+   color: var(--fb-ink);
+}
+
+.fb-dot
+{
+   width: 8px;
+   height: 8px;
+   border-radius: 50%;
+   background: var(--fb-green);
+   -webkit-animation: fbPulse 2.2s var(--fb-ease-out) infinite;
+   animation: fbPulse 2.2s var(--fb-ease-out) infinite;
+}
+
+/*
+Scoreboard - liquid-glass sheet. NOTE: main.js slides this element in with
+jquery.transit (inline translate/opacity), so this rule must NOT set a
+transform; centering uses auto margins only.
+*/
 #scoreboard
 {
    position: absolute;
    display: none;
    opacity: 0;
-   top: 64px;
-   left: 43px;
-   width: 236px;
-   height: 280px;
-   background-image: url('../assets/scoreboard.png');
-   background-repeat: no-repeat;
+   top: 44px;
+   left: 0;
+   right: 0;
+   margin: 0 auto;
+   width: calc(100% - 36px);
+   max-width: 272px;
+   padding: 16px 16px 14px;
+   border-radius: 26px;
+
+   background: var(--fb-sheet-fill);
+   -webkit-backdrop-filter: blur(22px) saturate(180%);
+   backdrop-filter: blur(22px) saturate(180%);
+   border: 1px solid var(--fb-glass-border);
+   box-shadow: var(--fb-shadow-glass);
 
    z-index: 1000;
 }
 
+.fb-kicker
+{
+   margin: 0 0 10px;
+   text-align: center;
+   font-family: var(--fb-font-display);
+   font-size: 1.12rem;
+   font-weight: 600;
+   letter-spacing: -0.012em;
+   color: var(--fb-ink);
+}
+
+.fb-sheet-head
+{
+   display: -webkit-flex;
+   display: flex;
+   -webkit-align-items: center;
+   align-items: center;
+   gap: 12px;
+}
+
+/* medal well (main.js scales/fades it in; empty when no medal was won) */
 #medal
 {
-   position: absolute;
-   opacity: 0;
-   top: 114px;
-   left: 32px;
-   width: 44px;
-   height: 44px;
+   -webkit-flex: 0 0 auto;
+   flex: 0 0 auto;
+   width: 52px;
+   height: 52px;
+   border-radius: 50%;
+   background: rgba(255, 255, 255, 0.5);
+   border: 1px solid var(--fb-gold);
+   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 16px rgba(10, 20, 12, 0.14);
+
+   display: -webkit-flex;
+   display: flex;
+   -webkit-align-items: center;
+   align-items: center;
+   -webkit-justify-content: center;
+   justify-content: center;
 }
 
-#currentscore
+#medal:empty
 {
-   position: absolute;
-   top: 105px;
-   left: 107px;
-   width: 104px;
-   height: 14px;
-   text-align: right;
+   display: none;
 }
 
-#currentscore img
+#medal img
 {
-   padding-left: 2px;
+   display: block;
 }
 
+.fb-rows
+{
+   -webkit-flex: 1 1 auto;
+   flex: 1 1 auto;
+   min-width: 0;
+   display: -webkit-flex;
+   display: flex;
+   -webkit-flex-direction: column;
+   flex-direction: column;
+   gap: 6px;
+}
+
+/* rows hold only the digit sprites main.js appends; labels are pseudo so
+   .empty() can never remove them */
+#currentscore,
 #highscore
 {
-   position: absolute;
-   top: 147px;
-   left: 107px;
-   width: 104px;
-   height: 14px;
-   text-align: right;
+   display: -webkit-flex;
+   display: flex;
+   -webkit-align-items: center;
+   align-items: center;
+   -webkit-justify-content: space-between;
+   justify-content: space-between;
+   gap: 8px;
+   padding: 5px 11px;
+   border-radius: 12px;
+
+   background: rgba(255, 255, 255, 0.55);
+   border: 1px solid rgba(194, 162, 75, 0.32);
 }
 
+#currentscore:before,
+#highscore:before
+{
+   font-size: 0.68rem;
+   font-weight: 700;
+   letter-spacing: 0.09em;
+   text-transform: uppercase;
+   color: rgba(34, 48, 31, 0.66);
+}
+
+#currentscore:before { content: "Score"; }
+#highscore:before { content: "Best"; }
+
+#currentscore img,
 #highscore img
 {
-   padding-left: 2px;
+   display: block;
 }
 
+/* replay: green glass pill (transit animates y/opacity inline, so press
+   feedback uses background only, never a transform) */
 #replay
 {
-   position: absolute;
    opacity: 0;
-   top: 205px;
-   left: 61px;
-   height: 115px;
-   width: 70px;
+   margin-top: 12px;
    cursor: pointer;
+
+   display: -webkit-flex;
+   display: flex;
+   -webkit-align-items: center;
+   align-items: center;
+   -webkit-justify-content: center;
+   justify-content: center;
+   gap: 8px;
+   padding: 11px 16px;
+   border-radius: 999px;
+
+   background: linear-gradient(180deg, rgba(46, 91, 62, 0.94), rgba(31, 55, 38, 0.96));
+   border: 1px solid rgba(255, 255, 255, 0.32);
+   box-shadow: 0 12px 26px rgba(10, 20, 12, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+
+   font-size: 0.82rem;
+   font-weight: 700;
+   letter-spacing: 0.05em;
+   color: var(--fb-cream);
+   -webkit-tap-highlight-color: transparent;
+}
+
+#replay:active
+{
+   background: linear-gradient(180deg, rgba(46, 91, 62, 1), rgba(24, 44, 31, 1));
+   box-shadow: 0 6px 14px rgba(10, 20, 12, 0.28), inset 0 2px 6px rgba(10, 20, 12, 0.35);
+}
+
+#replay img
+{
+   display: block;
+   width: 24px;
+   height: 24px;
 }
 
 .boundingbox
@@ -354,21 +731,64 @@ Screen - Game
    background-image: url('../assets/pipe-up.png');
 }
 
-#footer
+/* Pasons (2026-10-14): the credit footer chips were removed with the visible
+   credits (see index.html / CHANGES.md); only the HUD pill remains here. */
+
+
+/*
+Reduced motion: kill decorative drift and materialize/pulse; slides stay
+tiny and short (transit-driven entries land almost instantly). Pipes keep
+their animation - it IS the gameplay.
+*/
+@media (prefers-reduced-motion: reduce)
 {
-   position: absolute;
-   bottom: 3px;
-   left: 3px;
+   #clouds-far, #clouds-near, #land, #ceiling, .bird
+   {
+      -webkit-animation: none;
+      animation: none;
+   }
+
+   .fb-card
+   {
+      -webkit-animation: none;
+      animation: none;
+   }
+
+   .fb-hero img, .fb-hero::after
+   {
+      -webkit-animation: none;
+      animation: none;
+   }
+
+   .fb-dot
+   {
+      -webkit-animation: none;
+      animation: none;
+   }
+
+   #splash, #scoreboard, #replay, #medal
+   {
+      -webkit-transition-duration: 120ms !important;
+      transition-duration: 120ms !important;
+   }
 }
 
-#footer a,
-#footer a:link,
-#footer a:visited,
-#footer a:hover,
-#footer a:active
+/*
+Reduced transparency: frostier, near-solid surfaces.
+*/
+@media (prefers-reduced-transparency: reduce)
 {
-   display: block;
-   padding: 2px;
-   text-decoration: none;
-   color: #fff;
+   #bigscore
+   {
+      background: rgba(31, 55, 38, 0.95);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+   }
+
+   .fb-card, #scoreboard
+   {
+      background: rgba(250, 247, 238, 0.98);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+   }
 }

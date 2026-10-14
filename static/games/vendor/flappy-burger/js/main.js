@@ -62,6 +62,9 @@ $(document).ready(function() {
    $(document).one("pointerdown keydown touchstart", function() {
       pasonsAudioUnlocked = true;
    });
+
+   // Pasons (2026-10-14): the credit footer and its gesture guard were removed
+   // with the visible credits (see index.html / CHANGES.md).
 });
 
 function getCookie(cname)

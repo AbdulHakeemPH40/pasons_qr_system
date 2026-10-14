@@ -18,9 +18,97 @@
 
   // Shuffle card images: How many different images are available to shuffle
   // from?
-  var imagesAvailable = 15;
+  var imagesAvailable = 14;
+
+  // Countdown budget: 15s + 15s per pair (Pasons extension, see CHANGES.md).
+  // 2x3 = 60s, 3x4 = 105s, 4x5 = 165s, 7x4 = 225s.
+  var timeBaseSeconds = 15;
+  var timePerPairSeconds = 15;
 
   /************ End hard coded settings ******************/
+
+  // ---- Countdown + points display (Pasons extension) ----
+  var timerId = null;
+  var remainingMs = 0;
+  var lastTickAt = 0;
+  var paused = false;
+
+  // Glass pass: which card indices have been matched this round, so the
+  // gold ring survives a resize re-layout. Cleared with each new game.
+  var matchedSet = {};
+
+  var timerEl = document.getElementById('memory--timer');
+  var pointsEl = document.getElementById('memory--points');
+
+  var budgetFor = function (rows, columns) {
+    var pairs = (rows * columns) / 2;
+    return (timeBaseSeconds + timePerPairSeconds * pairs) * 1000;
+  };
+
+  var formatTime = function (ms) {
+    var total = Math.max(0, Math.ceil(ms / 1000));
+    var minutes = Math.floor(total / 60);
+    var seconds = total % 60;
+    return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+  };
+
+  var renderTimer = function () {
+    if (!timerEl) {
+      return;
+    }
+    timerEl.textContent = formatTime(remainingMs);
+    timerEl.classList.toggle('urgent', remainingMs <= 10000 && remainingMs > 0);
+  };
+
+  var renderPoints = function () {
+    // The shell HUD polls #memory--points as the score (bridge kind "text"),
+    // so this element must always hold bare digits.
+    if (pointsEl) {
+      pointsEl.textContent = String($.points);
+    }
+  };
+
+  var stopTimer = function () {
+    if (timerId !== null) {
+      window.clearInterval(timerId);
+      timerId = null;
+    }
+  };
+
+  var tick = function () {
+    if (paused) {
+      lastTickAt = Date.now();
+      return;
+    }
+    var now = Date.now();
+    remainingMs -= (now - lastTickAt);
+    lastTickAt = now;
+    if (remainingMs <= 0) {
+      remainingMs = 0;
+      renderTimer();
+      endOnTimeout();
+      return;
+    }
+    renderTimer();
+  };
+
+  var startTimer = function (ms) {
+    stopTimer();
+    remainingMs = ms;
+    lastTickAt = Date.now();
+    paused = false;
+    renderTimer();
+    timerId = window.setInterval(tick, 250);
+  };
+
+  // A guest who backgrounds the app (phone call, waiter) must not lose the
+  // round to a clock that kept running while the page was hidden.
+  document.addEventListener('visibilitychange', function () {
+    paused = document.hidden;
+    if (!paused) {
+      lastTickAt = Date.now();
+    }
+  });
 
   // Handle clicking on settings icon
   var settings = document.getElementById('memory--settings-icon');
@@ -46,16 +134,59 @@
       document.getElementById('memory--end-game-modal').classList.remove('show');
       document.getElementById('memory--end-game-message').innerText = "";
       document.getElementById('memory--end-game-score').innerText = "";
-      buildLayout($.cards, $.settings.rows, $.settings.columns);
+      var summary = document.getElementById('memory--end-game-summary');
+      if (summary) {
+        summary.innerText = "";
+      }
+      renderPoints();
+      matchedSet = {};
+      buildLayout($.cards, $.settings.rows, $.settings.columns, true);
+      startTimer(budgetFor($.settings.rows, $.settings.columns));
     }
 
   };
   reset.addEventListener('click', handleSettingsSubmission);
 
+  // Show the end-of-round modal. Points are written to the score line; the
+  // shell HUD freezes its score when it sees this modal appear, so every
+  // point must be settled BEFORE this is called (time bonus included).
+  var showEndGame = function (message) {
+    var pairs = Math.floor($.cards.length / 2);
+    var matched = Math.floor($._matched / 2);
+
+    document.getElementById('memory--end-game-message').textContent = message;
+    document.getElementById('memory--end-game-score').textContent =
+        'Points: ' + $.points;
+
+    var summary = document.getElementById('memory--end-game-summary');
+    if (summary) {
+      summary.textContent =
+          matched + '/' + pairs + ' pairs \u00b7 ' +
+          $.attempts + ' attempts \u00b7 best streak ' + $.bestStreak;
+    }
+
+    renderPoints();
+    document.getElementById('memory--end-game-modal').classList.toggle('show');
+  };
+
+  // Countdown reached zero: keep the points earned, end the round.
+  var endOnTimeout = function () {
+    if ($.isGameOver) {
+      return;
+    }
+    stopTimer();
+    $.timeUp();
+    showEndGame('Time\u2019s up!');
+  };
+
   // Handle clicking on card
   var handleFlipCard = function (event) {
 
     event.preventDefault();
+
+    if ($.isGameOver) {
+      return;
+    }
 
     var status = $.play(this.index);
     console.log(status);
@@ -64,47 +195,45 @@
       this.classList.toggle('clicked');
     }
 
+    renderPoints();
+
+    // Glass-pass motion: ring matched pairs in gold, shake a missed pair.
+    // Purely visual — the flip contract above is untouched.
+    if (status.code == 2 || status.code == 4) {
+      var nodes = document.getElementById('memory--cards').childNodes;
+      matchedSet[status.args[0]] = true;
+      matchedSet[status.args[1]] = true;
+      nodes[status.args[0]].classList.add('matched');
+      nodes[status.args[1]].classList.add('matched');
+      nodes[status.args[0]].classList.add('just-matched');
+      nodes[status.args[1]].classList.add('just-matched');
+    }
+
     if (status.code == 3 ) {
+      var missNodes = document.getElementById('memory--cards').childNodes;
+      missNodes[status.args[0]].classList.add('miss');
+      missNodes[status.args[1]].classList.add('miss');
       setTimeout(function () {
         var childNodes = document.getElementById('memory--cards').childNodes;
         childNodes[status.args[0]].classList.remove('clicked');
         childNodes[status.args[1]].classList.remove('clicked');
+        childNodes[status.args[0]].classList.remove('miss');
+        childNodes[status.args[1]].classList.remove('miss');
       }.bind(status), nonMatchingCardTime);
     }
     else if (status.code == 4) {
-      var score = parseInt((($.attempts - $.mistakes) / $.attempts) * 100, 10);
-      var message = getEndGameMessage(score);
-
-      document.getElementById('memory--end-game-message').textContent = message;
-      document.getElementById('memory--end-game-score').textContent =
-          'Score: ' + score + ' / 100';
-
-      document.getElementById("memory--end-game-modal").classList.toggle('show');
+      stopTimer();
+      // Speed bonus: +15 per whole second left. Awarded before the modal
+      // shows so the shell's final score includes it.
+      var bonus = $.addTimeBonus(Math.floor(remainingMs / 1000));
+      showEndGame('You found them all! (+' + bonus + ' time bonus)');
     }
 
   };
 
-  var getEndGameMessage = function(score) {
-    var message = "";
-
-    if (score == 100) {
-      message = "Amazing job!"
-    }
-    else if (score >= 70 ) {
-      message = "Great job!"
-    }
-    else if (score >= 50) {
-      message = "Great job!"
-    }
-    else {
-      message = "You can do better.";
-    }
-
-    return message;
-  }
-
-  // Build grid of cards
-  var buildLayout = function (cards, rows, columns) {
+  // Build grid of cards. `fresh` = a brand-new board (deal-in stagger plays);
+  // a resize re-layout rebuilds the same board and must not re-deal it.
+  var buildLayout = function (cards, rows, columns, fresh) {
     if (!cards.length) {
       return;
     }
@@ -128,7 +257,7 @@
       for (var j = 0; j < columns; j++) {
         // Use cloneNode(true) otherwise only one node is appended
         memoryCards.appendChild(buildCardNode(index, cards[index],
-          (100 / columns) + "%", (100 / rows) + "%"));
+          (100 / columns) + "%", (100 / rows) + "%", fresh));
         index++;
       }
     }
@@ -149,13 +278,13 @@
 
   };
 
-  // Update on resize
+  // Update on resize (re-lay-out, not a fresh deal)
   window.addEventListener('resize', function() {
-    buildLayout($.cards, $.settings.rows, $.settings.columns);
+    buildLayout($.cards, $.settings.rows, $.settings.columns, false);
   }, true);
 
   // Build single card
-  var buildCardNode = function (index, card, width, height) {
+  var buildCardNode = function (index, card, width, height, fresh) {
     var flipContainer = document.createElement("li");
     var flipper = document.createElement("div");
     var front = document.createElement("a");
@@ -167,6 +296,16 @@
     flipContainer.classList.add("flip-container");
     if (card.isRevealed) {
       flipContainer.classList.add("clicked");
+    }
+    // Glass pass: cards matched this round stay ringed after a re-layout
+    // (the DOM classes die with the old nodes), while the deal-in stagger
+    // only plays when a brand-new board is laid out.
+    if (matchedSet[index]) {
+      flipContainer.classList.add("matched");
+    }
+    if (fresh) {
+      flipContainer.classList.add("deal-in");
+      flipContainer.style.animationDelay = Math.min(index * 28, 560) + "ms";
     }
 
     flipper.classList.add("flipper");

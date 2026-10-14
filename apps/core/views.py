@@ -609,8 +609,14 @@ def qr_instagram_redirect(request, key):
     if outlet and outlet.instagram_url:
         ig_url = outlet.instagram_url
     elif brand.social_links and brand.social_links.get("instagram"):
-        handle = brand.social_links.get("instagram").replace("@", "").strip()
-        ig_url = f"https://instagram.com/{handle}"
+        value = brand.social_links.get("instagram").replace("@", "").strip()
+        # social_links stores full URLs; a bare handle is also tolerated
+        if value.startswith(("http://", "https://")):
+            ig_url = value
+        elif value.startswith(("instagram.com", "www.instagram.com")):
+            ig_url = f"https://{value}"
+        else:
+            ig_url = f"https://instagram.com/{value}"
 
     if not ig_url:
         ig_url = "https://instagram.com"
