@@ -8,7 +8,7 @@
 
 {% block content %}
 {# GAMES_V also guards the vendored iframe src so a game update is not served from cache. Keep in sync with the scripts block below. #}
-{% with GAMES_V="2026-10-11-4" %}
+{% with GAMES_V="2026-10-13-2" %}
 <div class="device-stage">
   <div class="device">
     <div class="device-island" aria-hidden="true"></div>
@@ -72,7 +72,7 @@
 
 {% block scripts %}
 {# GAMES_V: bump whenever any script under static/games/ changes #}
-{% with GAMES_V="2026-10-11-4" %}
+{% with GAMES_V="2026-10-13-2" %}
 <script src="{% static 'games/core/storage.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/theme.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/shell.js' %}?v={{ GAMES_V }}"></script>

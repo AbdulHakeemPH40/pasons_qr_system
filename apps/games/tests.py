@@ -1,7 +1,7 @@
 """
 Games Zone acceptance suite (vendored open-source model).
 
-The five games are open-source projects vendored under static/games/vendor/
+The three games are open-source projects vendored under static/games/vendor/
 and run unmodified inside a same-origin iframe; the shell reads score and
 game-over through per-game bridge selectors (registry.py). These tests lock
 the public contract:
@@ -194,10 +194,34 @@ class GamesEventBeaconTests(GamesZoneFixtures):
     def test_beacon_clamps_absurd_scores(self):
         self.client.post(
             reverse("games_event"),
-            {"slug": "snake", "kind": "finished", "score": "99999999999"},
+            {
+                "slug": "memory-match",
+                "kind": "finished",
+                "score": "99999999999",
+            },
         )
-        event = GameEvent.objects.filter(game_slug="snake").first()
+        event = GameEvent.objects.filter(game_slug="memory-match").first()
         self.assertEqual(event.score, 10_000_000)
+
+    def test_removed_games_are_gone(self):
+        """Hextris and Snake were removed by request (2026-10-13)."""
+        from .registry import get_game
+
+        self.assertIsNone(get_game("hextris"))
+        self.assertIsNone(get_game("snake"))
+        self.assertEqual(
+            {game.slug for game in enabled_games()},
+            {"2048", "flappy-burger", "memory-match"},
+        )
+        for slug in ("hextris", "snake"):
+            self.assertEqual(
+                self.client.get(reverse("games_play", args=[slug])).status_code,
+                404,
+                slug,
+            )
+        hub = self.client.get(reverse("games_hub"))
+        self.assertNotContains(hub, "Hextris")
+        self.assertNotContains(hub, "Snake")
 
 
 class LandingPlayCardTests(GamesZoneFixtures):

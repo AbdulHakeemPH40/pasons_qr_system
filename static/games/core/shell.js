@@ -107,19 +107,6 @@
           for (var i = 0; i < imgs.length; i++) alts += imgs[i].getAttribute("alt") || "";
           return alts ? (parseInt(alts, 10) || 0) : 0;
         }
-        if (cfg.kind === "global") {
-          var v = frame.contentWindow[cfg.name];
-          return typeof v === "number" ? v : (parseInt(v, 10) || 0);
-        }
-        if (cfg.kind === "parse") {
-          var els = doc.querySelectorAll(cfg.sel);
-          var re = new RegExp(cfg.re);
-          for (var j = 0; j < els.length; j++) {
-            var m = re.exec(els[j].textContent || "");
-            if (m) return parseInt(m[1], 10) || 0;
-          }
-          return 0;
-        }
         /* "objects": count the entries of a game global array whose named
            property is truthy, divided by divisor. Needed where the game keeps
            matched items in the DOM (memory-match never removes matched cards,
@@ -157,13 +144,6 @@
           for (var i = 0; i < els.length; i++) {
             if (els[i].offsetParent !== null || els[i].getClientRects().length) return true;
           }
-        }
-        /* "equals": an iframe window global reaches a sentinel value.
-           Needed where the game-over element always has a layout box
-           (hextris hides #gameoverscreen with jQuery only after first
-           use, so DOM visibility lies); gameState == -1 is authoritative. */
-        if (cfg.kind === "equals") {
-          return frame.contentWindow[cfg.name] === cfg.value;
         }
       } catch (e) { /* ignore */ }
       return false;

@@ -1,7 +1,7 @@
 """
 Games Zone registry (GAMES_ZONE_PLAN.md section 3, vendored model).
 
-The five games are open-source projects vendored under
+The games are open-source projects vendored under
 static/games/vendor/<slug>/ (see static/games/vendor/CREDITS.md for licences
 and credits). We do not rebuild them: each game runs UNMODIFIED inside a
 same-origin iframe, and the shared shell reads score / game-over straight out
@@ -15,8 +15,6 @@ Because of that model every entry carries:
           game code:
             score kinds: text   -> parseInt(element.textContent)
                            digits -> join alt attrs of child imgs
-                           global -> parseInt(iframe.contentWindow[name])
-                           parse  -> regex group 1 over matching elements
                            objects-> count a global array's truthy named prop
                                      (dot path in name), divided by divisor
             over  kinds: class   -> element carries class cls
@@ -64,31 +62,6 @@ GAMES = (
         },
     ),
     Game(
-        slug="hextris",
-        name="Hextris",
-        tagline="Spin the ring, match three colours",
-        howto="Tap left or right to spin the hexagon",
-        glyph="hex",
-        tint="green",
-        embed="games/vendor/hextris/index.html",
-        license="GPL-3.0",
-        credit="Hextris by the Hextris team, GPL-3.0",
-        bridge={
-            "score": {"kind": "global", "name": "score"},
-            # hextris uses gameState == 2 for the real game over (main.js sets
-            # it after checkGameOver) but gameState == -1 for a PAUSE
-            # (view.js pause(), which also fires on window blur). Watching -1
-            # would pop "Game over" the moment the guest backgrounds the game,
-            # so the authoritative flag is 2. #gameoverscreen always has a
-            # layout box (upstream hides it only via jQuery), so DOM
-            # visibility lies.
-            "over": {"kind": "equals", "name": "gameState", "value": 2},
-            # hextris resumes from this localStorage key on load; clear it so
-            # "Play again" starts a fresh round instead of restoring the old one.
-            "resetKeys": ["saveState"],
-        },
-    ),
-    Game(
         slug="flappy-burger",
         name="Flappy Burger",
         tagline="Tap to fly through the gaps",
@@ -101,28 +74,6 @@ GAMES = (
         bridge={
             "score": {"kind": "digits", "sel": "#bigscore"},
             "over": {"kind": "visible", "sel": "#scoreboard"},
-        },
-    ),
-    Game(
-        slug="snake",
-        name="Snake",
-        tagline="The classic, with a hungry snake",
-        howto="Swipe or use arrow keys to steer",
-        glyph="snake",
-        tint="green",
-        embed="games/vendor/snake/index.html",
-        license="MIT",
-        credit="JavaScript-Snake by patorjk, MIT licence",
-        bridge={
-            "score": {
-                "kind": "parse",
-                "sel": ".snake-panel-component",
-                "re": r"Length:\s*(\d+)",
-            },
-            "over": {
-                "kind": "visible",
-                "sel": ".snake-try-again-dialog, .snake-win-dialog",
-            },
         },
     ),
     Game(

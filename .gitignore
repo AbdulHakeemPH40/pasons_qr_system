@@ -68,7 +68,7 @@ verify_prototype_svg.py
 *.md
 
 # Exception: the vendored games must ship their licence and attribution docs.
-# Hextris is GPL-3.0 and its licence text lives in LICENSE.md; CREDITS.md and
-# the per-game CHANGES.md files record every modification. Re-include them so
-# the vendored games stay licence-compliant inside the repository.
+# CREDITS.md and the per-game CHANGES.md files record every modification, and
+# each folder keeps its upstream licence file. Re-include the docs so the
+# vendored games stay licence-compliant inside the repository.
 !static/games/vendor/**/*.md

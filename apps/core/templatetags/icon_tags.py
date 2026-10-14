@@ -107,10 +107,6 @@ GLYPHS = {
         f'<rect {_STROKE} x="4" y="13" width="7" height="7" rx="1.6"/>'
         f'<path {_STROKE} d="M16.5 13.5v6M13.5 16.5h6"/>'
     ),
-    "snake": (
-        f'<path {_STROKE} d="M5 6.5h9a3 3 0 0 1 0 6h-4a3 3 0 0 0 0 6h9"/>'
-        f'<circle fill="currentColor" cx="6.4" cy="6.5" r="1.1"/>'
-    ),
     "burger": (
         f'<path {_STROKE} d="M4.5 10a7.5 7.5 0 0 1 15 0z"/>'
         f'<path {_STROKE} d="M4.5 13.5h15"/>'
@@ -130,10 +126,6 @@ GLYPHS = {
     ),
     "pause": (
         f'<path {_STROKE} d="M9.5 6.5v11M14.5 6.5v11"/>'
-    ),
-    "hex": (
-        f'<path {_STROKE} d="M12 3.2l7 4v9.6l-7 4-7-4V7.2z"/>'
-        f'<path {_STROKE} d="M12 8.6l3 1.7v3.4l-3 1.7-3-1.7v-3.4z"/>'
     ),
     "restart": (
         f'<path {_STROKE} d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/>'
