@@ -261,7 +261,7 @@ def panel_qr_generate(request):
             dest_page = SmartPage.objects.filter(brand=outlet.brand, outlet__isnull=True).first()
 
         seq = QrCode.objects.filter(outlet=outlet).count() + 1
-        outlet_code = outlet.code.split("-")[-1]
+        outlet_code = outlet.code.split("-", 1)[-1]
         qr_name = f"{outlet.brand.code}-{outlet_code}-{source_type.upper()}-{seq:03d}"
 
         qr = QrCode.objects.create(
@@ -946,9 +946,25 @@ def panel_menu_item_edit(request, pk):
         MenuItem.objects.filter(_menu_item_q(user, outlets)).select_related("brand", "outlet", "category"),
         pk=pk,
     )
-    _check_menu_item_permission(user, item)
+    # Client 2026-10-15: outlet managers may upload or replace the photo on
+    # brand-level items too (the Top 10 lists are brand-level rows). Structure
+    # (name, price, category, delete) stays Head Office only, so for managers
+    # this form degrades to a photo-only editor and only the image is written.
+    photo_only = item.outlet_id is None and not is_head_office(user)
+    if not photo_only:
+        _check_menu_item_permission(user, item)
 
     if request.method == "POST":
+        if photo_only:
+            image = request.FILES.get("image")
+            if image:
+                item.image = image
+                item.save(update_fields=["image", "updated_at"])
+                log_change(user, "MENU_ITEM_PHOTO", item.name_en, item.brand, None)
+                messages.success(request, f"Photo updated for “{item.name_en}”.")
+            else:
+                messages.error(request, "Choose a photo to upload.")
+            return redirect("panel_menu_items")
         brand = get_object_or_404(scoped_brands(user), pk=request.POST.get("brand"))
         outlet = item.outlet
         item = _menu_item_from_post(request, item, brand, outlet)
@@ -956,7 +972,9 @@ def panel_menu_item_edit(request, pk):
         messages.success(request, f"Menu item “{item.name_en}” updated.")
         return redirect("panel_menu_items")
 
-    return render(request, "panel/menu_item_form.html", _menu_item_form_context(user, item))
+    context = _menu_item_form_context(user, item)
+    context["photo_only"] = photo_only
+    return render(request, "panel/menu_item_form.html", context)
 
 
 @login_required

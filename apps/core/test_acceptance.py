@@ -37,6 +37,7 @@ from apps.core.panel_permissions import (
 )
 from apps.engagement.models import Feedback, Lead
 from apps.menu.models import MenuCategory, MenuItem, MenuSource, SpecialItem
+from apps.menu.top_picks import TOP_FOOD_CATEGORY, TOP_DRINK_CATEGORY
 
 
 def _hours_open_all_day():
@@ -1232,12 +1233,44 @@ class MenuEditTests(AcceptanceFixtures):
         self.assertEqual(response.status_code, 403)
         self.assertFalse(MenuItem.objects.filter(name_en="Sneaky Base Item").exists())
 
-    def test_manager_cannot_edit_brand_level_item(self):
+    def test_manager_gets_photo_only_form_for_brand_item(self):
+        """Client 2026-10-15: outlet managers may upload photos on brand-level
+        items (the Top 10 lists are brand-level), so the form opens — but only
+        the photo editor; structure stays Head Office."""
         self.client.login(username="ic-manager", password="pass-ic")
         response = self.client.get(
             reverse("panel_menu_item_edit", args=[self.base_item.pk])
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Upload photo")
+        self.assertNotContains(response, 'name="name_en"')
+        self.assertNotContains(response, 'name="regular_price"')
+
+    def test_manager_uploads_photo_on_brand_item(self):
+        self.client.login(username="ic-manager", password="pass-ic")
+        photo = SimpleUploadedFile("dish.png", b"\x89PNG fake dish", content_type="image/png")
+        response = self.client.post(
+            reverse("panel_menu_item_edit", args=[self.base_item.pk]),
+            {"image": photo},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.base_item.refresh_from_db()
+        self.assertTrue(self.base_item.image)
+        self.assertEqual(self.base_item.name_en, "Hummus")   # structure untouched
+
+    def test_manager_cannot_change_brand_item_details(self):
+        self.client.login(username="ic-manager", password="pass-ic")
+        response = self.client.post(
+            reverse("panel_menu_item_edit", args=[self.base_item.pk]),
+            {
+                "brand": self.brand.pk, "category": self.category.pk,
+                "name_en": "Hacked", "regular_price": "1.00",
+            },
+        )
+        self.assertEqual(response.status_code, 302)   # photo-only path: no image, no write
+        self.base_item.refresh_from_db()
+        self.assertEqual(self.base_item.name_en, "Hummus")
+        self.assertEqual(self.base_item.regular_price, 8)
 
     def test_manager_creates_branch_override_of_brand_item(self):
         self.client.login(username="ic-manager", password="pass-ic")
@@ -1263,7 +1296,7 @@ class MenuCardPageTests(AcceptanceFixtures):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.category = MenuCategory.objects.create(brand=cls.brand, name_en="Mains")
+        cls.category = MenuCategory.objects.create(brand=cls.brand, name_en=TOP_FOOD_CATEGORY)
         cls.dish = MenuItem.objects.create(
             category=cls.category, brand=cls.brand, name_en="Chicken mandi",
             description_en="Slow-cooked rice, smoked chicken.",
@@ -1289,28 +1322,35 @@ class MenuCardPageTests(AcceptanceFixtures):
         response = self.client.get(reverse("customer_menu", args=["kcic-table-001"]))
         self.assertEqual(response.status_code, 200)
         body = response.content.decode()
-        self.assertIn("Most Popular", body)         # curated strip label
+        self.assertIn("Most Popular", body)         # curated list label
         self.assertIn("Chicken mandi", body)        # dish name shown
         self.assertIn("/media/menu/pdf/", body)      # PDF card links the upload
         self.assertNotIn("Sold out kebab", body)     # unavailable dishes stay hidden
         self.assertNotIn("Save 14%", body)           # name-only cards: no offer chips
         self.assertNotIn("Chef's pick", body)        # name-only cards: no badges
+        self.assertNotIn("menu-price", body)         # names only: no prices
 
-    def test_menu_page_shows_five_to_ten_dishes_not_the_full_menu(self):
-        """Client 2026-10-14: a small Most Popular strip (5-10 dishes),
-        never the full menu dump."""
+    def test_menu_page_shows_the_top_lists_not_the_full_menu(self):
+        """Client 2026-10-15: the brand's Top 10 food and Top 10 beverages
+        only (Docs/Pasons_Restaurants_Top10_Food_Beverages.md), each capped
+        at ten — never a full-menu dump."""
         self._in_platform_source(MenuSource.MenuType.PAGES)
-        for n in range(20):
+        drinks_cat = MenuCategory.objects.create(brand=self.brand, name_en=TOP_DRINK_CATEGORY)
+        for n in range(15):
             MenuItem.objects.create(
                 category=self.category, brand=self.brand,
                 name_en=f"Extra dish {n}", regular_price=10 + n, available=True,
             )
+            MenuItem.objects.create(
+                category=drinks_cat, brand=self.brand,
+                name_en=f"Extra drink {n}", regular_price=5 + n, available=True,
+            )
         response = self.client.get(reverse("customer_menu", args=["kcic-table-001"]))
         body = response.content.decode()
         cards = body.count('<article class="menu-card')
-        self.assertGreaterEqual(cards, 5)
-        self.assertLessEqual(cards, 10)
-        self.assertNotIn("Extra dish 19", body)   # tail of the menu never dumps
+        self.assertEqual(cards, 20)                  # 10 food + 10 beverages
+        self.assertNotIn("Extra dish 14", body)      # tail of the list never dumps
+        self.assertNotIn("Extra drink 14", body)
 
     def test_pdf_source_stays_in_platform(self):
         self._in_platform_source(MenuSource.MenuType.PDF)
@@ -1443,8 +1483,10 @@ class PlaceIdLinkTests(AcceptanceFixtures):
         )
         response = self.client.get(reverse("smart_page", args=["kingchef-intlcity"]))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "writereview?placeid=ChIJ-kingchef-intl-city-demo")
-        self.assertContains(response, "query_place_id=ChIJ-kingchef-intl-city-demo")
+        # The old link opens the shop window. Place ID links live on the
+        # composer and the directions target, not on a location picker.
+        self.assertContains(response, "REVIEW US ON GOOGLE")
+        self.assertNotContains(response, "Choose a location")
 
 
 class ReviewComposerTests(AcceptanceFixtures):
@@ -1605,11 +1647,9 @@ class ReviewComposerTests(AcceptanceFixtures):
 
     def test_smart_page_cta_opens_composer_and_keeps_direct_google_link(self):
         response = self.client.get(reverse("smart_page", args=["kingchef-intlcity"]))
-        self.assertContains(
-            response, reverse("smart_review_write", args=["kingchef-intlcity"])
-        )
-        # Place ID contract preserved: the direct Google link is still rendered
-        self.assertContains(response, "writereview?placeid=ChIJ-kingchef-intl-city-demo")
+        # The shop window's review card opens the composer for this outlet.
+        self.assertContains(response, "/review/write/")
+        self.assertNotContains(response, "Choose a location")
 
     def test_smart_composer_google_button_opens_review_url(self):
         response = self.client.get(

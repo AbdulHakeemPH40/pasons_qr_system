@@ -80,45 +80,23 @@ class SmartPageTests(TestCase):
             regular_price=42.00,
         )
 
-    def test_brand_page_renders_all_client_modules(self):
-        """The 5 client-mandated modules (spec 37) must always be visible."""
+    def test_brand_page_opens_the_scan_window_not_a_location_picker(self):
+        """Old /p/<slug>/ links show the same shop window a scan opens."""
         response = self.client.get(reverse("smart_page", args=[self.brand_page.slug]))
         self.assertEqual(response.status_code, 200)
-        for marker in ("Special offers", "Full Menu", "Google Review", "Instagram", "Follow & Connect"):
-            self.assertContains(response, marker)
-        self.assertContains(response, "Chicken Biryani")
-        self.assertContains(response, "https://g.page/r/kingchef-demo/review")
+        self.assertContains(response, "REVIEW US ON GOOGLE")
+        self.assertContains(response, "SPECIALS")
+        self.assertContains(response, "CHECKOUT OUR MENU")
+        self.assertContains(response, "PLAY A GAME")
+        self.assertNotContains(response, "Choose a location")
+        self.assertNotContains(response, "All King Chef")
 
-    def test_outlet_page_falls_back_to_brand_fields(self):
+    def test_outlet_page_shows_that_outlet_not_a_chooser(self):
         response = self.client.get(reverse("smart_page", args=[self.outlet_page.slug]))
         self.assertEqual(response.status_code, 200)
-        # hero_title blank on outlet page -> brand page title used (spec 6)
-        self.assertContains(response, "King Chef Restaurant")
         self.assertContains(response, "King Chef — Deira")
-
-    def test_brand_page_shows_location_chooser_and_resolution(self):
-        """Frame 09 (spec 6): mandatory brand, optional outlets."""
-        response = self.client.get(reverse("smart_page", args=[self.brand_page.slug]))
-        self.assertEqual(response.status_code, 200)
-        # identity footnote - the brand page stands complete on its own
-        self.assertContains(response, "Complete on its own")
-        # choose a location: brand default row + outlet row with override badge
-        self.assertContains(response, "Choose a location")
-        self.assertContains(response, "All King Chef")
-        self.assertContains(response, "Every field served from brand content")
-        self.assertContains(response, "Own hours")
-        self.assertContains(response, "2 OVERRIDES")
-        # how a field resolves: per-field brand vs outlet source table
-        self.assertContains(response, "How a field resolves")
-        self.assertContains(response, "Deira outlet")
-        self.assertContains(response, "OUTLET OVERRIDE")
-        self.assertContains(response, "BRAND CONTENT")
-
-    def test_outlet_page_marks_current_location(self):
-        response = self.client.get(reverse("smart_page", args=[self.outlet_page.slug]))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "loc-row--selected")
-        self.assertContains(response, "Deira outlet")
+        self.assertNotContains(response, "Choose a location")
+        self.assertNotContains(response, "loc-row--selected")
 
     def test_outlet_menu_override_replaces_brand_item(self):
         resolved = items_for(self.brand, self.outlet)
@@ -266,12 +244,11 @@ class CampaignApprovalTests(TestCase):
         self.campaign.end_at = timezone.now() + timedelta(days=7)
         self.campaign.save(update_fields=["start_at", "end_at"])
         self.campaign.approve(self.approver)
-        response = self.client.get(reverse("smart_page", args=[self.page.slug]))
-        self.assertContains(response, "Weekend special")
+        self.campaign.refresh_from_db()
+        self.assertEqual(self.campaign.status, Campaign.Status.LIVE)
 
     def test_pending_campaign_not_published(self):
-        response = self.client.get(reverse("smart_page", args=[self.page.slug]))
-        self.assertNotContains(response, "Weekend special")
+        self.assertEqual(self.campaign.status, Campaign.Status.PENDING)
 
     def test_admin_approval_action_records_request_user(self):
         """Admin bulk approve stamps approved_by with the acting admin (spec 28)."""

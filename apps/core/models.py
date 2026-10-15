@@ -438,10 +438,17 @@ class QrCode(TimeStampedModel):
             raise ValidationError(
                 {"qr_code_name": f"First segment must be the brand code {self.brand.code}"}
             )
-        if self.outlet_id and not self.qr_code_name.startswith(f"{self.brand.code}-{self.outlet.code.split('-')[-1]}-"):
-            raise ValidationError(
-                {"qr_code_name": "Outlet segment must match the outlet code"}
+        if self.outlet_id:
+            full_seg = self.outlet.code.split("-", 1)[-1]
+            tail_seg = self.outlet.code.split("-")[-1]
+            valid_prefixes = (
+                f"{self.brand.code}-{full_seg}-",
+                f"{self.brand.code}-{tail_seg}-",
             )
+            if not self.qr_code_name.startswith(valid_prefixes):
+                raise ValidationError(
+                    {"qr_code_name": "Outlet segment must match the outlet code"}
+                )
 
     def save(self, *args, **kwargs):
         if not self.redirect_key:

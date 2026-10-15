@@ -4,7 +4,7 @@
 <div class="panel-header">
   <div>
     <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Menu Items</h1>
-    <p class="muted" style="margin: 4px 0 0;">Brand-level items are managed by Head Office. Branch managers can create branch versions and edit their own items.</p>
+    <p class="muted" style="margin: 4px 0 0;">Brand-level items are managed by Head Office. Branch managers can upload photos on any item and fully manage their own branch items.</p>
   </div>
   <div>
     <a href="{% url 'panel_menu_item_add' %}" class="btn btn-primary btn-sm">+ Add Item</a>
@@ -44,7 +44,9 @@
         <td>{{ item.category.name_en }}</td>
         <td>{{ item.outlet.official_name|default:"Whole brand" }}</td>
         <td>
-          {% if item.offer_price %}
+          {% if not item.regular_price %}
+            <span class="muted">&mdash;</span>
+          {% elif item.offer_price %}
             <del>{{ item.regular_price }}</del> <strong>{{ item.offer_price }}</strong> {{ item.currency }}
           {% else %}
             {{ item.regular_price }} {{ item.currency }}
@@ -69,6 +71,8 @@
               {% csrf_token %}
               <button type="submit" class="btn btn-outline btn-sm">Remove</button>
             </form>
+            {% else %}
+            <a href="{% url 'panel_menu_item_edit' item.pk %}" class="btn btn-primary btn-sm">Upload photo</a>
             {% endif %}
             {% if not item.outlet_id %}
             <form method="post" action="{% url 'panel_menu_item_override' item.pk %}">

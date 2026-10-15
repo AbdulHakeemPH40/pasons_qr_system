@@ -299,6 +299,9 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "panel_dashboard"
 LOGOUT_REDIRECT_URL = "login"
 
+# Same-origin framing (needed by same-origin games iframes and multi-outlet preview walls)
+X_FRAME_OPTIONS = "SAMEORIGIN"
+
 # --- DRF -----------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [

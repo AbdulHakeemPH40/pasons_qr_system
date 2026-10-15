@@ -106,142 +106,13 @@ def smart_page(request, slug):
             reverse("smart_page", args=[slug], query=query, fragment="feedback")
         )
 
-    modules = set(
-        page.modules.filter(enabled=True).values_list("module_type", flat=True)
+    # Old printed /p/<slug>/ links open the same shop window a scan opens.
+    # The location picker is not a customer page, so this is the only GET path.
+    return render(
+        request,
+        "outlet_landing.html",
+        _landing_context(request, brand, outlet, _landing_qr(brand, outlet)),
     )
-    live_campaign = (
-        # auto-publish/auto-expire by window (spec 29): SCHEDULED flips to
-        # effective the moment start_at passes, LIVE expires at end_at
-        Campaign.objects.filter(
-            brand=brand,
-            status__in=[Campaign.Status.LIVE, Campaign.Status.SCHEDULED],
-        )
-        .filter(start_at__lte=timezone.now(), end_at__gte=timezone.now())
-        .order_by("-start_at")
-        .first()
-    )
-    offers = [
-        item
-        for item in items_for(brand, outlet)
-        if item.offer_price is not None and item.available
-    ]
-
-    # brand pages describe the primary outlet's place + hours (frame 02/09)
-    active_qs = list(brand.outlets.filter(active=True).order_by("id"))
-    primary_outlet = outlet or (active_qs[0] if active_qs else None)
-
-    # hours resolve outlet -> brand content (spec section 6, frame 09 table)
-    hours_owner = outlet if (outlet and outlet.opening_hours) else None
-    if hours_owner is None:
-        hours_owner = next((o for o in active_qs if o.opening_hours), None)
-
-    today_key = DAY_KEYS[timezone.localtime().weekday()]
-    hours = (hours_owner.opening_hours if hours_owner else {}) or {}
-    today_hours = hours.get(today_key) or None
-
-    location_label = ""
-    if primary_outlet:
-        location_label = ", ".join(
-            dict.fromkeys(
-                p for p in (primary_outlet.city, primary_outlet.emirate) if p
-            )
-        ) or primary_outlet.official_name
-    closing_label = ""
-    if today_hours and not today_hours.get("closed") and today_hours.get("close"):
-        closing_label = f"Closes {_h12(today_hours['close'])}"
-
-    menu_groups = _menu_groups(brand, outlet)
-
-    lang = _language(request)
-    social = brand.social_links or {}
-
-    # client modules 4/5 (spec 37): Instagram handle + ordered social dots.
-    # Instagram comes from the brand social dict; the WA dot is injected from
-    # the click-to-chat number so it always renders on a live page.
-    instagram_handle = ig_handle(social.get("instagram", ""))
-    social_links = circle_links(social, whatsapp_url=_wa_link(
-        (outlet.whatsapp if outlet else "") or brand.default_whatsapp
-    ))
-
-    # guest rating summary for the identity + Google review modules
-    feedback_agg = Feedback.objects.filter(brand=brand, outlet=outlet).aggregate(
-        avg=Avg("rating"), n=Count("id")
-    )
-    review_avg = round(feedback_agg["avg"], 1) if feedback_agg["avg"] else None
-
-    # frame 09 (spec section 6) — mandatory brand, optional outlets:
-    # location chooser rows + per-field resolution for the focus outlet
-    locations = []
-    if active_qs:
-        base = page.brand_page
-        locations.append(
-            {
-                "name": f"All {_brand_short(brand)}",
-                "initial": _brand_short(brand)[:1].upper(),
-                "sub": "Every field served from brand content",
-                "badge": "BRAND",
-                "url": reverse("smart_page", args=[base.slug]) if base else "",
-                "selected": outlet is None,
-            }
-        )
-        locations.extend(_location_rows(brand, outlet))
-    focus_outlet = outlet or (active_qs[0] if active_qs else None)
-    resolve_rows = _resolve_rows(focus_outlet) if focus_outlet else []
-    resolve_label = f"{_outlet_short(focus_outlet)} outlet" if focus_outlet else ""
-    chooser_label = (
-        f"{_outlet_short(outlet)} outlet" if outlet else "Brand default"
-    ) if active_qs else ""
-
-    # frame 09 brand identity meta: "<desc> · N outlets · EN + AR"
-    brand_meta = ""
-    if outlet is None and active_qs:
-        desc = (brand.description or "").split("\u2014")[0].strip() or page.resolved(
-            "hero_subtitle"
-        )
-        parts = [p for p in (desc,) if p]
-        parts.append(f"{len(active_qs)} outlet{'' if len(active_qs) == 1 else 's'}")
-        langs = " + ".join(str(l).upper() for l in (page.enabled_languages or []))
-        if langs:
-            parts.append(langs)
-        brand_meta = " \u00b7 ".join(parts)
-
-    context = {
-        "page": page,
-        "brand": brand,
-        "outlet": outlet,
-        "modules": modules,
-        "title": page.resolved("page_title"),
-        "hero_title": page.resolved("hero_title"),
-        "hero_subtitle": page.resolved("hero_subtitle"),
-        "location_label": location_label,
-        "closing_label": closing_label,
-        "brand_meta": brand_meta,
-        "locations": locations,
-        "chooser_label": chooser_label,
-        "resolve_rows": resolve_rows,
-        "resolve_label": resolve_label,
-        "is_open": (hours_owner.is_open_now() if hours_owner else True),
-        "today_hours": today_hours if today_hours and not today_hours.get("closed") else None,
-        "review_avg": review_avg,
-        "review_count": feedback_agg["n"],
-        "campaign": live_campaign,
-        "offers": offers,
-        "menu": menu_groups,
-        "menu_count": sum(len(g["items"]) for g in menu_groups),
-        "google_review_url": _review_url(brand, outlet),
-        "social": social,
-        "instagram_handle": instagram_handle,
-        "social_links": social_links,
-        "whatsapp_url": _wa_link(
-            (outlet.whatsapp if outlet else "") or brand.default_whatsapp
-        ),
-        "phone": (outlet.phone if outlet else "") or brand.default_phone,
-        "maps_url": _maps_url(brand, outlet),
-        "thanks": request.GET.get("thanks") == "1",
-        "lang": lang,
-        "dir": "rtl" if lang == "ar" else "ltr",
-    }
-    return render(request, "smart_page.html", context)
 
 
 def _review_url(brand, outlet):
@@ -279,6 +150,92 @@ def _h12(value):
     suffix = "AM" if hour < 12 else "PM"
     hour12 = hour % 12 or 12
     return f"{hour12}:{minute:02d} {suffix}" if minute else f"{hour12} {suffix}"
+
+
+class _PageKey:
+    """A page with no printed QR still needs a key the action cards can use.
+
+    Menu, specials and games resolve the shop from QrCode.redirect_key, so
+    the key has to be a real code for this brand and this outlet only.
+    """
+
+    def __init__(self, qr):
+        self.redirect_key = qr.redirect_key
+        self.pk = qr.pk
+
+
+def _landing_qr(brand, outlet):
+    """The printed QR whose window /p/<slug>/ must show.
+
+    Prefer the entrance code for this exact outlet (or the brand, when the
+    page has no outlet). Fall back to any code for the same place, then
+    mint one so the cards never point at another shop.
+    """
+    qs = QrCode.objects.filter(brand=brand, outlet=outlet)
+    found = (
+        qs.filter(active=True, source_type=QrCode.SourceType.ENTRANCE).order_by("id").first()
+        or qs.filter(active=True).order_by("id").first()
+        or qs.order_by("id").first()
+    )
+    if found is not None:
+        return _PageKey(found)
+    page = (
+        SmartPage.objects.filter(brand=brand, outlet=outlet, published=True).order_by("id").first()
+        or SmartPage.objects.filter(brand=brand, outlet__isnull=True, published=True).order_by("id").first()
+    )
+    if page is None:
+        return None
+    scope = (outlet.code.split("-", 1)[-1] if outlet else "MAIN")
+    qr = QrCode(
+        qr_code_name=f"{brand.code}-{scope}-FLYER-PAGE",
+        destination_page=page,
+        brand=brand,
+        outlet=outlet,
+        source_type=QrCode.SourceType.FLYER,
+    )
+    qr.save()
+    return _PageKey(qr)
+
+
+def _landing_context(request, brand, outlet, qr):
+    """The scanned-shop window. /q/<key>/ and old /p/<slug>/ links share it."""
+    hours_owner = outlet if (outlet and outlet.opening_hours) else None
+    if not hours_owner:
+        active_outlets = list(brand.outlets.filter(active=True))
+        hours_owner = next((o for o in active_outlets if o.opening_hours), None)
+
+    today_key = DAY_KEYS[timezone.localtime().weekday()]
+    hours = (hours_owner.opening_hours if hours_owner else {}) or {}
+    today_hours = hours.get(today_key) or None
+
+    is_open = hours_owner.is_open_now() if hours_owner else True
+    today_close_str = ""
+    if today_hours and not today_hours.get("closed") and today_hours.get("close"):
+        today_close_str = _h12(today_hours["close"])
+
+    address_line = (outlet.address if outlet else "") or getattr(brand, "corporate_address", "")
+    lang = _language(request)
+    return {
+        "qr": qr,
+        "brand": brand,
+        "outlet": outlet,
+        "outlet_title": f"{_brand_short(brand)} - Restaurant",
+        "subtitle": brand.description.split("—")[0].strip() if brand.description else "Authentic Dining Experience",
+        "is_open": is_open,
+        "today_close_str": today_close_str,
+        "address_line": address_line,
+        "address": address_line,
+        "maps_url": _maps_url(brand, outlet),
+        "phone_number": (outlet.phone if outlet else "") or brand.default_phone,
+        "whatsapp_url": _wa_link((outlet.whatsapp if outlet else "") or brand.default_whatsapp),
+        "brand_colors": brand.brand_colors or {},
+        "lang": lang,
+        "dir": "rtl" if lang == "ar" else "ltr",
+        "has_specials": True,
+        "has_menu": True,
+        "has_review": True,
+        "has_instagram": True,
+    }
 
 
 def _wa_link(number):
@@ -428,57 +385,11 @@ def qr_redirect(request, key):
     # Store resolved context in signed session (source of truth)
     request.session["qr"] = qr.pk
 
-    # Prepare Outlet Landing Window directly at /q/<token>/
-    brand = qr.brand
-    outlet = qr.outlet
-
-    # Determine hours & open status
-    hours_owner = outlet if (outlet and outlet.opening_hours) else None
-    if not hours_owner:
-        active_outlets = list(brand.outlets.filter(active=True))
-        hours_owner = next((o for o in active_outlets if o.opening_hours), None)
-
-    today_key = DAY_KEYS[timezone.localtime().weekday()]
-    hours = (hours_owner.opening_hours if hours_owner else {}) or {}
-    today_hours = hours.get(today_key) or None
-
-    is_open = hours_owner.is_open_now() if hours_owner else True
-    today_close_str = ""
-    if today_hours and not today_hours.get("closed") and today_hours.get("close"):
-        today_close_str = _h12(today_hours["close"])
-
-    # Info strip parameters
-    address_line = (outlet.address if outlet else "") or getattr(brand, "corporate_address", "")
-    maps_url = _maps_url(brand, outlet)
-
-    phone_number = (outlet.phone if outlet else "") or brand.default_phone
-
-    lang = _language(request)
-    dir_rtl = (lang == "ar")
-
-    context = {
-        "qr": qr,
-        "brand": brand,
-        "outlet": outlet,
-        "outlet_title": f"{_brand_short(brand)} - Restaurant",
-        "subtitle": brand.description.split("—")[0].strip() if brand.description else "Authentic Dining Experience",
-        "is_open": is_open,
-        "today_close_str": today_close_str,
-        "address_line": address_line,
-        "address": address_line,
-        "maps_url": maps_url,
-        "phone_number": phone_number,
-        "whatsapp_url": _wa_link((outlet.whatsapp if outlet else "") or brand.default_whatsapp),
-        "brand_colors": brand.brand_colors or {},
-        "lang": lang,
-        "dir": "rtl" if dir_rtl else "ltr",
-        # Client-mandated modules stay visible; missing links fall back inside each view.
-        "has_specials": True,
-        "has_menu": True,
-        "has_review": True,
-        "has_instagram": True,
-    }
-    return render(request, "outlet_landing.html", context)
+    return render(
+        request,
+        "outlet_landing.html",
+        _landing_context(request, qr.brand, qr.outlet, qr),
+    )
 
 
 @require_GET

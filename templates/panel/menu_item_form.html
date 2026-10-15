@@ -4,7 +4,11 @@
 <div class="panel-header">
   <div>
     <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">{% if item %}Edit Menu Item: {{ item.name_en }}{% else %}Add Menu Item{% endif %}</h1>
+    {% if photo_only %}
+    <p class="muted" style="margin: 4px 0 0;">This is a brand-level item. You can update its photo here; Head Office manages the name, price and details.</p>
+    {% else %}
     <p class="muted" style="margin: 4px 0 0;">Leave the branch empty for a brand-level item (Head Office only). Branch managers pick their branch.</p>
+    {% endif %}
   </div>
 </div>
 
@@ -12,6 +16,7 @@
   <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: var(--sp-3);">
     {% csrf_token %}
 
+    {% if not photo_only %}
     <div>
       <label style="display: block; font-weight: 600; margin-bottom: 4px;">Brand</label>
       <select name="brand" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
@@ -95,6 +100,8 @@
       </div>
     </div>
 
+    {% endif %}
+
     <div>
       <label style="display: block; font-weight: 600; margin-bottom: 4px;">Photo</label>
       {% if item and item.image %}
@@ -104,6 +111,7 @@
       <input type="file" name="image" accept="image/*">
     </div>
 
+    {% if not photo_only %}
     <div style="display: flex; gap: var(--sp-3);">
       <label style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
         <input type="checkbox" name="available" {% if not item or item.available %}checked{% endif %}> Available
@@ -112,9 +120,10 @@
         <input type="checkbox" name="featured" {% if item and item.featured %}checked{% endif %}> Featured
       </label>
     </div>
+    {% endif %}
 
     <div style="display: flex; gap: var(--sp-2); margin-top: var(--sp-2);">
-      <button type="submit" class="btn btn-primary">{% if item %}Save Changes{% else %}Add Item{% endif %}</button>
+      <button type="submit" class="btn btn-primary">{% if photo_only %}Upload photo{% elif item %}Save Changes{% else %}Add Item{% endif %}</button>
       <a href="{% url 'panel_menu_items' %}" class="btn btn-outline">Cancel</a>
     </div>
   </form>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load icon_tags media_tags %}
+{% load static icon_tags media_tags %}
 
 {% block title %}Menu · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
 {% block body_class %}theme-warm{% endblock %}
@@ -28,52 +28,83 @@
       </header>
 
       {% if pdf_url %}
-      <a class="menu-pdf" href="{{ pdf_url }}" target="_blank" rel="noopener">
+      <a class="menu-pdf" href="{{ pdf_url }}" target="_blank" rel="noopener" aria-label="Full menu PDF — Open">
+        <span class="menu-pdf-glow" aria-hidden="true"></span>
         <span class="menu-pdf-ico" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg>
+          <span class="menu-pdf-sheet menu-pdf-sheet--back"></span>
+          <span class="menu-pdf-sheet menu-pdf-sheet--front">
+            <svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg>
+          </span>
+          <span class="menu-pdf-tag">PDF</span>
         </span>
         <span class="menu-pdf-copy">
+          <span class="menu-pdf-kicker">
+            <span class="menu-pdf-dot" aria-hidden="true"></span>
+            Digital Booklet
+          </span>
           <strong>Full menu PDF</strong>
           <small>Every page, exactly as printed</small>
         </span>
-        <span class="menu-pdf-cta">Open</span>
+        <span class="menu-pdf-cta">
+          <span class="menu-pdf-cta-label">Open</span>
+          <span class="menu-pdf-cta-orb" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg>
+          </span>
+        </span>
       </a>
       {% endif %}
 
-      {# Client 2026-10-14: no full-menu dump here, just a small Most Popular strip. #}
-      {# Dish names only; photos appear once staff upload them via the panel. #}
-      {# The printed full menu lives in the Full menu PDF card above. #}
-      <section class="menu-cat" aria-labelledby="cat-popular">
-        <div class="menu-cat-head">
-          <h2 id="cat-popular" class="menu-cat-title">Most Popular</h2>
-          <span class="chip chip--gold chip--sm">{{ popular|length }}</span>
+      {# Client 2026-10-15: brand-wise Top 10 lists as swipeable image-card rails, the specials page card system. #}
+      {# Names only, no prices; a photo appears once staff upload one, placeholder art until then. #}
+      {% for section in top_sections %}
+      <section class="spec-section" aria-labelledby="cat-{{ section.key }}">
+        <div class="section-head menu-section-head">
+          <h2 id="cat-{{ section.key }}" class="menu-cat-title">{{ section.label }}</h2>
+          <span class="chip chip--gold chip--sm">Top 10</span>
+          <span class="row-nav">
+            <button type="button" class="row-arrow" data-row-prev aria-label="Scroll {{ section.label }} left">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button type="button" class="row-arrow" data-row-next aria-label="Scroll {{ section.label }} right">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </span>
         </div>
-        <div class="menu-list">
-          {% for item in popular %}
-          <article class="menu-card{% if not item.image %} menu-card--text{% endif %}">
-            {% if item.image %}
-            <div class="menu-card-media">
-              {% with dish_webp=item.image|deriv_url:640 %}
-              <picture>
-                {% if dish_webp %}<source srcset="{{ dish_webp }}" type="image/webp">{% endif %}
-                <img src="{{ item.image.url }}" alt="{{ item.name_en }}" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}" decoding="async">
-              </picture>
-              {% endwith %}
-            </div>
-            {% endif %}
-            <div class="menu-card-body">
-              <h3 class="menu-name">
-                {% if dir == "rtl" and item.name_ar %}{{ item.name_ar }}{% else %}{{ item.name_en }}{% endif %}
-              </h3>
-            </div>
-          </article>
-          {% endfor %}
+        <div class="snap-wrap" data-row-wrap>
+          <div class="snap-row" data-row>
+            {% for item in section.items %}
+            <article class="menu-card promo-card" style="--i:{{ forloop.counter0 }}">
+              <div class="promo-media">
+                {% if item.image %}
+                {% with dish_webp=item.image|deriv_url:640 %}
+                <picture>
+                  {% if dish_webp %}<source srcset="{{ dish_webp }}" type="image/webp">{% endif %}
+                  <img src="{{ item.image.url }}" alt="{{ item.name_en }}" loading="lazy" decoding="async">
+                </picture>
+                {% endwith %}
+                {% else %}
+                <span class="menu-plate{% if section.key == "drink" %} menu-plate--drink{% endif %}" aria-hidden="true">
+                  {% if section.key == "drink" %}
+                  <svg viewBox="0 0 24 24"><path d="M7 7h10l-1.2 12.2a1.5 1.5 0 01-1.5 1.3h-4.6a1.5 1.5 0 01-1.5-1.3L7 7z"/><path d="M13.5 2.5l-1.8 4.5"/><path d="M7.6 12h8.8"/></svg>
+                  {% else %}
+                  <svg viewBox="0 0 24 24"><path d="M4 10h16v2a8 8 0 01-16 0v-2z"/><path d="M8 10V7M12 10V6M16 10V7"/></svg>
+                  {% endif %}
+                </span>
+                {% endif %}
+              </div>
+              <div class="promo-body">
+                <h3 class="promo-title">{% if dir == "rtl" and item.name_ar %}{{ item.name_ar }}{% else %}{{ item.name_en }}{% endif %}</h3>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
         </div>
       </section>
+      {% endfor %}
 
       {% if pages %}
-      <section class="menu-cat" aria-label="Menu booklet">
-        <div class="menu-cat-head">
+      <section class="spec-section" aria-label="Menu booklet">
+        <div class="section-head menu-section-head">
           <h2 class="menu-cat-title">Menu booklet</h2>
           <span class="chip chip--gold chip--sm">{{ total_pages }} pages</span>
         </div>
@@ -93,7 +124,7 @@
       </section>
       {% endif %}
 
-      {% if not popular and not pages and not pdf_url %}
+      {% if not food and not drinks and not pages and not pdf_url %}
       <div class="menu-empty glass">
         <div class="glyph" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M6 4h9a3 3 0 013 3v13H9a3 3 0 01-3-3V4z"/></svg>
@@ -113,6 +144,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/specials_carousel.js' %}?v=2026-10-10-3" defer></script>
 <script>
   (function () {
     var cards = document.querySelectorAll(".booklet-page-card");

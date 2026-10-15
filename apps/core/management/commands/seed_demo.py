@@ -27,6 +27,7 @@ from django.utils import timezone
 
 from apps.core.models import Brand, Campaign, Group, Outlet, PageModule, QrCode, SmartPage
 from apps.menu.models import MenuCategory, MenuItem, MenuSource, SpecialItem
+from apps.menu.top_picks import seed_top_picks
 
 WEEK_HOURS = {
     day: {"open": "10:00", "close": "23:00", "closed": False}
@@ -496,16 +497,18 @@ class Command(BaseCommand):
 
             # QR codes — naming convention [BRAND]-[OUTLET]-[SOURCE]-[SEQUENCE] (§22)
             if spec["outlets"]:
-                first = Outlet.objects.get(code=spec["outlets"][0]["code"])
-                first_page = SmartPage.objects.get(slug=spec["outlets"][0]["code"].lower())
-                self._make_qr(
-                    f"{brand.code}-{first.code.split('-')[-1]}-ENTRANCE-01",
-                    brand, first, first_page, "entrance", "Main entrance",
-                )
-                self._make_qr(
-                    f"{brand.code}-{first.code.split('-')[-1]}-TABLE-018",
-                    brand, first, first_page, "table", "Table 18",
-                )
+                for out_spec in spec["outlets"]:
+                    out_obj = Outlet.objects.get(code=out_spec["code"])
+                    out_page = SmartPage.objects.get(slug=out_spec["code"].lower())
+                    out_seg = out_obj.code.split("-", 1)[-1]
+                    self._make_qr(
+                        f"{brand.code}-{out_seg}-ENTRANCE-01",
+                        brand, out_obj, out_page, "entrance", "Main entrance",
+                    )
+                    self._make_qr(
+                        f"{brand.code}-{out_seg}-TABLE-018",
+                        brand, out_obj, out_page, "table", "Table 18",
+                    )
             else:
                 self._make_qr(
                     f"{brand.code}-MAIN-FLYER-01",
@@ -521,6 +524,12 @@ class Command(BaseCommand):
 
         self._seed_menu_pdfs()
         self._load_real_menus()
+
+        # Brand-wise Top 10 food + beverages
+        # (Docs/Pasons_Restaurants_Top10_Food_Beverages.md).
+        for brand_name, counts in seed_top_picks().items():
+            detail = ", ".join(f"{cat} x{n}" for cat, n in counts)
+            self.stdout.write(f"  Top picks: {brand_name} — {detail}")
 
         self.stdout.write(self.style.SUCCESS("Seed complete — 4 brands ready."))
 

@@ -10,6 +10,7 @@ from django.db.models import Q
 
 from apps.core.models import QrCode
 from apps.menu.models import SpecialItem, MenuSource, items_for
+from apps.menu.top_picks import TOP_FOOD_CATEGORY, TOP_DRINK_CATEGORY
 from apps.analytics.models import TapEvent
 
 
@@ -140,32 +141,33 @@ def customer_menu(request, key):
     pages = list(menu_source.pages.all().order_by("page_number")) if menu_source else []
     pdf_url = menu_source.menu_file.url if (menu_source and menu_source.menu_file) else ""
 
-    # Most Popular strip (client ask 2026-10-14): show a handful of dishes
-    # only, never the whole menu (5-10 is enough). Featured items lead (staff
-    # set "Featured" in the panel), then one dish per category per pass so a
-    # large section cannot crowd the strip. The full menu stays behind the
-    # "Full menu PDF" card above.
+    # Brand-wise Top 10 lists (client ask 2026-10-15, from
+    # Docs/Pasons_Restaurants_Top10_Food_Beverages.md): each brand shows its
+    # own "Most Popular" food list and "Top Beverages" list, capped at 10
+    # each. Names only, no prices. The full printed menu stays behind the
+    # "Full menu PDF" card above. Staff edit these lists from the panel (the
+    # categories are ordinary menu categories).
     visible = [
         item for item in items_for(brand, outlet)
         if item.available and item.category.active
     ]
-    popular = [item for item in visible if item.featured][:10]
-    buckets = {}
-    for item in visible:
-        if not item.featured:
-            buckets.setdefault(item.category_id, []).append(item)
-    rows = sorted(
-        buckets.values(), key=lambda r: (r[0].category.sort_order, r[0].category_id)
-    )
-    depth = 0
-    while len(popular) < 10 and any(depth < len(row) for row in rows):
-        for row in rows:
-            if depth < len(row):
-                popular.append(row[depth])
-                if len(popular) >= 10:
-                    break
-        depth += 1
-    item_count = len(popular)
+
+    def top_list(cat_name):
+        rows = [i for i in visible if i.category.name_en == cat_name]
+        rows.sort(key=lambda i: (i.sort_order, i.id))
+        return rows[:10]
+
+    food = top_list(TOP_FOOD_CATEGORY)
+    drinks = top_list(TOP_DRINK_CATEGORY)
+    item_count = len(food) + len(drinks)
+
+    # Same section shape as the specials page so the two pages share one card
+    # language; empty sections stay hidden.
+    top_sections = [
+        {"key": "food", "label": TOP_FOOD_CATEGORY, "items": food},
+        {"key": "drink", "label": TOP_DRINK_CATEGORY, "items": drinks},
+    ]
+    top_sections = [s for s in top_sections if s["items"]]
 
     lang = request.GET.get("lang", "en")
     dir_rtl = (lang == "ar")
@@ -177,7 +179,9 @@ def customer_menu(request, key):
         "menu_source": menu_source,
         "pages": pages,
         "pdf_url": pdf_url,
-        "popular": popular,
+        "food": food,
+        "drinks": drinks,
+        "top_sections": top_sections,
         "item_count": item_count,
         "total_pages": len(pages),
         "ordering_url": ordering_url,
