@@ -79,6 +79,48 @@ GLYPHS = {
     "search": (
         f'<circle {_STROKE} cx="11" cy="11" r="6.5"/><path {_STROKE} d="M15.8 15.8L21 21"/>'
     ),
+    "menu": (
+        f'<path {_STROKE} d="M4.5 7h15M4.5 12h15M4.5 17h15"/>'
+    ),
+    "chart": (
+        f'<path {_STROKE} d="M4.5 19.5h15"/>'
+        f'<path {_STROKE} d="M7 19.5V11M12 19.5V6.5M17 19.5v-5"/>'
+    ),
+    "building": (
+        f'<path {_STROKE} d="M4.5 20V6.5A1.5 1.5 0 0 1 6 5h7a1.5 1.5 0 0 1 1.5 1.5V20"/>'
+        f'<path {_STROKE} d="M14.5 10h3.5A1.5 1.5 0 0 1 19.5 11.5V20M3.5 20h17"/>'
+        f'<path {_STROKE} d="M8 8.5h2M8 12h2M8 15.5h2"/>'
+    ),
+    "qr": (
+        f'<path {_STROKE} d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5z"/>'
+        f'<path {_STROKE} d="M14 14h2.2v2.2H14zM18.2 14H19.5v5.5h-3.3M14 18.2v1.3"/>'
+    ),
+    "utensils": (
+        f'<path {_STROKE} d="M6 3.5v6.2a2 2 0 0 0 2 2V20.5M8 3.5v4M6 7.5h4"/>'
+        f'<path {_STROKE} d="M16 3.5c1.6 1.6 1.6 4.4 0 6v11"/>'
+    ),
+    "inbox": (
+        f'<path {_STROKE} d="M4 13.5l2.2-8h11.6l2.2 8"/>'
+        f'<path {_STROKE} d="M4 13.5h4.2l1 2.2h5.6l1-2.2H20V20H4z"/>'
+    ),
+    "trend": (
+        f'<path {_STROKE} d="M4 16.5l5-5 3.2 3.2L20 6.5"/>'
+        f'<path {_STROKE} d="M14.5 6.5H20V12"/>'
+    ),
+    "users": (
+        f'<circle {_STROKE} cx="9" cy="8.5" r="2.6"/>'
+        f'<path {_STROKE} d="M4.2 18.5c.5-2.6 2.4-4 4.8-4s4.3 1.4 4.8 4"/>'
+        f'<circle {_STROKE} cx="16.2" cy="9" r="2"/>'
+        f'<path {_STROKE} d="M15.2 14.6c1.8.2 3.2 1.3 3.7 3.4"/>'
+    ),
+    "list": (
+        f'<path {_STROKE} d="M8.5 6.5h11M8.5 12h11M8.5 17.5h11"/>'
+        f'<path {_STROKE} d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/>'
+    ),
+    "logout": (
+        f'<path {_STROKE} d="M10 5.5H6.5A1.5 1.5 0 0 0 5 7v10a1.5 1.5 0 0 0 1.5 1.5H10"/>'
+        f'<path {_STROKE} d="M10.5 12H19M15.5 8.5L19 12l-3.5 3.5"/>'
+    ),
     "directions": (
         f'<path {_STROKE} d="M12 2.8l9 3.6v5.2c0 5-3.8 8.8-9 10.6-5.2-1.8-9-5.6-9-10.6V6.4'
         f'l9-3.6z"/><path {_STROKE} d="M9 12.2l2 2 4-4"/>'

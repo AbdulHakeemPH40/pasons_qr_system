@@ -1,9 +1,9 @@
 """
 Create the staff panel accounts.
 
-  - 4 Brand Managers    one per brand
-  - 13 Outlet Managers  one per branch
-  - 3 Head Office       IT and Admin, Operations, Marketing
+  - 1 All-brands user   every brand on the same dashboard
+  - 13 Branch users     one per branch
+  - 3 Head Office       IT and Admin, Operations, Marketing (optional)
 
 Every account is written through ``panel_permissions.apply_role_to_user``, the
 same function the Users panel calls, so a seeded account behaves exactly like
@@ -63,8 +63,9 @@ DEPARTMENT_NAMES = {code: name_en for code, name_en, _ in DEPARTMENTS}
 
 class Command(BaseCommand):
     help = (
-        "Create the staff panel accounts (4 brand, 13 outlet, 3 head office) "
-        "and the departments. Idempotent; --dry-run prints without writing."
+        "Create the staff panel accounts (1 all-brands user, one user per "
+        "branch, optional head office) and the departments. Idempotent; "
+        "--dry-run prints without writing."
     )
 
     def add_arguments(self, parser):
@@ -176,21 +177,20 @@ class Command(BaseCommand):
         if codes:
             brands = brands.filter(code__in=codes)
 
-        for brand in brands:
-            username, local = self._names("brand", brand.code.lower(), style)
-            rows.append(
-                {
-                    "role": "brand_manager",
-                    "username": username,
-                    "email": f"{local}@{domain}",
-                    "name": brand.name_en,
-                    "brand": brand,
-                    "outlet": None,
-                    "department_code": None,
-                    "scope": f"all branches of {brand.name_en}",
-                }
-            )
+        rows.append(
+            {
+                "role": "brand_manager",
+                "username": "brand_manager",
+                "email": f"brand_manager@{domain}",
+                "name": "All brands",
+                "brand": None,
+                "outlet": None,
+                "department_code": None,
+                "scope": "every brand, same dashboard",
+            }
+        )
 
+        for brand in brands:
             outlets = Outlet.objects.filter(brand=brand, active=True).order_by("code")
             for outlet in outlets:
                 username, local = self._names("outlet", outlet.code.lower(), style)

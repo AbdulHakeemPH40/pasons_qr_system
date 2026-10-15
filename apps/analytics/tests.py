@@ -33,24 +33,24 @@ def make_brand(code, name):
 
 
 class DashboardAccessTests(TestCase):
-    def test_anonymous_redirects_to_admin_login(self):
-        response = self.client.get(reverse("dashboard"))
+    def test_anonymous_redirects_to_panel_login(self):
+        response = self.client.get(reverse("panel_analytics"))
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/admin/login/", response["Location"])
+        self.assertIn("/panel/login/", response["Location"])
 
-    def test_non_staff_forbidden(self):
-        User.objects.create_user("viewer", password="pw")
-        self.client.login(username="viewer", password="pw")
-        response = self.client.get(reverse("dashboard"))
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/admin/login/", response["Location"])
+    def test_old_dashboard_address_opens_the_panel_page(self):
+        response = self.client.get(reverse("dashboard"), follow=True)
+        self.assertEqual(response.redirect_chain[0][0], reverse("panel_analytics"))
+        self.assertIn("/panel/login/", response.redirect_chain[-1][0])
 
     def test_staff_sees_dashboard(self):
         User.objects.create_superuser("admin", password="pw")
         self.client.login(username="admin", password="pw")
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("panel_analytics"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Management Dashboard")
+        self.assertContains(response, "Analytics")
+        self.assertContains(response, "panel-sidebar")
+        self.assertContains(response, 'href="/panel/analytics/"')
         # Group Summary tiles (spec 25)
         for label in (
             "Scans today", "Active campaigns", "Enquiries",
@@ -111,7 +111,7 @@ class DashboardDataTests(TestCase):
             status=Campaign.Status.LIVE,
         )
         self.client.login(username="admin", password="pw")
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("panel_analytics"))
         kpis = {k["key"]: k for k in response.context["kpis"]}
         self.assertEqual(kpis["scans_today"]["value"], 2)
         self.assertEqual(kpis["scans_month"]["value"], 2)
@@ -122,7 +122,7 @@ class DashboardDataTests(TestCase):
         self._scan(self.qr, self.brand)
         self._scan(self.qr2, self.other)
         self.client.login(username="admin", password="pw")
-        response = self.client.get(reverse("dashboard"), {"brand": "DONARIST"})
+        response = self.client.get(reverse("panel_analytics"), {"brand": "DONARIST"})
         self.assertEqual(response.context["brand"], self.other)
         kpis = {k["key"]: k for k in response.context["kpis"]}
         self.assertEqual(kpis["scans_month"]["value"], 1)  # only DONARIST
@@ -133,7 +133,7 @@ class DashboardDataTests(TestCase):
 
     def test_unknown_brand_code_falls_back_to_group(self):
         self.client.login(username="admin", password="pw")
-        response = self.client.get(reverse("dashboard"), {"brand": "NOPE"})
+        response = self.client.get(reverse("panel_analytics"), {"brand": "NOPE"})
         self.assertIsNone(response.context["brand"])
 
     def test_scans_by_day_zero_fills(self):

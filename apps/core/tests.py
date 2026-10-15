@@ -98,6 +98,14 @@ class SmartPageTests(TestCase):
         self.assertNotContains(response, "Choose a location")
         self.assertNotContains(response, "loc-row--selected")
 
+    def test_home_reopens_the_last_shop_this_browser_opened(self):
+        """/ points at the last /p/<slug>/ this browser opened, not a global scan."""
+        self.client.get(reverse("smart_page", args=[self.outlet_page.slug]))
+        response = self.client.get(reverse("home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "King Chef — Deira")
+        self.assertEqual(ScanEvent.objects.count(), 0)
+
     def test_outlet_menu_override_replaces_brand_item(self):
         resolved = items_for(self.brand, self.outlet)
         self.assertEqual(len(resolved), 1)

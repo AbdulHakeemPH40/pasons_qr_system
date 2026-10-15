@@ -17,7 +17,8 @@ from django.urls import Resolver404, resolve
 from apps.core.panel_permissions import require_capability
 
 # Login and logout must stay reachable before the user holds any role.
-CAPABILITY_EXEMPT_VIEWS = frozenset({"panel_login", "panel_logout"})
+# These are the real URL names in config/urls.py (name="login" / name="logout").
+CAPABILITY_EXEMPT_VIEWS = frozenset({"login", "logout"})
 
 # Resolved view name -> capability key. Keep in step with config/urls.py;
 # PanelCapabilityCoverageTests enforces that.
@@ -39,6 +40,8 @@ VIEW_CAPABILITIES = {
     "panel_special_edit": "specials",
     "panel_special_toggle": "specials",
     "panel_menus": "menus",
+    "panel_menu_pdf_replace": "menus",
+    "panel_menu_pdf_delete": "menus",
     "panel_menu_items": "menus",
     "panel_menu_item_add": "menus",
     "panel_menu_item_edit": "menus",
@@ -56,13 +59,10 @@ VIEW_CAPABILITIES = {
     "panel_changelog": "changelog",
 }
 
-# Staff routes outside /panel/ that enforce their capability inside the view
-# instead, so their own auth redirect can run first. Enforced in
-# apps.analytics.views.dashboard: a non-staff visitor must still be redirected
-# to the admin login rather than answered with a 403.
-INLINE_GATED_VIEWS = {
-    "dashboard": "analytics",
-}
+# Kept so a future staff route outside /panel/ can declare its own gate
+# without being flagged as ungated. Empty today: /dashboard/ redirects into
+# the panel, and panel_analytics is gated with the rest of the shell.
+INLINE_GATED_VIEWS = {}
 
 
 class PanelCapabilityMiddleware:

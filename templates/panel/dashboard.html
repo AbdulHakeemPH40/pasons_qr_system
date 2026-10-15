@@ -3,28 +3,28 @@
 {% block panel_content %}
 <div class="panel-header">
   <div>
-    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Management Dashboard</h1>
-    <p class="muted" style="margin: 4px 0 0;">Welcome, {{ user.username }}. Overview across authorized outlets.</p>
+    <h1>Management dashboard</h1>
+    <p>Welcome, {{ user.username }}. Overview across authorized outlets.</p>
   </div>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-4);">
-  <div class="glass glass--sm" style="padding: var(--sp-3); text-align: center;">
-    <p class="caption muted" style="margin: 0 0 4px;">ACTIVE OUTLETS</p>
-    <p style="font-size: 2rem; font-weight: 800; color: var(--forest); margin: 0;">{{ outlet_count }}</p>
+<div class="panel-stats">
+  <div class="panel-stat">
+    <span>Active outlets</span>
+    <strong>{{ outlet_count }}</strong>
   </div>
-  <div class="glass glass--sm" style="padding: var(--sp-3); text-align: center;">
-    <p class="caption muted" style="margin: 0 0 4px;">ACTIVE QR CODES</p>
-    <p style="font-size: 2rem; font-weight: 800; color: var(--leaf); margin: 0;">{{ qr_count }}</p>
+  <div class="panel-stat">
+    <span>Active QR codes</span>
+    <strong>{{ qr_count }}</strong>
   </div>
-  <div class="glass glass--sm" style="padding: var(--sp-3); text-align: center;">
-    <p class="caption muted" style="margin: 0 0 4px;">TOTAL SCANS</p>
-    <p style="font-size: 2rem; font-weight: 800; color: var(--ink); margin: 0;">{{ total_scans }}</p>
+  <div class="panel-stat">
+    <span>Total scans</span>
+    <strong>{{ total_scans }}</strong>
   </div>
 </div>
 
-<h2 style="font-size: var(--fs-h2); color: var(--forest); margin-top: var(--sp-4);">Managed Outlets</h2>
-<div style="overflow-x: auto;">
+<h2 style="font-size: 1.15rem; letter-spacing: -0.02em; margin: 0 0 0.4rem;">Managed outlets</h2>
+<div class="panel-table-wrap">
   <table class="panel-table">
     <thead>
       <tr>

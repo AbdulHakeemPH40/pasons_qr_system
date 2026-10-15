@@ -3,15 +3,19 @@
 {% block panel_content %}
 <div class="panel-header">
   <div>
-    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Staff Users</h1>
-    <p class="muted" style="margin: 4px 0 0;">Head Office creates users and assigns roles and branches. Brands and branches can only be created or modified by Head Office.</p>
+    <h1>Staff users</h1>
+    {% if is_brand_manager %}
+    <p class="muted" style="margin: 4px 0 0;">Create a branch user and assign the branches they may open. You only see users of your own brand.</p>
+    {% else %}
+    <p class="muted" style="margin: 4px 0 0;">Create a brand user here, or in Django admin. A brand user then assigns branch users from their own dashboard.</p>
+    {% endif %}
   </div>
   <div>
     <a href="{% url 'panel_user_add' %}" class="btn btn-primary btn-sm">+ Add User</a>
   </div>
 </div>
 
-<div style="overflow-x: auto;">
+<div class="panel-table-wrap">
   <table class="panel-table">
     <thead>
       <tr>

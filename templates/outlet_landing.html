@@ -14,7 +14,7 @@
     <div class="device-screen">
       {# ---- identity: logo, brand, location (reference header) ---- #}
       <header class="scan-identity">
-        <div class="avatar">
+        <div class="avatar{% if brand.code == 'DONARIST' %} avatar--on-dark{% endif %}">
           {% if brand.logo %}
           {% comment %}
           WebP derivative at 3x the rendered size; the img stays as the

@@ -145,6 +145,10 @@ class CustomerMenuPdfTests(TestCase):
         self.assertIn("menu-pdf-tag", body)
         self.assertIn("menu-pdf-cta-orb", body)
         self.assertIn("Open", body)
+        css = (settings.BASE_DIR / "static" / "css" / "theme-warm.css").read_text(encoding="utf-8")
+        tile = css.split("body.theme-warm .page--glass .menu-pdf {", 1)[1].split("}", 1)[0]
+        self.assertIn("flex-shrink: 0", tile)
+        self.assertIn("min-height: min-content", tile)
 
 
 class TopPicksSeedTests(TestCase):

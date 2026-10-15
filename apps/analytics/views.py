@@ -8,35 +8,32 @@ top performer), scans by day / outlet / source, and top QR placements —
 all aggregated read-time from raw ScanEvent rows (spec 24/50).
 """
 
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from apps.core.models import Brand, Campaign
-from apps.core.panel_permissions import CAP_ANALYTICS, require_capability
+from apps.core.panel_permissions import scoped_brands
 
 from . import aggregates
 from .models import ScanEvent
 
-staff_required = user_passes_test(
-    lambda u: u.is_active and u.is_staff, login_url="admin:login"
-)
-
 
 @require_GET
-@staff_required
+@login_required
 def dashboard(request):
-    """Internal KPI dashboard (spec 25). ?brand=<code> scopes to brand view."""
-    # This route is not under /panel/, so its capability is enforced here,
-    # after staff_required. That keeps the existing non-staff redirect to the
-    # admin login while still denying a Head Office department that has no
-    # analytics section (for example Operations).
-    require_capability(request.user, CAP_ANALYTICS)
+    """Internal KPI dashboard (spec 25). ?brand=<code> scopes to brand view.
+
+    The panel middleware already checks the analytics capability, so a brand
+    or branch login reaches this page the same way it reaches the rest of
+    the panel. Numbers stay inside that person's brands.
+    """
+    allowed = scoped_brands(request.user)
     brand = None
     brand_code = request.GET.get("brand", "")
     if brand_code:
-        brand = Brand.objects.filter(code__iexact=brand_code).first()
+        brand = allowed.filter(code__iexact=brand_code).first()
 
     events = None
     if brand is not None:
@@ -44,8 +41,9 @@ def dashboard(request):
 
     context = {
         "title": "Management Dashboard",
+        "nav_active": "analytics",
         "brand": brand,
-        "brands": Brand.objects.filter(status="active").order_by("name_en"),
+        "brands": allowed.filter(status="active").order_by("name_en"),
         "kpis": aggregates.group_summary(qs=events, brand=brand),
         "by_day": aggregates.scans_by_day(qs=events),
         "by_outlet": aggregates.scans_by_outlet(qs=events),
@@ -55,7 +53,7 @@ def dashboard(request):
         "pending_campaigns": _pending_campaigns(brand),
         "generated_at": timezone.localtime(),
     }
-    return render(request, "dashboard.html", context)
+    return render(request, "panel/analytics.html", context)
 
 
 def _pending_campaigns(brand):

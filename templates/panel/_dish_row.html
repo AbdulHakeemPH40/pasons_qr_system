@@ -1,0 +1,18 @@
+<div class="dish-row">
+  <div class="dish-name">
+    <strong>{{ item.name_en }}</strong>
+    {% if item.name_ar %}<small dir="rtl">{{ item.name_ar }}</small>{% endif %}
+    {% if not item.available %}<small>Unavailable</small>{% endif %}
+    {% if item.outlet_id %}<small>{{ item.outlet.official_name }}</small>{% endif %}
+  </div>
+  <div class="dish-price {% if not item.regular_price %}is-blank{% endif %}">
+    {% if item.regular_price %}{{ item.regular_price }} AED{% else %}No price{% endif %}
+  </div>
+  <div class="dish-actions">
+    {% if can_edit or item.outlet_id %}
+    <a href="{% url 'panel_menu_item_edit' item.pk %}" class="btn btn-outline btn-sm">Edit</a>
+    {% else %}
+    <a href="{% url 'panel_menu_item_edit' item.pk %}" class="btn btn-primary btn-sm">Photo</a>
+    {% endif %}
+  </div>
+</div>

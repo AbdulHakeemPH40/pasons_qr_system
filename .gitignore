@@ -4,6 +4,8 @@
 !.env.example
 *.pem
 *.key
+Docs/panel_accounts.md
+Docs/panel_accounts.csv
 
 # Python
 __pycache__/

@@ -280,6 +280,25 @@ class QrFlowTests(AcceptanceFixtures):
 
 
 class PanelScopeTests(AcceptanceFixtures):
+    def test_specials_page_keeps_the_panel_shell(self):
+        """A child page that fills extra_css must not drop the sidebar.
+
+        specials_list.html overrides extra_css. The shell used to live in
+        that same block, so Specials rendered as an unstyled stack: the
+        nav sat on top of the table instead of beside it.
+        """
+        self.client.login(username="headoffice", password="pass-head")
+        response = self.client.get(reverse("panel_specials"))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn("panel-sidebar", html)
+        self.assertIn("grid-template-columns: 17.5rem", html)
+        self.assertLess(
+            html.index("grid-template-columns: 17.5rem"),
+            html.index("panel-sidebar"),
+        )
+        self.assertIn(".spec-thumb", html)
+
     def test_anonymous_panel_redirects_to_login(self):
         response = self.client.get(reverse("panel_dashboard"))
         self.assertEqual(response.status_code, 302)
@@ -332,48 +351,42 @@ class PanelScopeTests(AcceptanceFixtures):
         outlet = Outlet.objects.get(code="KINGCHEF-KARAMA")
         self.assertTrue(SmartPage.objects.filter(outlet=outlet, published=True).exists())
 
-    def test_head_office_generates_and_retires_qr(self):
+    def test_head_office_generates_one_qr_per_branch(self):
         self.client.login(username="headoffice", password="pass-head")
-        before = QrCode.objects.filter(outlet=self.intl, active=True).count()
+        QrCode.objects.filter(outlet=self.intl).delete()
         response = self.client.post(reverse("panel_qr_generate"), {
             "outlet": self.intl.pk,
-            "source_type": "counter",
-            "label": "Counter 1",
         })
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(QrCode.objects.filter(outlet=self.intl, active=True).count(), before + 1)
-        created = QrCode.objects.get(label="Counter 1")
-        self.assertTrue(created.qr_code_name.startswith("KINGCHEF-INTLCITY-COUNTER-"))
+        created = QrCode.objects.get(outlet=self.intl, active=True)
+        self.assertEqual(created.qr_code_name, "KINGCHEF-INTLCITY-BRANCH-01")
+        self.assertEqual(created.source_type, "branch")
 
-        regen = self.client.get(reverse("panel_qr_regenerate", args=[created.pk]))
-        self.assertEqual(regen.status_code, 302)
-        created.refresh_from_db()
-        self.assertFalse(created.active)
-        retired_page = self.client.get(reverse("qr_landing", args=[created.redirect_key]))
-        self.assertEqual(retired_page.status_code, 410)
+        again = self.client.post(reverse("panel_qr_generate"), {
+            "outlet": self.intl.pk,
+        })
+        self.assertEqual(again.status_code, 302)
+        self.assertEqual(QrCode.objects.filter(outlet=self.intl, active=True).count(), 1)
 
     def test_manager_can_generate_qr_for_own_branch_only(self):
         self.client.login(username="ic-manager", password="pass-ic")
         response = self.client.get(reverse("panel_qr_generate"))
         self.assertEqual(response.status_code, 200)
 
+        QrCode.objects.filter(outlet=self.intl).delete()
         created = self.client.post(reverse("panel_qr_generate"), {
             "outlet": self.intl.pk,
-            "source_type": "counter",
-            "label": "Manager Counter",
         })
         self.assertEqual(created.status_code, 302)
         self.assertTrue(
-            QrCode.objects.filter(label="Manager Counter", outlet=self.intl).exists()
+            QrCode.objects.filter(qr_code_name="KINGCHEF-INTLCITY-BRANCH-01", outlet=self.intl).exists()
         )
 
         cross = self.client.post(reverse("panel_qr_generate"), {
             "outlet": self.nahda.pk,
-            "source_type": "counter",
-            "label": "Should Not Land",
         })
         self.assertEqual(cross.status_code, 404)
-        self.assertFalse(QrCode.objects.filter(label="Should Not Land").exists())
+        self.assertFalse(QrCode.objects.filter(outlet=self.nahda, qr_code_name__endswith="-BRANCH-01").exclude(pk=self.qr_nahda.pk).exists())
 
     def test_special_add_is_scoped(self):
         self.client.login(username="ic-manager", password="pass-ic")
@@ -537,10 +550,10 @@ class NoProfileScopeTests(AcceptanceFixtures):
 
 
 class EmailLoginTests(AcceptanceFixtures):
-    """Phase 1: staff sign in with their email address OR their username.
+    """Email sign-in is for the superuser only.
 
-    Identity matching is case-insensitive because email addresses are, and
-    the backend refuses rather than guesses when an address is ambiguous.
+    Brand users and branch users sign in with a username and password.
+    Typing an email stored on those accounts must not open the panel.
     """
 
     @classmethod
@@ -552,49 +565,46 @@ class EmailLoginTests(AcceptanceFixtures):
         OutletManager.objects.create(
             user=cls.email_user, role=OutletManager.Role.BRAND, brand=cls.brand,
         )
+        cls.superuser = User.objects.create_superuser(
+            "root", password="pass-root", email="root@pasonsgrp.com",
+        )
 
-    def test_login_with_email_address(self):
-        self.assertTrue(
+    def test_brand_user_cannot_sign_in_with_email(self):
+        self.assertFalse(
             self.client.login(
                 username="bm.kingchef@pasonsgrp.com", password="pass-email"
             )
         )
 
-    def test_login_with_email_is_case_insensitive(self):
+    def test_brand_user_signs_in_with_username(self):
+        self.assertTrue(self.client.login(username="bm-email", password="pass-email"))
+
+    def test_superuser_signs_in_with_email(self):
         self.assertTrue(
-            self.client.login(
-                username="BM.KingChef@PasonsGrp.com", password="pass-email"
-            )
+            self.client.login(username="root@pasonsgrp.com", password="pass-root")
         )
 
-    def test_login_with_username_still_works(self):
-        self.assertTrue(self.client.login(username="bm-email", password="pass-email"))
+    def test_superuser_email_is_case_insensitive(self):
+        self.assertTrue(
+            self.client.login(username="Root@PasonsGrp.com", password="pass-root")
+        )
+
+    def test_superuser_signs_in_with_username(self):
+        self.assertTrue(self.client.login(username="root", password="pass-root"))
 
     def test_login_with_unknown_email_fails(self):
         self.assertFalse(
-            self.client.login(username="nobody@pasonsgrp.com", password="pass-email")
+            self.client.login(username="nobody@pasonsgrp.com", password="pass-root")
         )
 
-    def test_login_with_email_and_wrong_password_fails(self):
-        self.assertFalse(
-            self.client.login(
-                username="bm.kingchef@pasonsgrp.com", password="wrong-password"
-            )
-        )
-
-    def test_login_page_offers_email_or_username(self):
+    def test_login_page_asks_for_username(self):
         response = self.client.get(reverse("login"))
-        self.assertContains(response, "Email or username")
-
-    def test_email_login_reaches_the_right_scope(self):
-        self.client.login(username="bm.kingchef@pasonsgrp.com", password="pass-email")
-        listing = self.client.get(reverse("panel_outlets"))
-        self.assertEqual(listing.status_code, 200)
-        self.assertContains(listing, "International City")
+        self.assertContains(response, ">Username<")
+        self.assertNotContains(response, "Email or username")
 
 
 class StaffEmailValidationTests(AcceptanceFixtures):
-    """Phase 1: an email is required and unique, because it is a login identity."""
+    """Brand and branch users do not need an email. A typed one stays unique."""
 
     @classmethod
     def setUpTestData(cls):
@@ -606,15 +616,16 @@ class StaffEmailValidationTests(AcceptanceFixtures):
     def setUp(self):
         self.client.login(username="headoffice", password="pass-head")
 
-    def test_add_user_without_email_is_rejected(self):
+    def test_add_branch_user_without_email_is_accepted(self):
         response = self.client.post(reverse("panel_user_add"), {
             "username": "noemail",
             "password": "Str0ng-Pass!42",
             "role": "outlet_manager",
             "outlets": [self.intl.pk],
         })
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(User.objects.filter(username="noemail").exists())
+        self.assertEqual(response.status_code, 302)
+        created = User.objects.get(username="noemail")
+        self.assertEqual(created.email, "")
 
     def test_add_user_with_duplicate_email_is_rejected(self):
         response = self.client.post(reverse("panel_user_add"), {
@@ -725,10 +736,10 @@ class SidebarRoleLabelTests(AcceptanceFixtures):
         self.assertNotContains(response, reverse("panel_changelog"))
         self.assertContains(response, reverse("panel_outlets"))
 
-    def test_brand_manager_nav_hides_head_office_only_links(self):
+    def test_brand_manager_nav_shows_users_but_not_structure(self):
         self.client.login(username="bm-sidebar", password="pass-bm")
         response = self.client.get(reverse("panel_dashboard"))
-        self.assertNotContains(response, reverse("panel_users"))
+        self.assertContains(response, reverse("panel_users"))
         self.assertNotContains(response, reverse("panel_brands"))
         self.assertContains(response, reverse("panel_outlets"))
 
@@ -884,7 +895,7 @@ class DepartmentCapabilityTests(AcceptanceFixtures):
         nav as leaking when it is not.
         """
         html = response.content.decode()
-        start = html.find('<nav class="panel-nav">')
+        start = html.find('<nav class="panel-nav"')
         self.assertNotEqual(start, -1, "sidebar nav not found in the response")
         end = html.find("</nav>", start)
         return html[start:end]
@@ -1001,13 +1012,12 @@ class PanelCapabilityCoverageTests(TestCase):
             f"Panel views with no capability declared: {sorted(unmapped)}",
         )
 
-    def test_the_bare_dashboard_route_is_also_gated(self):
-        # /dashboard/ is not under /panel/, so it must be declared as inline
-        # gated or it would silently escape the department gate.
-        from apps.core.middleware import INLINE_GATED_VIEWS
-
-        self.assertIn("dashboard", self._url_names())
-        self.assertIn("dashboard", INLINE_GATED_VIEWS)
+    def test_the_bare_dashboard_route_opens_the_panel_page(self):
+        # /dashboard/ is not a second page. It redirects into the panel, so
+        # the department gate on panel_analytics still applies.
+        response = self.client.get(reverse("dashboard"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("panel_analytics"))
 
     def test_capability_keys_are_real(self):
         from apps.core import panel_permissions as perms
@@ -1019,7 +1029,8 @@ class PanelCapabilityCoverageTests(TestCase):
     def test_exempt_views_are_auth_endpoints_only(self):
         from apps.core.middleware import CAPABILITY_EXEMPT_VIEWS
 
-        self.assertEqual(CAPABILITY_EXEMPT_VIEWS, {"panel_login", "panel_logout"})
+        self.assertEqual(CAPABILITY_EXEMPT_VIEWS, {"login", "logout"})
+        self.assertTrue({"login", "logout"} <= self._url_names())
 
 
 class UsersPanelTests(AcceptanceFixtures):
@@ -1102,6 +1113,128 @@ class UsersPanelTests(AcceptanceFixtures):
         self.assertFalse(User.objects.filter(username="ic-manager").exists())
 
 
+class BrandUserAssignsBranchUsersTests(AcceptanceFixtures):
+    """Django admin / Head Office creates the brand user.
+    That brand user assigns branch users from the custom dashboard.
+    A branch user only opens the branches they were given.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.other = Brand.objects.create(
+            name_en="Donar Istanbul", code="DONARIST", status="active",
+        )
+        cls.other_outlet = Outlet.objects.create(
+            code="DONARIST-LULU", official_name="Donar Istanbul Lulu",
+            brand=cls.other, slug="donarist-lulu", active=True,
+        )
+        cls.brand_user = User.objects.create_user(
+            "bm.kingchef", password="pass-brand", email="bm.kingchef@pasonsgrp.com",
+        )
+        OutletManager.objects.create(
+            user=cls.brand_user, role=OutletManager.Role.BRAND, brand=cls.brand,
+        )
+
+    def test_brand_user_creates_a_branch_user_for_one_branch(self):
+        self.client.login(username="bm.kingchef", password="pass-brand")
+        response = self.client.post(reverse("panel_user_add"), {
+            "username": "om.intl",
+            "password": "pass-branch",
+            "email": "om.intl@pasonsgrp.com",
+            "role": "brand_manager",
+            "brand": self.other.pk,
+            "outlets": [self.intl.pk, self.other_outlet.pk],
+        })
+        self.assertEqual(response.status_code, 302)
+        created = User.objects.get(username="om.intl")
+        profile = created.outlet_manager_profile
+        self.assertEqual(profile.role, OutletManager.Role.OUTLET)
+        self.assertFalse(created.is_staff)
+        self.assertEqual(list(profile.outlets.all()), [self.intl])
+
+        self.client.logout()
+        self.client.login(username="om.intl", password="pass-branch")
+        listing = self.client.get(reverse("panel_outlets"))
+        self.assertContains(listing, "International City")
+        self.assertNotContains(listing, "Al Nahda")
+        self.assertNotContains(listing, "Donar")
+        self.assertEqual(self.client.get(reverse("panel_users")).status_code, 403)
+
+    def test_brand_user_list_hides_other_brands_and_head_office(self):
+        self.client.login(username="bm.kingchef", password="pass-brand")
+        response = self.client.get(reverse("panel_users"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ic-manager")
+        self.assertNotContains(response, "headoffice")
+        body = response.content.split(b"<tbody>", 1)[1]
+        self.assertNotIn(b"bm.kingchef", body)
+        self.assertNotIn(b"headoffice", body)
+
+    def test_short_password_is_rejected(self):
+        self.client.login(username="bm.kingchef", password="pass-brand")
+        response = self.client.post(reverse("panel_user_add"), {
+            "username": "om.weak",
+            "password": "1",
+            "email": "om.weak@pasonsgrp.com",
+            "role": "outlet_manager",
+            "outlets": [self.intl.pk],
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "too short")
+        self.assertFalse(User.objects.filter(username="om.weak").exists())
+
+    def test_admin_brand_role_clears_staff_flag(self):
+        from django.contrib.admin.sites import site
+        from django.test import RequestFactory
+
+        person = User.objects.create_user(
+            "almost-head", password="pass-almost-head", email="almost@pasonsgrp.com",
+            is_staff=True,
+        )
+        admin_user = User.objects.create_superuser(
+            "root-admin", password="pass-root-admin", email="root@pasonsgrp.com",
+        )
+        model_admin = site._registry[User]
+        request = RequestFactory().post("/admin/auth/user/%s/change/" % person.pk)
+        request.user = admin_user
+        inline = model_admin.inlines[0](User, site)
+        formset_class = inline.get_formset(request, person)
+        prefix = formset_class().prefix
+        formset = formset_class(data={
+            f"{prefix}-TOTAL_FORMS": "1",
+            f"{prefix}-INITIAL_FORMS": "0",
+            f"{prefix}-MIN_NUM_FORMS": "0",
+            f"{prefix}-MAX_NUM_FORMS": "1",
+            f"{prefix}-0-role": OutletManager.Role.BRAND,
+            f"{prefix}-0-brand": str(self.brand.pk),
+            f"{prefix}-0-id": "",
+            f"{prefix}-0-user": str(person.pk),
+        }, instance=person)
+        self.assertTrue(formset.is_valid(), formset.errors)
+        model_admin.save_formset(request, None, formset, change=True)
+        person.refresh_from_db()
+        self.assertFalse(person.is_staff)
+        self.assertEqual(person.outlet_manager_profile.role, OutletManager.Role.BRAND)
+        self.assertEqual(person.outlet_manager_profile.brand, self.brand)
+
+    def test_brand_user_cannot_edit_head_office_or_another_brand(self):
+        self.client.login(username="bm.kingchef", password="pass-brand")
+        self.assertEqual(
+            self.client.get(reverse("panel_user_edit", args=[self.head.pk])).status_code,
+            403,
+        )
+        response = self.client.post(reverse("panel_user_add"), {
+            "username": "om.other",
+            "password": "pass-other",
+            "email": "om.other@pasonsgrp.com",
+            "role": "outlet_manager",
+            "outlets": [self.other_outlet.pk],
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(User.objects.filter(username="om.other").exists())
+
+
 class StructureLockTests(AcceptanceFixtures):
     def test_manager_cannot_add_outlet(self):
         self.client.login(username="ic-manager", password="pass-ic")
@@ -1167,7 +1300,7 @@ class MenuEditTests(AcceptanceFixtures):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.category = MenuCategory.objects.create(brand=cls.brand, name_en="Starters")
+        cls.category = MenuCategory.objects.create(brand=cls.brand, name_en=TOP_FOOD_CATEGORY)
         cls.base_item = MenuItem.objects.create(
             category=cls.category, brand=cls.brand, name_en="Hummus",
             regular_price=8, available=True,
@@ -1179,18 +1312,16 @@ class MenuEditTests(AcceptanceFixtures):
 
     def test_manager_sets_menu_source_for_own_branch(self):
         self.client.login(username="ic-manager", password="pass-ic")
+        pdf = SimpleUploadedFile("own.pdf", b"%PDF-1.4 own", content_type="application/pdf")
         response = self.client.post(reverse("panel_menus"), {
             "brand": self.brand.pk,
             "outlet": self.intl.pk,
-            "menu_type": "external_url",
-            "menu_url": "https://menu.kingchef.example/intl",
+            "menu_file": pdf,
         })
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(
-            MenuSource.objects.filter(
-                outlet=self.intl, menu_url="https://menu.kingchef.example/intl"
-            ).exists()
-        )
+        source = MenuSource.objects.get(outlet=self.intl)
+        self.assertEqual(source.menu_type, MenuSource.MenuType.PDF)
+        self.assertTrue(source.menu_file.name.endswith(".pdf"))
 
     def test_manager_cannot_set_brand_menu_source(self):
         self.client.login(username="ic-manager", password="pass-ic")
@@ -1271,6 +1402,37 @@ class MenuEditTests(AcceptanceFixtures):
         self.base_item.refresh_from_db()
         self.assertEqual(self.base_item.name_en, "Hummus")
         self.assertEqual(self.base_item.regular_price, 8)
+
+    def test_menu_items_page_shows_brand_lists_not_the_old_full_menu(self):
+        """The panel lists each brand's cards. Old full-menu rows stay off it."""
+        self.client.login(username="headoffice", password="pass-head")
+        old_cat = MenuCategory.objects.create(brand=self.brand, name_en="Main Course")
+        MenuItem.objects.create(
+            category=old_cat, brand=self.brand, outlet=None,
+            name_en="Old printed curry", regular_price=19, available=True,
+        )
+        response = self.client.get(reverse("panel_menu_items"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Hummus")
+        self.assertNotContains(response, "Old printed curry")
+        MenuItem.objects.filter(pk=self.base_item.pk).update(regular_price=0)
+        again = self.client.get(reverse("panel_menu_items"))
+        self.assertContains(again, "No price")
+
+    def test_brand_manager_can_add_a_dish_without_a_price(self):
+        self.client.login(username="headoffice", password="pass-head")
+        response = self.client.post(reverse("panel_menu_item_add"), {
+            "brand": self.brand.pk,
+            "outlet": "",
+            "category": self.category.pk,
+            "name_en": "House lemonade",
+            "regular_price": "",
+            "available": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        added = MenuItem.objects.get(name_en="House lemonade")
+        self.assertIsNone(added.outlet_id)
+        self.assertEqual(added.regular_price, 0)
 
     def test_manager_creates_branch_override_of_brand_item(self):
         self.client.login(username="ic-manager", password="pass-ic")
@@ -1364,7 +1526,7 @@ class MenuCardPageTests(AcceptanceFixtures):
             "brand": self.brand.pk,
             "outlet": self.intl.pk,
             "menu_type": "pages",
-            "menu_file": self.PDF,
+            "menu_file": self._pdf(),
         })
         self.assertEqual(response.status_code, 302)
         source = MenuSource.objects.get(outlet=self.intl)
@@ -1383,6 +1545,74 @@ class MenuCardPageTests(AcceptanceFixtures):
         self.assertEqual(response.status_code, 302)
         source = MenuSource.objects.get(outlet=self.intl)
         self.assertFalse(source.menu_file)
+
+    def _pdf(self, name="menu.pdf"):
+        return SimpleUploadedFile(name, b"%PDF-1.4 test menu", content_type="application/pdf")
+
+    def test_brand_manager_adds_replaces_and_removes_brand_pdf(self):
+        brand_user = User.objects.create_user("bm-menus", password="pass-bm")
+        profile = OutletManager.objects.create(
+            user=brand_user, role=OutletManager.Role.BRAND, brand=self.brand,
+        )
+        self.client.login(username="bm-menus", password="pass-bm")
+        added = self.client.post(reverse("panel_menus"), {
+            "brand": self.brand.pk,
+            "outlet": "",
+            "menu_file": self._pdf("brand.pdf"),
+        })
+        self.assertEqual(added.status_code, 302)
+        source = MenuSource.objects.get(brand=self.brand, outlet__isnull=True)
+        self.assertEqual(source.menu_type, MenuSource.MenuType.PDF)
+        self.assertTrue(source.menu_file.name.endswith(".pdf"))
+
+        replaced = self.client.post(
+            reverse("panel_menu_pdf_replace", args=[source.pk]),
+            {"menu_file": self._pdf("brand-new.pdf")},
+        )
+        self.assertEqual(replaced.status_code, 302)
+        source.refresh_from_db()
+        self.assertTrue(source.menu_file.name.endswith("brand-new.pdf"))
+
+        removed = self.client.post(reverse("panel_menu_pdf_delete", args=[source.pk]))
+        self.assertEqual(removed.status_code, 302)
+        self.assertFalse(MenuSource.objects.filter(pk=source.pk).exists())
+        self.assertTrue(profile.pk)
+
+    def test_branch_manager_replaces_own_pdf_and_cannot_touch_another(self):
+        own = MenuSource.objects.get(outlet=self.intl)
+        other_brand = Brand.objects.create(name_en="Other", code="OTHER-PDF")
+        other_outlet = Outlet.objects.create(
+            code="OTHER-ONE", slug="other-one", official_name="Other Branch",
+            brand=other_brand, city="Dubai", active=True,
+        )
+        other = MenuSource.objects.create(
+            brand=other_brand, outlet=other_outlet,
+            menu_type=MenuSource.MenuType.PDF, active=True,
+        )
+        self.client.login(username="ic-manager", password="pass-ic")
+        page = self.client.get(reverse("panel_menus"))
+        self.assertContains(page, "Replace")
+        self.assertContains(page, "Remove")
+        self.assertNotContains(page, "Other Branch")
+
+        replaced = self.client.post(
+            reverse("panel_menu_pdf_replace", args=[own.pk]),
+            {"menu_file": self._pdf("branch-new.pdf")},
+        )
+        self.assertEqual(replaced.status_code, 302)
+        own.refresh_from_db()
+        self.assertEqual(own.menu_type, MenuSource.MenuType.PDF)
+        self.assertTrue(own.menu_file.name.endswith("branch-new.pdf"))
+
+        blocked = self.client.post(
+            reverse("panel_menu_pdf_delete", args=[other.pk]),
+        )
+        self.assertEqual(blocked.status_code, 404)
+        self.assertTrue(MenuSource.objects.filter(pk=other.pk).exists())
+
+        removed = self.client.post(reverse("panel_menu_pdf_delete", args=[own.pk]))
+        self.assertEqual(removed.status_code, 302)
+        self.assertFalse(MenuSource.objects.filter(pk=own.pk).exists())
 
 
 class CrmTests(AcceptanceFixtures):
@@ -1692,22 +1922,46 @@ class SeedStaffCommandTests(TestCase):
     def test_dry_run_writes_nothing(self):
         output = self._run("--dry-run")
         self.assertFalse(User.objects.exists(), "a dry run created a user")
-        self.assertIn("bm.branda", output)
+        self.assertIn("brand_manager", output)
+        self.assertIn("om.branda-one", output)
+        self.assertNotIn("bm.branda", output)
         self.assertIn("Dry run", output)
 
-    def test_run_creates_two_brand_three_outlet_and_three_head_office(self):
+    def test_run_creates_one_all_brands_user_and_one_user_per_branch(self):
         self._run("--password", "pw-123456")
-        self.assertEqual(User.objects.count(), 8)
+        # 1 all-brands + 3 branch + 3 head office. No per-brand manager.
+        self.assertEqual(User.objects.count(), 7)
+        self.assertFalse(User.objects.filter(username="bm.branda").exists())
         roles = {u.username: u.outlet_manager_profile.role for u in User.objects.all()}
-        self.assertEqual(roles["bm.branda"], OutletManager.Role.BRAND)
+        self.assertEqual(roles["brand_manager"], OutletManager.Role.BRAND)
         self.assertEqual(roles["om.branda-one"], OutletManager.Role.OUTLET)
 
-    def test_brand_manager_scope_is_the_whole_brand(self):
+    def test_all_brands_manager_uses_the_same_dashboard(self):
         self._run("--password", "pw-123456")
-        bm = User.objects.get(username="bm.branda")
+        manager = User.objects.get(username="brand_manager")
+        self.assertIsNone(manager.outlet_manager_profile.brand)
+        self.assertFalse(manager.is_staff)
         self.assertEqual(
-            set(scoped_outlets(bm).values_list("code", flat=True)),
-            {"BRANDA-ONE", "BRANDA-TWO"},
+            set(scoped_outlets(manager).values_list("code", flat=True)),
+            {"BRANDA-ONE", "BRANDA-TWO", "BRANDB-ONE"},
+        )
+        self.assertEqual(
+            set(scoped_brands(manager).values_list("code", flat=True)),
+            {"BRANDA", "BRANDB"},
+        )
+        self.assertTrue(self.client.login(username="brand_manager", password="pw-123456"))
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertContains(response, "Brand Manager")
+        self.assertContains(response, "All brands")
+        self.assertContains(response, reverse("panel_outlets"))
+        self.assertContains(response, reverse("panel_users"))
+
+    def test_no_separate_brand_manager_is_created(self):
+        self._run("--password", "pw-123456")
+        self.assertFalse(
+            OutletManager.objects.filter(role=OutletManager.Role.BRAND)
+            .exclude(user__username="brand_manager")
+            .exists()
         )
 
     def test_outlet_manager_scope_is_one_branch_and_never_staff(self):
@@ -1733,26 +1987,26 @@ class SeedStaffCommandTests(TestCase):
 
     def test_second_run_creates_nothing_and_keeps_the_password(self):
         self._run("--password", "first-pass")
-        before = User.objects.get(username="bm.branda").password
+        before = User.objects.get(username="brand_manager").password
         output = self._run()
-        self.assertEqual(User.objects.count(), 8)
-        self.assertEqual(User.objects.get(username="bm.branda").password, before)
-        self.assertIn("refreshed 8", output)
-        self.assertTrue(self.client.login(username="bm.branda", password="first-pass"))
+        self.assertEqual(User.objects.count(), 7)
+        self.assertEqual(User.objects.get(username="brand_manager").password, before)
+        self.assertIn("refreshed 7", output)
+        self.assertTrue(self.client.login(username="brand_manager", password="first-pass"))
 
     def test_brands_filter_leaves_a_brand_out(self):
         self._run("--password", "pw-123456", "--brands", "BRANDA")
-        self.assertTrue(User.objects.filter(username="bm.branda").exists())
-        self.assertFalse(User.objects.filter(username="bm.brandb").exists())
+        self.assertTrue(User.objects.filter(username="om.branda-one").exists())
         self.assertFalse(User.objects.filter(username="om.brandb-one").exists())
+        self.assertTrue(User.objects.filter(username="brand_manager").exists())
 
     def test_email_domain_is_configurable(self):
         self._run("--password", "pw-123456", "--domain", "example.test")
         self.assertEqual(
-            User.objects.get(username="bm.branda").email, "bm.branda@example.test"
+            User.objects.get(username="brand_manager").email, "brand_manager@example.test"
         )
 
     def test_style_b_uses_the_manager_prefix(self):
         self._run("--password", "pw-123456", "--style", "b")
-        self.assertTrue(User.objects.filter(username="manager.branda").exists())
+        self.assertTrue(User.objects.filter(username="brand_manager").exists())
         self.assertTrue(User.objects.filter(username="manager.branda_one").exists())

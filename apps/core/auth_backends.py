@@ -1,11 +1,9 @@
 """
-Staff sign-in by email address or username.
+Sign-in identity for the staff panel.
 
-The panel asks for a single identity field. Django's default ``ModelBackend``
-matches the username only, so an account created with its email address (for
-example ``bm.kingchef@pasonsgrp.com``) could not sign in unless the whole
-address was typed into the username box. This backend lets a person type
-either one, and leaves every existing username login working unchanged.
+The superuser may type a username or an email address. Brand users and
+branch users sign in with a username only. An email address stored on
+those accounts is not a login, so typing it must not open the panel.
 """
 
 from django.contrib.auth import get_user_model
@@ -15,7 +13,7 @@ UserModel = get_user_model()
 
 
 class EmailOrUsernameBackend(ModelBackend):
-    """Authenticate by email address (case-insensitive) or by username.
+    """Username for every account. Email only for the superuser.
 
     Listed before ``ModelBackend`` in ``AUTHENTICATION_BACKENDS``. It returns
     ``None`` when it cannot match, so Django simply moves on to the next
@@ -44,10 +42,10 @@ class EmailOrUsernameBackend(ModelBackend):
     def _find_user(identity):
         """Resolve one identity string to a user, or None.
 
-        Tried in order: an exact username match (case-insensitive), then an
-        email match (case-insensitive). If two accounts share an email the
-        lookup refuses rather than guessing, since a duplicate address would
-        otherwise make sign-in ambiguous.
+        Username matches every account, case-insensitive. An email match is
+        accepted only when the single matching account is a superuser. Brand
+        and branch users must use their username, even if the typed string
+        equals an email stored on their account.
         """
         identity = (identity or "").strip()
         if not identity:
@@ -61,5 +59,7 @@ class EmailOrUsernameBackend(ModelBackend):
         except UserModel.MultipleObjectsReturned:
             return None
 
-        matches = list(UserModel.objects.filter(email__iexact=identity)[:2])
+        matches = list(
+            UserModel.objects.filter(email__iexact=identity, is_superuser=True)[:2]
+        )
         return matches[0] if len(matches) == 1 else None

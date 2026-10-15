@@ -370,6 +370,7 @@ class QrCode(TimeStampedModel):
     """
 
     class SourceType(models.TextChoices):
+        BRANCH = "branch", "Branch"
         ENTRANCE = "entrance", "Entrance"
         TABLE = "table", "Table"
         COUNTER = "counter", "Counter"
@@ -491,6 +492,7 @@ class OutletManager(TimeStampedModel):
     Two roles (brand/branch structural changes stay head-office only):
     - outlet_manager: manages the assigned outlets (branches)
     - brand_manager: manages ALL outlets of one brand
+    - brand_manager with no brand: manages every brand on the same dashboard
     """
 
     class Role(models.TextChoices):
@@ -509,7 +511,7 @@ class OutletManager(TimeStampedModel):
         null=True,
         blank=True,
         related_name="managers",
-        help_text="Set for brand managers: scope is all outlets of this brand",
+        help_text="Set for one brand. Leave empty for a manager of every brand.",
     )
     outlets = models.ManyToManyField(Outlet, related_name="managers", blank=True)
     can_edit_contact = models.BooleanField(default=False)
@@ -531,9 +533,15 @@ class OutletManager(TimeStampedModel):
         return f"{self.user.username} ({role})"
 
     def managed_outlets(self):
-        """Outlets in this manager's scope (all brand outlets for brand managers)."""
+        """Outlets in this manager's scope.
+
+        A brand manager with a brand sees that brand's branches. A brand
+        manager with no brand sees every branch, on the same dashboard.
+        """
         if self.role == self.Role.BRAND and self.brand_id:
             return Outlet.objects.filter(brand_id=self.brand_id)
+        if self.role == self.Role.BRAND:
+            return Outlet.objects.all()
         return self.outlets.all()
 
 

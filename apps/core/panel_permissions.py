@@ -2,6 +2,7 @@
 Role and scope enforcement for /panel/ (Spec Part D).
 """
 
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from apps.core.models import Outlet, Brand, OutletManager, ChangeLog
@@ -24,14 +25,20 @@ CAP_ANALYTICS = "analytics"
 CAP_USERS = "users"
 CAP_CHANGELOG = "changelog"
 
-# Managers (brand or branch) run their outlets: every section except the ones
-# that change platform structure or staff accounts. This set reproduces what
-# managers could already reach before departments existed, so no existing
-# behaviour changes.
-MANAGER_CAPABILITIES = frozenset({
+# Branch managers run their assigned outlets. They do not create staff or
+# change platform structure.
+OUTLET_MANAGER_CAPABILITIES = frozenset({
     CAP_DASHBOARD, CAP_OUTLETS, CAP_QRCODES, CAP_SPECIALS, CAP_MENUS,
     CAP_LEADS, CAP_FEEDBACK, CAP_ANALYTICS, CAP_CHANGELOG,
 })
+
+# Brand managers use the same dashboard, plus Users, so they can create the
+# branch managers for their own brand. Brands and branches stay with Django
+# admin / Head Office.
+BRAND_MANAGER_CAPABILITIES = OUTLET_MANAGER_CAPABILITIES | frozenset({CAP_USERS})
+
+# Kept so older imports still name the branch-manager set.
+MANAGER_CAPABILITIES = OUTLET_MANAGER_CAPABILITIES
 
 # What each Head Office department may open, keyed by Department.code. An
 # unknown code grants nothing (fail closed), so adding a department row
@@ -109,8 +116,9 @@ def role_label(user):
     if not profile:
         return "No access"
     if profile.role == OutletManager.Role.BRAND:
-        brand = profile.brand.name_en if profile.brand else "no brand set"
-        return f"Brand Manager \u00b7 {brand}"
+        if profile.brand is None:
+            return "Brand Manager \u00b7 All brands"
+        return f"Brand Manager \u00b7 {profile.brand.name_en}"
     names = ", ".join(profile.outlets.values_list("official_name", flat=True))
     return f"Outlet Manager \u00b7 {names or 'no branches assigned'}"
 
@@ -141,6 +149,7 @@ def apply_role_to_user(user, role, brand, outlets, department=None):
         profile.outlets.clear()
         profile.department = department
     elif role == "brand_manager":
+        # A brand means one brand. No brand means every brand, same dashboard.
         profile.role = OutletManager.Role.BRAND
         profile.brand = brand
         profile.outlets.clear()
@@ -174,8 +183,11 @@ def user_capabilities(user):
                 return frozenset({CAP_DASHBOARD})
             return caps
         return ALL_CAPABILITIES
-    if getattr(user, "outlet_manager_profile", None) is not None:
-        return MANAGER_CAPABILITIES
+    profile = getattr(user, "outlet_manager_profile", None)
+    if profile is not None:
+        if profile.role == OutletManager.Role.BRAND:
+            return BRAND_MANAGER_CAPABILITIES
+        return OUTLET_MANAGER_CAPABILITIES
     # Authenticated but holding no role: the dashboard stays reachable so
     # signing in lands on a page rather than a 403. It will simply show
     # nothing, because their scope is empty.
@@ -229,6 +241,78 @@ def check_outlet_permission(user, outlet):
         allowed = scoped_outlets(user).filter(pk=outlet.pk).exists()
         if not allowed:
             raise PermissionDenied("You do not have access to this outlet.")
+
+
+def brand_for_manager(user):
+    """The one brand a brand manager may staff, or None.
+
+    An empty brand means every brand (the all-brands manager). Head Office
+    and branch managers return None here; callers check the role first.
+    """
+    profile = getattr(user, "outlet_manager_profile", None)
+    if not profile or profile.role != OutletManager.Role.BRAND:
+        return None
+    return profile.brand
+
+
+def can_manage_staff(user):
+    """Django admin / Head Office, or a brand manager on the custom dashboard."""
+    return is_head_office(user) or is_brand_manager(user)
+
+
+def staff_rows_for(user):
+    """Accounts this person may see on the Users page.
+
+    Head Office sees everyone. A brand manager sees only the branch managers
+    of their brand, never other brands, never Head Office, never themselves
+    as a peer brand account.
+    """
+    users = (
+        User.objects.all()
+        .select_related("outlet_manager_profile__brand", "outlet_manager_profile__department")
+        .prefetch_related("outlet_manager_profile__outlets")
+        .order_by("username")
+    )
+    if is_head_office(user):
+        return users
+    brand = brand_for_manager(user)
+    if brand is None and is_brand_manager(user):
+        return users.filter(
+            outlet_manager_profile__role=OutletManager.Role.OUTLET,
+        )
+    if brand is None:
+        return User.objects.none()
+    return users.filter(
+        outlet_manager_profile__role=OutletManager.Role.OUTLET,
+        outlet_manager_profile__outlets__brand=brand,
+    ).distinct()
+
+
+def actor_may_edit_user(actor, target):
+    """True when actor may open or change this account.
+
+    A brand manager may only touch branch managers whose branches are all
+    inside their brand. They cannot promote someone, edit Head Office, edit
+    another brand manager, or reach a branch of another brand.
+    """
+    if not actor.is_authenticated or actor.pk == getattr(target, "pk", None):
+        return False
+    if is_head_office(actor):
+        return True
+    if not is_brand_manager(actor):
+        return False
+    if is_head_office(target):
+        return False
+    profile = getattr(target, "outlet_manager_profile", None)
+    if profile is None or profile.role != OutletManager.Role.OUTLET:
+        return False
+    brand = brand_for_manager(actor)
+    outlets = profile.outlets.all()
+    if not outlets.exists():
+        return False
+    if brand is None:
+        return True
+    return not outlets.exclude(brand=brand).exists()
 
 
 def log_change(user, action, object_repr, brand=None, outlet=None, details=None):

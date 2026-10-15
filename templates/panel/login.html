@@ -95,12 +95,12 @@
     {% csrf_token %}
     {% if form.errors %}
     <div class="login-error" role="alert">
-      Invalid email/username or password. Please try again.
+      Invalid username or password. Please try again.
     </div>
     {% endif %}
 
     <div class="login-field">
-      <label for="id_username">Email or username</label>
+      <label for="id_username">Username</label>
       <input type="text" name="username" id="id_username" autocomplete="username" autofocus required>
     </div>
 

@@ -134,6 +134,18 @@ _BRAND_DIET = {
 }
 
 
+def retire_full_menus():
+    """
+    Guest cards are the two Top 10 lists only. The old full-menu rows
+    (printed PDF extracts and demo dishes) stay out of the panel and the
+    guest page. Photos and prices on the Top 10 rows are kept.
+    """
+    return MenuItem.objects.exclude(
+        category__name_en__in=(TOP_FOOD_CATEGORY, TOP_DRINK_CATEGORY),
+        outlet__isnull=True,
+    ).delete()[0]
+
+
 def seed_top_picks():
     """
     Create or refresh the two top-pick lists for every brand in TOP_PICKS.

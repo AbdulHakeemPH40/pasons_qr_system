@@ -108,6 +108,17 @@ h1, h2, h3, h4 {
   padding-block-end: var(--sp-7);
 }
 
+/* Staff panel is a workspace, not a guest card. Width and padding live
+   on .panel-layout so the sidebar can fill the viewport edge to edge. */
+.page--panel {
+  --page-max: none;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  min-height: 100dvh;
+}
+
 /* ==========================================================================
    Glass primitives (glassmorphism / apple-design):
    translucent white fill + backdrop blur & saturate, 1px white border

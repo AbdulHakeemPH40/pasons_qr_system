@@ -234,6 +234,19 @@ body.theme-warm .avatar {
 
 body.theme-warm .avatar img { object-fit: contain; padding: 12%; }
 
+/* Donar Istanbul's plate is #231F20 (sampled from the logo file). Any other
+   dark, and the disc reads as a different background behind the mark. */
+body.theme-warm .avatar--on-dark {
+  background: #231F20;
+  /* No pale halo. A light ring reads as a second, lighter dark around the plate. */
+  box-shadow: 0 10px 28px rgba(35, 31, 32, 0.22);
+}
+
+body.theme-warm .avatar--on-dark img {
+  padding: 0;
+  object-fit: cover;
+}
+
 body.theme-warm .scan-identity .avatar,
 body.theme-warm .identity-card .avatar {
   width: 104px;
@@ -1495,6 +1508,12 @@ body.theme-warm .page--glass .menu-pdf {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
+  /* The desktop phone frame is a flex column. Without a floor the tile
+     shrinks to the kicker line and overflow:hidden hides the title and
+     the Open button. min-height: min-content keeps the whole button. */
+  flex-shrink: 0;
+  min-height: min-content;
+  height: auto;
   gap: 14px;
   padding: 13px 13px 13px 13px;
   border-radius: 26px;

@@ -1,12 +1,71 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
 
-from .models import Brand, Campaign, Group, Outlet, PageModule, QrCode, SmartPage
+from .models import (
+    Brand, Campaign, Department, Group, Outlet, OutletManager, PageModule,
+    QrCode, SmartPage,
+)
 
 
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
     list_display = ("name", "primary_domain", "default_language", "status")
     search_fields = ("name", "legal_name")
+
+
+class OutletManagerInline(admin.StackedInline):
+    """Attach the custom-dashboard role to a Django user.
+
+    Superuser sets role to Brand Manager and picks one brand. That person
+    then creates branch users from the custom dashboard. A branch user is
+    role Outlet Manager plus the branches they may open.
+
+    Saving a brand or branch role clears Staff status. Staff status is
+    Head Office, and a brand user with that flag would see every brand.
+    """
+
+    model = OutletManager
+    fk_name = "user"
+    extra = 0
+    filter_horizontal = ("outlets",)
+    autocomplete_fields = ("brand", "department")
+
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    inlines = (OutletManagerInline,)
+
+    def save_formset(self, request, form, formset, change):
+        """A brand or branch role cannot also be Staff.
+
+        Staff status means Head Office and opens every brand. The superuser
+        form can tick both. This drops Staff when the saved role is a manager,
+        so a brand user cannot become Head Office by accident.
+        """
+        instances = formset.save(commit=False)
+        for profile in instances:
+            if not isinstance(profile, OutletManager):
+                profile.save()
+                continue
+            if profile.role in (OutletManager.Role.BRAND, OutletManager.Role.OUTLET):
+                if profile.user.is_staff or profile.user.is_superuser:
+                    profile.user.is_staff = False
+                    profile.user.is_superuser = False
+                    profile.user.save(update_fields=["is_staff", "is_superuser"])
+            profile.save()
+        formset.save_m2m()
+        for obj in formset.deleted_objects:
+            obj.delete()
+
+
+@admin.register(Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ("name_en", "code", "is_active")
+    search_fields = ("name_en", "code")
 
 
 @admin.register(Brand)

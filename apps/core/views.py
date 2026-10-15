@@ -61,23 +61,55 @@ def _menu_groups(brand, outlet):
     return groups
 
 
+def _remember_shop(request, slug):
+    """Remember the shop this browser last opened, so / can reopen it."""
+    request.session["last_shop"] = slug
+
+
+def _open_remembered_shop(request):
+    """The shop this browser last opened, if that page is still published."""
+    slug = request.session.get("last_shop")
+    if not slug:
+        return None
+    page = (
+        SmartPage.objects.select_related("brand", "outlet")
+        .filter(slug=slug, published=True, brand__status="active")
+        .first()
+    )
+    if page is None or (page.outlet and not page.outlet.active):
+        return None
+    qr = _landing_qr(page.brand, page.outlet)
+    if qr is None:
+        return None
+    return render(
+        request,
+        "outlet_landing.html",
+        _landing_context(request, page.brand, page.outlet, qr),
+    )
+
+
 @require_GET
 def home(request):
     """
-    Public entry is the scanned shop, not a brand directory.
+    Public entry is the shop this browser last opened, not a brand directory.
 
-    A table QR always lands on /q/<token>/ (that outlet's five actions).
-    Opening / with no token uses the most recently scanned active QR so
-    the same window is what a person sees, never the four-brand list.
+    Opening /p/<slug>/ or scanning /q/<token>/ remembers that shop. The next
+    visit to / reopens that same window. A first visit, with nothing
+    remembered, uses the most recently scanned active QR.
     """
+    remembered = _open_remembered_shop(request)
+    if remembered is not None:
+        return remembered
     qr = (
         QrCode.objects.filter(active=True, brand__status="active")
-        .select_related("brand", "outlet")
+        .select_related("brand", "outlet", "destination_page")
         .order_by("-last_scanned_at", "-id")
         .first()
     )
     if qr is None:
         return render(request, "404.html", status=404)
+    if qr.destination_page_id and qr.destination_page.published:
+        _remember_shop(request, qr.destination_page.slug)
     return qr_redirect(request, qr.redirect_key)
 
 
@@ -108,6 +140,7 @@ def smart_page(request, slug):
 
     # Old printed /p/<slug>/ links open the same shop window a scan opens.
     # The location picker is not a customer page, so this is the only GET path.
+    _remember_shop(request, slug)
     return render(
         request,
         "outlet_landing.html",
@@ -384,6 +417,8 @@ def qr_redirect(request, key):
 
     # Store resolved context in signed session (source of truth)
     request.session["qr"] = qr.pk
+    if qr.destination_page_id:
+        _remember_shop(request, qr.destination_page.slug)
 
     return render(
         request,

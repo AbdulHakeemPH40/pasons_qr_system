@@ -28,7 +28,7 @@
         {% for page in pages %}
         <a class="brand-card glass glass--lg reveal" style="--i: {{ forloop.counter }}"
           href="{% url 'smart_page' page.slug %}">
-          <div class="avatar avatar--lg">
+          <div class="avatar avatar--lg{% if page.brand.code == 'DONARIST' %} avatar--on-dark{% endif %}">
             {% if page.brand.logo %}
             {% with logo_webp=page.brand.logo|deriv_url:162 %}
             <picture>

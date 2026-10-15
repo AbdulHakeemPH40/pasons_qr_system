@@ -4,7 +4,11 @@
 <div class="panel-header">
   <div>
     <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">{% if target %}Edit User: {{ target.username }}{% else %}Add Staff User{% endif %}</h1>
-    <p class="muted" style="margin: 4px 0 0;">Roles decide what this person can do. Only Head Office creates brands and branches.</p>
+    {% if is_brand_manager %}
+    <p class="muted" style="margin: 4px 0 0;">This person will sign in to the branch dashboard for the branches you assign. They cannot see other brands.</p>
+    {% else %}
+    <p class="muted" style="margin: 4px 0 0;">A brand user manages one brand. A branch user only opens the branches you assign.</p>
+    {% endif %}
   </div>
 </div>
 
@@ -31,23 +35,31 @@
     </div>
 
     <div>
-      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Email (used to sign in)</label>
-      <input type="email" name="email" value="{{ target.email|default:'' }}" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Email (optional, not used to sign in)</label>
+      <input type="email" name="email" value="{{ target.email|default:'' }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px;">
     </div>
 
+    {% if is_brand_manager %}
+    <input type="hidden" name="role" value="outlet_manager">
+    <div>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Role</label>
+      <p style="margin: 0;">Branch user. They open only the branches you select below.</p>
+    </div>
+    {% else %}
     <div>
       <label style="display: block; font-weight: 600; margin-bottom: 4px;">Role</label>
       <select name="role" id="role-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
         <option value="head_office" {% if current_role == "head_office" %}selected{% endif %}>Head Office — brands, branches and staff; scope set by department</option>
-        <option value="brand_manager" {% if current_role == "brand_manager" %}selected{% endif %}>Brand Manager — all branches of one brand</option>
-        <option value="outlet_manager" {% if not target or current_role == "outlet_manager" %}selected{% endif %}>Outlet Manager — selected branches only</option>
+        <option value="brand_manager" {% if current_role == "brand_manager" %}selected{% endif %}>Brand user — one brand, then they assign branch users</option>
+        <option value="outlet_manager" {% if not target or current_role == "outlet_manager" %}selected{% endif %}>Branch user — selected branches only</option>
       </select>
     </div>
+    {% endif %}
 
-    <div id="brand-field">
+    <div id="brand-field" {% if is_brand_manager %}style="display:none"{% endif %}>
       <label style="display: block; font-weight: 600; margin-bottom: 4px;">Brand (for Brand Manager)</label>
       <select name="brand" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-        <option value="">— select brand —</option>
+        <option value="">— all brands —</option>
         {% for b in brands %}
         <option value="{{ b.pk }}" {% if current_brand and current_brand.pk == b.pk %}selected{% endif %}>{{ b.name_en }}</option>
         {% endfor %}
@@ -55,7 +67,7 @@
     </div>
 
     <div id="outlets-field">
-      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Branches (for Outlet Manager — hold Ctrl to select multiple)</label>
+      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Branches this person may open{% if not is_brand_manager %} (hold Ctrl to select more than one){% endif %}</label>
       <select name="outlets" multiple size="6" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
         {% for o in outlets %}
         <option value="{{ o.pk }}" {% if o.pk in current_outlets %}selected{% endif %}>{{ o.brand.name_en }} — {{ o.official_name }}</option>
@@ -63,7 +75,7 @@
       </select>
     </div>
 
-    <div id="department-field">
+    <div id="department-field" {% if is_brand_manager %}style="display:none"{% endif %}>
       <label style="display: block; font-weight: 600; margin-bottom: 4px;">Department (for Head Office)</label>
       <select name="department" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
         <option value="">— no department (full access) —</option>
@@ -113,6 +125,7 @@
       outletsField.style.display = role === 'outlet_manager' ? '' : 'none';
       departmentField.style.display = role === 'head_office' ? '' : 'none';
     }
+    if (!roleSelect) return;
     roleSelect.addEventListener('change', sync);
     sync();
   })();

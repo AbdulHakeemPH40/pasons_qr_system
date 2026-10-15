@@ -14,6 +14,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 from apps.analytics import views as analytics_views
 from apps.core import views
@@ -71,6 +72,8 @@ urlpatterns = [
     path("panel/specials/<int:pk>/edit/", panel_views.panel_special_edit, name="panel_special_edit"),
     path("panel/specials/<int:pk>/toggle/", panel_views.panel_special_toggle, name="panel_special_toggle"),
     path("panel/menus/", panel_views.panel_menus, name="panel_menus"),
+    path("panel/menus/<int:pk>/replace/", panel_views.panel_menu_pdf_replace, name="panel_menu_pdf_replace"),
+    path("panel/menus/<int:pk>/delete/", panel_views.panel_menu_pdf_delete, name="panel_menu_pdf_delete"),
     path("panel/menus/items/", panel_views.panel_menu_items, name="panel_menu_items"),
     path("panel/menus/items/add/", panel_views.panel_menu_item_add, name="panel_menu_item_add"),
     path("panel/menus/items/<int:pk>/edit/", panel_views.panel_menu_item_edit, name="panel_menu_item_edit"),
@@ -87,7 +90,11 @@ urlpatterns = [
     path("panel/analytics/", analytics_views.dashboard, name="panel_analytics"),
     path("panel/changelog/", panel_views.panel_changelog, name="panel_changelog"),
 
-    path("dashboard/", analytics_views.dashboard, name="dashboard"),
+    path(
+        "dashboard/",
+        RedirectView.as_view(pattern_name="panel_analytics", permanent=False),
+        name="dashboard",
+    ),
 
     # Review assist API (spec section 39) — POST {"text": ...} -> 6 variants.
     path("api/review-assist/", views.api_review_assist, name="review_assist"),

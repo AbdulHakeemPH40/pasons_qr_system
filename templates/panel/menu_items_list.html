@@ -1,101 +1,136 @@
 {% extends "panel/base_panel.html" %}
 
+{% block extra_css %}
+<style>
+  .dish-board { display: flex; flex-direction: column; gap: 1.25rem; }
+  .brand-board {
+    background: #fff;
+    border: 1px solid rgba(49, 69, 45, 0.07);
+    border-radius: 1.15rem;
+    box-shadow: 0 10px 28px rgba(49, 69, 45, 0.05);
+    overflow: hidden;
+  }
+  .brand-board header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.95rem 1.1rem 0.8rem;
+    border-bottom: 1px solid rgba(49, 69, 45, 0.08);
+  }
+  .brand-board header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    letter-spacing: -0.02em;
+    color: var(--forest);
+  }
+  .brand-board header span {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 650;
+  }
+  .dish-lane { padding: 0.85rem 1.1rem 1rem; }
+  .dish-lane + .dish-lane { border-top: 1px solid rgba(49, 69, 45, 0.06); }
+  .dish-lane h3 {
+    margin: 0 0 0.65rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .dish-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) 7rem auto;
+    gap: 0.7rem;
+    align-items: center;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid rgba(49, 69, 45, 0.06);
+  }
+  .dish-row:last-child { border-bottom: 0; }
+  .dish-name { min-width: 0; }
+  .dish-name strong {
+    display: block;
+    overflow-wrap: anywhere;
+    letter-spacing: -0.01em;
+  }
+  .dish-name small { color: var(--text-secondary); }
+  .dish-price {
+    font-variant-numeric: tabular-nums;
+    color: var(--forest);
+    font-weight: 650;
+  }
+  .dish-price.is-blank { color: var(--text-secondary); font-weight: 500; }
+  .dish-actions { display: flex; gap: 0.4rem; justify-content: flex-end; flex-wrap: wrap; }
+  .dish-note {
+    margin: 0;
+    padding: 0.7rem 1.1rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+  @media (max-width: 720px) {
+    .dish-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .dish-price { grid-column: 1; }
+    .dish-actions { grid-column: 2; grid-row: 1 / span 2; }
+  }
+</style>
+{% endblock %}
+
 {% block panel_content %}
 <div class="panel-header">
   <div>
-    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Menu Items</h1>
-    <p class="muted" style="margin: 4px 0 0;">Brand-level items are managed by Head Office. Branch managers can upload photos on any item and fully manage their own branch items.</p>
+    <h1>Menu items</h1>
+    <p>Each brand keeps about ten foods and ten drinks. Price stays off the guest card until you add one.</p>
   </div>
-  <div>
-    <a href="{% url 'panel_menu_item_add' %}" class="btn btn-primary btn-sm">+ Add Item</a>
-  </div>
+  {% if can_edit %}
+  <a href="{% url 'panel_menu_item_add' %}" class="btn btn-primary btn-sm">Add a dish</a>
+  {% endif %}
 </div>
 
-<form method="get" style="display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); flex-wrap: wrap;">
-  <select name="outlet" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
-    <option value="">All items in scope</option>
-    {% for o in outlets %}
-    <option value="{{ o.pk }}" {% if active_outlet == o.pk|stringformat:"s" %}selected{% endif %}>{{ o.official_name }}</option>
+{% if brands|length > 1 %}
+<form method="get" style="display:flex; gap:0.5rem; margin:0 0 1rem; flex-wrap:wrap;">
+  <select name="brand" aria-label="Brand" style="padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#fff;">
+    <option value="">All brands</option>
+    {% for b in brands %}
+    <option value="{{ b.pk }}" {% if active_brand == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name_en }}</option>
     {% endfor %}
   </select>
-  <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+  <button type="submit" class="btn btn-outline btn-sm">Show</button>
 </form>
+{% endif %}
 
-<div style="overflow-x: auto;">
-  <table class="panel-table">
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th>Category</th>
-        <th>Scope</th>
-        <th>Price</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in items %}
-      <tr>
-        <td>
-          <strong>{{ item.name_en }}</strong>
-          {% if item.name_ar %}<div class="caption muted" dir="rtl">{{ item.name_ar }}</div>{% endif %}
-          {% if item.overrides %}<div class="caption" style="color: var(--leaf);">Branch version of a brand item</div>{% endif %}
-        </td>
-        <td>{{ item.category.name_en }}</td>
-        <td>{{ item.outlet.official_name|default:"Whole brand" }}</td>
-        <td>
-          {% if not item.regular_price %}
-            <span class="muted">&mdash;</span>
-          {% elif item.offer_price %}
-            <del>{{ item.regular_price }}</del> <strong>{{ item.offer_price }}</strong> {{ item.currency }}
-          {% else %}
-            {{ item.regular_price }} {{ item.currency }}
-          {% endif %}
-        </td>
-        <td>
-          <span class="badge-status {% if item.available %}badge-active{% else %}badge-inactive{% endif %}">
-            {% if item.available %}Available{% else %}Unavailable{% endif %}
-          </span>
-          {% if item.featured %}<span class="badge-status badge-active" style="margin-left: 4px;">Featured</span>{% endif %}
-        </td>
-        <td>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            {% if item.outlet_id or is_head_office %}
-            <a href="{% url 'panel_menu_item_edit' item.pk %}" class="btn btn-outline btn-sm">Edit</a>
-            <form method="post" action="{% url 'panel_menu_item_toggle' item.pk %}">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-secondary btn-sm">{% if item.available %}Mark off{% else %}Mark on{% endif %}</button>
-            </form>
-            <form method="post" action="{% url 'panel_menu_item_delete' item.pk %}"
-                  onsubmit="return confirm('Remove “{{ item.name_en|escapejs }}” from the menu? This cannot be undone.');">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-outline btn-sm">Remove</button>
-            </form>
-            {% else %}
-            <a href="{% url 'panel_menu_item_edit' item.pk %}" class="btn btn-primary btn-sm">Upload photo</a>
-            {% endif %}
-            {% if not item.outlet_id %}
-            <form method="post" action="{% url 'panel_menu_item_override' item.pk %}">
-              {% csrf_token %}
-              <select name="outlet" style="padding: 6px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px;">
-                {% for o in outlets %}
-                {% if o.brand_id == item.brand_id %}
-                <option value="{{ o.pk }}">{{ o.official_name }}</option>
-                {% endif %}
-                {% endfor %}
-              </select>
-              <button type="submit" class="btn btn-primary btn-sm">Branch version</button>
-            </form>
-            {% endif %}
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="6" class="muted" style="text-align: center; padding: var(--sp-4);">No menu items yet.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="dish-board">
+  {% for group in groups %}
+  <section class="brand-board" aria-labelledby="brand-{{ group.brand.pk }}">
+    <header>
+      <h2 id="brand-{{ group.brand.pk }}">{{ group.brand.name_en }}</h2>
+      <span>{{ group.food|length }} food · {{ group.drinks|length }} drinks</span>
+    </header>
+    {% if group.food %}
+    <div class="dish-lane">
+      <h3>Most popular</h3>
+      {% for item in group.food %}{% include "panel/_dish_row.html" %}{% endfor %}
+    </div>
+    {% endif %}
+    {% if group.drinks %}
+    <div class="dish-lane">
+      <h3>Top beverages</h3>
+      {% for item in group.drinks %}{% include "panel/_dish_row.html" %}{% endfor %}
+    </div>
+    {% endif %}
+    {% if group.other %}
+    <div class="dish-lane">
+      <h3>Added by a manager</h3>
+      {% for item in group.other %}{% include "panel/_dish_row.html" %}{% endfor %}
+    </div>
+    {% endif %}
+    {% if not group.food and not group.drinks and not group.other %}
+    <p class="dish-note">No dishes yet. Add one for this brand.</p>
+    {% endif %}
+  </section>
+  {% empty %}
+  <p class="dish-note">No dishes in your brands yet.</p>
+  {% endfor %}
 </div>
 {% endblock %}

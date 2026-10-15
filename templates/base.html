@@ -8,12 +8,13 @@
   <meta name="theme-color" content="{{ brand.brand_colors.primary|default:'#7FA06B' }}">
   <title>{% block title %}Pasons Smart QR{% endblock %}</title>
   <meta name="description" content="{% block description %}Pasons Group restaurant smart pages{% endblock %}">
-  {% with ASSET_V="2026-10-15-4" %}
+  {% with ASSET_V="2026-10-15-9" %}
   <link rel="preload" href="{% static 'css/tokens.css' %}?v={{ ASSET_V }}" as="style">
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v={{ ASSET_V }}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ ASSET_V }}">
   <link rel="stylesheet" href="{% static 'css/theme-warm.css' %}?v={{ ASSET_V }}">
   {% endwith %}
+  {% block extra_head %}{% endblock %}
   <style>
     :root {
       {% if brand and brand.brand_colors %}
@@ -32,7 +33,7 @@
         {% endif %}
       {% endif %}
     }
-    {% comment %}extra_css: emit bare CSS only — this block already renders inside a <style> element. Nested <style> tags corrupt the first rule and it gets dropped.{% endcomment %}
+    {% comment %}extra_css: emit bare CSS only — this block already renders inside a <style> element. Nested <style> tags corrupt the first rule and it gets dropped. A child that fills extra_css replaces the parent block, so shell CSS that must survive belongs in extra_head.{% endcomment %}
     {% block extra_css %}{% endblock %}
   </style>
 </head>

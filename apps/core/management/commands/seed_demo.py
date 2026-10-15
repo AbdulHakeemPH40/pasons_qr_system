@@ -90,8 +90,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Italy Cluster, International City, Dubai",
                 "maps": "",
-                "phone": "04 220 0011",
-                "whatsapp": "97142200011",
+                "phone": "042445999",
+                "whatsapp": "971569955333",
                 "google_place_id": "ChIJDX8qpTRnXz4RmYFym3s39bA",
                 "google_review_url": "",
                 "instagram_url": "",
@@ -104,8 +104,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Muhaisinah, Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "042588885",
+                "whatsapp": "971556985050",
                 "google_place_id": "ChIJz3xD_CdcXz4RpwFnb5EOOMc",
                 "google_review_url": "",
             },
@@ -117,8 +117,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Al Qusais Industrial 3, Dubai",
                 "maps": "",
-                "phone": "04 220 0013",
-                "whatsapp": "97142200013",
+                "phone": "042619999",
+                "whatsapp": "971564095888",
                 "google_place_id": "ChIJ2zV-3g9dXz4RX60t4_6MqKo",
                 "google_review_url": "",
             },
@@ -130,8 +130,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Al Quoz Industrial 2, Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "042723281",
+                "whatsapp": "971582079900",
                 "google_place_id": "ChIJXRPz825pXz4RPqjf3zvWWbk",
                 "google_review_url": "",
             },
@@ -143,8 +143,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Pasons Building, Al Quoz, Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "043429888",
+                "whatsapp": "971567047888",
                 "google_place_id": "ChIJX1SyzPFpXz4RRPHZ9lrVcPk",
                 "google_review_url": "",
             },
@@ -156,8 +156,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Street 8, Al Quoz Industrial 1, Dubai",
                 "maps": "",
-                "phone": "04 220 0003",
-                "whatsapp": "97142200003",
+                "phone": "043466262",
+                "whatsapp": "971564089595",
                 "google_place_id": "ChIJdUuEQIlpXz4RlwdRP3gfv04",
                 "google_review_url": "",
             },
@@ -169,8 +169,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Shajarat, Dubai Investment Park 2 (DIP-2), Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "042279999",
+                "whatsapp": "971564098333",
                 "google_place_id": "ChIJjR76pQpzXz4RR3qeYf_Za3w",
                 "google_review_url": "",
             },
@@ -182,8 +182,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Pasons, Dubai Investment Park 2 (DIP-2), Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "048829920",
+                "whatsapp": "971545812000",
                 "google_place_id": "ChIJk1l3QUJyXz4RwMWZT5oCABY",
                 "google_review_url": "",
             },
@@ -224,8 +224,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Al Qusais, Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "042581000",
+                "whatsapp": "971565208000",
                 "google_place_id": "ChIJj5xHF1ddXz4RefV0z65m-SQ",
                 "google_review_url": "",
             },
@@ -274,8 +274,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Muhaisnah, Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "042583000",
+                "whatsapp": "971564097333",
                 "google_place_id": "ChIJt9zECeBfXz4Rgl9KfRnfPLk",
                 "google_review_url": "",
             },
@@ -287,8 +287,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Al Qusais, Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "042612050",
+                "whatsapp": "971558182323",
                 "google_place_id": "ChIJPesrN31dXz4RauFPfS7AFxE",
                 "google_review_url": "",
             },
@@ -300,8 +300,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Karama, Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "043801000",
+                "whatsapp": "971565241000",
                 "google_place_id": "ChIJTfp6HtdCXz4RALlvr6801HQ",
                 "google_review_url": "",
             },
@@ -352,8 +352,8 @@ BRANDS = [
                 "emirate": "Dubai",
                 "address": "Lulu Center, Lulu Village, Dubai",
                 "maps": "",
-                "phone": "",
-                "whatsapp": "",
+                "phone": "042737180",
+                "whatsapp": "971563440449",
                 "google_place_id": "ChIJv-MPcKhfXz4RCNoMBOq6O6U",
                 "google_review_url": "",
             },
@@ -415,30 +415,9 @@ class Command(BaseCommand):
             )
             self.stdout.write(f"  Brand: {brand.name_en} ({brand.code})")
 
-            # menus — brand-level is the mandatory base
-            MenuCategory.objects.filter(brand=brand, outlet__isnull=True).delete()
-            for sort, (cat_name, items) in enumerate(spec["menu"].items()):
-                category = MenuCategory.objects.create(
-                    brand=brand, name_en=cat_name, sort_order=sort
-                )
-                for i, (en, ar, price, offer, diet, spice) in enumerate(items):
-                    MenuItem.objects.create(
-                        category=category,
-                        brand=brand,
-                        name_en=en,
-                        name_ar=ar,
-                        description_en=f"{en} — freshly prepared.",
-                        description_ar=ar,
-                        regular_price=price,
-                        offer_price=offer,
-                        currency="AED",
-                        dietary_type=diet,
-                        spice_level=spice,
-                        allergens=["nuts"] if "Baklava" in en or "Kunafa" in en else [],
-                        available=True,
-                        featured=offer is not None,
-                        sort_order=i,
-                    )
+            # Guest cards are the brand Top 10 lists (seed_top_picks below),
+            # not this old priced demo menu. A reseed no longer writes those
+            # dishes. Photos and prices staff set on the Top 10 rows stay.
 
             # live offer campaign
             Campaign.objects.update_or_create(
@@ -502,12 +481,8 @@ class Command(BaseCommand):
                     out_page = SmartPage.objects.get(slug=out_spec["code"].lower())
                     out_seg = out_obj.code.split("-", 1)[-1]
                     self._make_qr(
-                        f"{brand.code}-{out_seg}-ENTRANCE-01",
-                        brand, out_obj, out_page, "entrance", "Main entrance",
-                    )
-                    self._make_qr(
-                        f"{brand.code}-{out_seg}-TABLE-018",
-                        brand, out_obj, out_page, "table", "Table 18",
+                        f"{brand.code}-{out_seg}-BRANCH-01",
+                        brand, out_obj, out_page, "branch", "Every table",
                     )
             else:
                 self._make_qr(
@@ -523,7 +498,8 @@ class Command(BaseCommand):
                 self._seed_kingchef_fixtures(brand, now)
 
         self._seed_menu_pdfs()
-        self._load_real_menus()
+        # The printed dish dump (load_menu_data) is no longer seeded. Guests
+        # see the brand Top 10 cards; the full printed menu is the PDF card.
 
         # Brand-wise Top 10 food + beverages
         # (Docs/Pasons_Restaurants_Top10_Food_Beverages.md).
@@ -556,13 +532,13 @@ class Command(BaseCommand):
         qusais_page = SmartPage.objects.get(outlet=qusais)
 
         self._make_qr(
-            "KINGCHEF-INTLCITY-TABLE-001",
-            brand, intl, intl_page, "table", "Table 1",
+            "KINGCHEF-INTLCITY-BRANCH-01",
+            brand, intl, intl_page, "branch", "Every table",
             redirect_key="kcic-table-001",
         )
         self._make_qr(
-            "KINGCHEF-QUSAIS-TABLE-004",
-            brand, qusais, qusais_page, "table", "Table 4",
+            "KINGCHEF-QUSAIS-BRANCH-01",
+            brand, qusais, qusais_page, "branch", "Every table",
             redirect_key="kcqusais-table-004",
         )
 
@@ -697,4 +673,6 @@ class Command(BaseCommand):
         qr, _ = QrCode.objects.update_or_create(qr_code_name=name, defaults=defaults)
         if redirect_key and qr.redirect_key != redirect_key:
             QrCode.objects.filter(pk=qr.pk).update(redirect_key=redirect_key)
+        if outlet is not None:
+            QrCode.objects.filter(outlet=outlet).exclude(pk=qr.pk).delete()
         self.stdout.write(f"    QR: {name}")

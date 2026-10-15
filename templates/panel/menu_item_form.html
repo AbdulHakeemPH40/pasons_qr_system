@@ -7,7 +7,7 @@
     {% if photo_only %}
     <p class="muted" style="margin: 4px 0 0;">This is a brand-level item. You can update its photo here; Head Office manages the name, price and details.</p>
     {% else %}
-    <p class="muted" style="margin: 4px 0 0;">Leave the branch empty for a brand-level item (Head Office only). Branch managers pick their branch.</p>
+    <p class="muted" style="margin: 4px 0 0;">Leave price blank if this dish should show no price. Leave the branch empty to add it for the whole brand.</p>
     {% endif %}
   </div>
 </div>
@@ -72,8 +72,8 @@
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Regular price (AED)</label>
-        <input type="number" step="0.01" name="regular_price" value="{{ item.regular_price|default:'' }}" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Price (AED, optional)</label>
+        <input type="number" step="0.01" min="0" name="regular_price" value="{% if item and item.regular_price %}{{ item.regular_price }}{% endif %}" placeholder="Leave blank for no price" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
       </div>
       <div>
         <label style="display: block; font-weight: 600; margin-bottom: 4px;">Offer price (blank = no offer)</label>

@@ -1,22 +1,14 @@
-Brand,Brand Code,Branch (Outlet),Outlet Code,Outlet Slug,Smart Page URL (/p/<slug>/),QR Entry URL (/q/<key>/),QR Code Name,QR Active
-,,,,,,,,
-BRAND-LEVEL ENTRY PAGES ( /p/<brand-slug>/ ),,,,,,,,
-Donar Istanbul,DONARIST,— BRAND ENTRY —,,,http://127.0.0.1:8000/p/donarist/,,,
-King Chef Restaurant,KINGCHEF,— BRAND ENTRY —,,,http://127.0.0.1:8000/p/kingchef/,,,
-Milan Veg,MILANVEG,— BRAND ENTRY —,,,http://127.0.0.1:8000/p/milanveg/,,,
-Paramount Restaurant,PARAMOUNT,— BRAND ENTRY —,,,http://127.0.0.1:8000/p/paramount/,,,
-,,,,,,,,
-BRANCH (OUTLET) ENTRY PAGES — one row per branch,,,,,,,,
-Donar Istanbul,DONARIST,Donar Istanbul — Lulu Center – Lulu Village,DONARIST-LULU,lulu-village,http://127.0.0.1:8000/p/donarist-lulu/,http://127.0.0.1:8000/q/b8ee8ba85aa9/,DONARIST-LULU-ENTRANCE-01,Yes
-King Chef Restaurant,KINGCHEF,King Chef — Al Quoz,KINGCHEF-ALQUOZ,al-quoz,http://127.0.0.1:8000/p/kingchef-alquoz/,http://127.0.0.1:8000/q/3ce58c0e1209/,KINGCHEF-ALQUOZ-ENTRANCE-01,Yes
-King Chef Restaurant,KINGCHEF,King Chef — Al Quoz Ind-2,KINGCHEF-ALQUOZ-IND2,al-quoz-ind-2,http://127.0.0.1:8000/p/kingchef-alquoz-ind2/,http://127.0.0.1:8000/q/73ed014dbf2b/,KINGCHEF-ALQUOZ-IND2-ENTRANCE-01,Yes
-King Chef Restaurant,KINGCHEF,King Chef — Al Quoz – Pasons Building,KINGCHEF-ALQUOZ-PASONS,al-quoz-pasons-building,http://127.0.0.1:8000/p/kingchef-alquoz-parsons/,http://127.0.0.1:8000/q/2f18e126c0bf/,KINGCHEF-ALQUOZ-PASONS-ENTRANCE-01,Yes
-King Chef Restaurant,KINGCHEF,King Chef — Al Qusais – Lomi Hamed,KINGCHEF-QUSAIS,al-qusais,http://127.0.0.1:8000/p/kingchef-qusais/,http://127.0.0.1:8000/q/pEnR5kHAqSXq/,KINGCHEF-QUSAIS-ENTRANCE-002,Yes
-King Chef Restaurant,KINGCHEF,King Chef — International City,KINGCHEF-INTLCITY,international-city,http://127.0.0.1:8000/p/kingchef-intlcity/,http://127.0.0.1:8000/q/ed7c98bbaa89/,KINGCHEF-INTLCITY-ENTRANCE-01,Yes
-King Chef Restaurant,KINGCHEF,King Chef — Muhaisinah,KINGCHEF-MUHAISINAH,muhaisinah,http://127.0.0.1:8000/p/kingchef-muhaisinah/,http://127.0.0.1:8000/q/cdc15c45ef97/,KINGCHEF-MUHAISINAH-ENTRANCE-01,Yes
-King Chef Restaurant,KINGCHEF,King Chef — Pasons – DIP-2,KINGCHEF-PASONS-DIP2,pasons-dip-2,http://127.0.0.1:8000/p/kingchef-parsons-dip2/,http://127.0.0.1:8000/q/676f31eccab1/,KINGCHEF-PASONS-DIP2-ENTRANCE-01,Yes
-King Chef Restaurant,KINGCHEF,King Chef — Shajarat – DIP-2,KINGCHEF-SHAJARAT-DIP2,shajarat-dip-2,http://127.0.0.1:8000/p/kingchef-shajarat-dip2/,http://127.0.0.1:8000/q/909b7546a81e/,KINGCHEF-SHAJARAT-DIP2-ENTRANCE-01,Yes
-Milan Veg,MILANVEG,Milan Veg — Al Qusais,MILANVEG-QUSAIS,al-qusais,http://127.0.0.1:8000/p/milanveg-qusais/,http://127.0.0.1:8000/q/91c2f600010a/,MILANVEG-QUSAIS-ENTRANCE-01,Yes
-Milan Veg,MILANVEG,Milan Veg — Karama,MILANVEG-KARAMA,karama,http://127.0.0.1:8000/p/milanveg-karama/,http://127.0.0.1:8000/q/388d2c8377d1/,MILANVEG-KARAMA-ENTRANCE-01,Yes
-Milan Veg,MILANVEG,Milan Veg — Muhaisnah,MILANVEG-MUHAISNAH,muhaisnah,http://127.0.0.1:8000/p/milanveg-muhaisnah/,http://127.0.0.1:8000/q/76808103e135/,MILANVEG-MUHAISNAH-ENTRANCE-01,Yes
-Paramount Restaurant,PARAMOUNT,Paramount — Al Qusais,PARAMOUNT-QUSAIS,al-qusais,http://127.0.0.1:8000/p/paramount-qusais/,http://127.0.0.1:8000/q/a362fadb01d8/,PARAMOUNT-QUSAIS-ENTRANCE-01,Yes
+Outlet Code,Phone,WhatsApp
+DONARIST-LULU,042737180,971563440449
+KINGCHEF-ALQUOZ,043466262,971564089595
+KINGCHEF-ALQUOZ-IND2,,
+KINGCHEF-ALQUOZ-PASONS,,
+KINGCHEF-QUSAIS,,
+KINGCHEF-INTLCITY,,
+KINGCHEF-MUHAISINAH,,
+KINGCHEF-PASONS-DIP2,,
+KINGCHEF-SHAJARAT-DIP2,,
+MILANVEG-QUSAIS,,
+MILANVEG-KARAMA,,
+MILANVEG-MUHAISNAH,,
+PARAMOUNT-QUSAIS,,

@@ -1,101 +1,283 @@
 {% extends "panel/base_panel.html" %}
+{% load icon_tags %}
+
+{% block extra_css %}
+<style>
+  .pdf-page { display: flex; flex-direction: column; gap: 1.1rem; }
+  .pdf-count {
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .pdf-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+    gap: 1rem;
+    align-items: start;
+  }
+  .pdf-list { display: flex; flex-direction: column; gap: 0.7rem; min-width: 0; }
+  .pdf-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.85rem 1rem;
+    align-items: center;
+    padding: 0.95rem 1rem;
+    background: #fff;
+    border: 1px solid rgba(49, 69, 45, 0.08);
+    border-radius: 1.05rem;
+    box-shadow: 0 8px 22px rgba(49, 69, 45, 0.04);
+  }
+  .pdf-mark {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 0.75rem;
+    display: grid;
+    place-items: center;
+    background: #f3efe4;
+    color: var(--forest);
+  }
+  .pdf-mark svg { width: 1.15rem; height: 1.15rem; }
+  .pdf-copy { min-width: 0; }
+  .pdf-copy h2 {
+    margin: 0;
+    font-size: 1.02rem;
+    letter-spacing: -0.02em;
+    color: var(--forest);
+    overflow-wrap: anywhere;
+  }
+  .pdf-copy p { margin: 0.15rem 0 0; color: var(--text-secondary); font-size: 0.86rem; }
+  .pdf-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.35rem;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    background: var(--forest);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.84rem;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 0 6px 14px rgba(49, 69, 45, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+  .pdf-open svg { width: 0.95rem; height: 0.95rem; }
+  .pdf-open:hover { background: #243321; color: #fff; }
+  .pdf-open:focus-visible {
+    outline: 2px solid rgba(49, 69, 45, 0.45);
+    outline-offset: 3px;
+  }
+  .pdf-open:active { transform: scale(0.98); }
+  .pdf-missing {
+    justify-self: end;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 650;
+  }
+  .pdf-tools {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(49, 69, 45, 0.07);
+  }
+  .pdf-tools form { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; margin: 0; }
+  .pdf-pick {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.32rem 0.75rem;
+    border-radius: 999px;
+    background: #f3efe4;
+    color: var(--forest);
+    font-size: 0.8rem;
+    font-weight: 650;
+    cursor: pointer;
+    max-width: 16rem;
+  }
+  .pdf-pick span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pdf-file {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .pdf-file:focus-visible + span {
+    outline: 2px solid rgba(49, 69, 45, 0.35);
+    outline-offset: 3px;
+    border-radius: 999px;
+  }
+  .pdf-remove {
+    margin-left: auto;
+    background: transparent;
+    color: #8a3b32;
+    border-color: rgba(138, 59, 50, 0.28);
+    box-shadow: none;
+  }
+  .pdf-remove:active { transform: scale(0.98); }
+  .pdf-add {
+    position: sticky;
+    top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 1.05rem 1.05rem 1.1rem;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(49, 69, 45, 0.08);
+    border-radius: 1.15rem;
+    box-shadow: 0 12px 28px rgba(49, 69, 45, 0.05);
+    backdrop-filter: blur(16px) saturate(160%);
+  }
+  .pdf-add h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    letter-spacing: -0.02em;
+    color: var(--forest);
+  }
+  .pdf-add p { margin: -0.35rem 0 0; color: var(--text-secondary); font-size: 0.86rem; }
+  .pdf-add label {
+    display: block;
+    margin-bottom: 0.32rem;
+    font-size: 0.78rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .pdf-add select,
+  .pdf-add input[type="file"] {
+    width: 100%;
+    padding: 0.68rem 0.72rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(49, 69, 45, 0.16);
+    background: #fff;
+    font: inherit;
+  }
+  .pdf-add select:focus,
+  .pdf-add input:focus,
+  .pdf-file:focus {
+    outline: 2px solid rgba(49, 69, 45, 0.28);
+    outline-offset: 2px;
+  }
+  .pdf-empty {
+    margin: 0;
+    padding: 1.3rem 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+    background: #fff;
+    border: 1px dashed rgba(49, 69, 45, 0.18);
+    border-radius: 1rem;
+  }
+  @media (max-width: 860px) {
+    .pdf-layout { grid-template-columns: 1fr; }
+    .pdf-add { position: static; }
+  }
+  @media (max-width: 560px) {
+    .pdf-card { grid-template-columns: auto minmax(0, 1fr); }
+    .pdf-open, .pdf-missing { grid-column: 1 / -1; justify-self: start; }
+    .pdf-remove { margin-left: 0; }
+    .pdf-file { max-width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pdf-open:active, .pdf-remove:active { transform: none; }
+  }
+</style>
+{% endblock %}
 
 {% block panel_content %}
-<div class="panel-header">
-  <div>
-    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Menus</h1>
-    <p class="muted" style="margin: 4px 0 0;">Booklet, PDF, or an external menu link. Outlet sources override the brand source.</p>
+<div class="pdf-page">
+  <div class="panel-header">
+    <div>
+      <h1>Menu PDFs</h1>
+      <p>One PDF per branch. A brand PDF covers every branch that does not have its own.</p>
+    </div>
+    <span class="pdf-count">{{ sources|length }} on file</span>
   </div>
-</div>
 
-<div style="overflow-x: auto; margin-bottom: var(--sp-4);">
-  <table class="panel-table">
-    <thead>
-      <tr>
-        <th>Brand</th>
-        <th>Scope</th>
-        <th>Type</th>
-        <th>PDF</th>
-        <th>Link</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
+  <div class="pdf-layout">
+    <div class="pdf-list">
       {% for s in sources %}
-      <tr>
-        <td>{{ s.brand.name_en }}</td>
-        <td>{{ s.outlet.official_name|default:"Whole brand" }}</td>
-        <td>{{ s.get_menu_type_display }}</td>
-        <td class="caption">
-          {% if s.menu_file %}<a href="{{ s.menu_file.url }}" target="_blank" rel="noopener">View PDF</a>{% else %}—{% endif %}
-        </td>
-        <td class="caption">{{ s.menu_url|default:"—" }}</td>
-        <td>
-          <span class="badge-status {% if s.active %}badge-active{% else %}badge-inactive{% endif %}">
-            {% if s.active %}Active{% else %}Off{% endif %}
-          </span>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="6" class="muted" style="text-align: center; padding: var(--sp-4);">No menu sources yet.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<div class="glass" style="max-width: 650px; padding: var(--sp-4);">
-  <h2 style="margin: 0 0 var(--sp-3); font-size: 1.1rem; color: var(--forest);">Set menu source</h2>
-  {% if not is_head_office %}
-  <p class="caption muted" style="margin: 0 0 var(--sp-2);">You can set the menu for your own branches. The brand-wide menu is managed by Head Office.</p>
-  {% endif %}
-  <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: var(--sp-3);">
-    {% csrf_token %}
-    <div>
-      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Brand</label>
-      <select name="brand" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-        {% for b in brands %}
-        <option value="{{ b.pk }}">{{ b.name_en }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Outlet (blank = brand source)</label>
-      <select name="outlet" {% if not is_head_office %}required{% endif %} style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-        {% if is_head_office %}
-        <option value="">Whole brand</option>
+      <article class="pdf-card">
+        <span class="pdf-mark" aria-hidden="true">{% icon "utensils" %}</span>
+        <div class="pdf-copy">
+          <h2>{{ s.outlet.official_name|default:"Whole brand" }}</h2>
+          <p>{{ s.brand.name_en }}</p>
+        </div>
+        {% if s.menu_file %}
+        <a class="pdf-open" href="{{ s.menu_file.url }}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>
+          View PDF
+        </a>
+        {% else %}
+        <span class="pdf-missing">No file</span>
         {% endif %}
-        {% for o in outlets %}
-        <option value="{{ o.pk }}">{{ o.official_name }}</option>
-        {% endfor %}
-      </select>
+        <div class="pdf-tools">
+          <form method="post" action="{% url 'panel_menu_pdf_replace' s.pk %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label class="pdf-pick">
+              <input class="pdf-file" type="file" name="menu_file" accept="application/pdf,.pdf" aria-label="Replacement PDF for {{ s.outlet.official_name|default:s.brand.name_en }}" required onchange="this.nextElementSibling.textContent = (this.files[0] && this.files[0].name) || 'Choose a new PDF'">
+              <span>Choose a new PDF</span>
+            </label>
+            <button type="submit" class="btn btn-secondary btn-sm">Replace</button>
+          </form>
+          <form method="post" action="{% url 'panel_menu_pdf_delete' s.pk %}" onsubmit="return confirm('Remove this menu PDF? Guests will no longer see it.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm pdf-remove">Remove</button>
+          </form>
+        </div>
+      </article>
+      {% empty %}
+      <p class="pdf-empty">No menu PDFs yet. Add one beside this list.</p>
+      {% endfor %}
     </div>
-    <div>
-      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Type</label>
-      <select name="menu_type" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-        {% for val, label in menu_types %}
-        <option value="{{ val }}">{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Menu PDF (guests get an “Open PDF menu” card)</label>
-      <input type="file" name="menu_file" accept="application/pdf,.pdf" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: #fff;">
-      <label style="display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px;" class="muted">
-        <input type="checkbox" name="menu_file_clear" value="1" style="width: auto;">
-        Remove the current PDF from this source
-      </label>
-    </div>
-    <div>
-      <label style="display: block; font-weight: 600; margin-bottom: 4px;">External menu URL (only used when type is External)</label>
-      <input type="url" name="menu_url" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-    </div>
-    <div>
-      <label style="display: block; font-weight: 600; margin-bottom: 4px;">Order online URL</label>
-      <input type="url" name="ordering_url" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-    </div>
-    <button type="submit" class="btn btn-primary">Save menu source</button>
-  </form>
+
+    <form method="post" enctype="multipart/form-data" class="pdf-add">
+      <h2>Add a menu PDF</h2>
+      {% if not can_set_brand_pdf %}
+      <p>You can add or replace the PDF for your own branches. The brand PDF is set by the brand manager.</p>
+      {% else %}
+      <p>Choose a branch, or leave it as the whole brand.</p>
+      {% endif %}
+      {% csrf_token %}
+      <div>
+        <label for="menu-brand">Brand</label>
+        <select id="menu-brand" name="brand" required>
+          {% for b in brands %}
+          <option value="{{ b.pk }}">{{ b.name_en }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="menu-branch">Branch</label>
+        <select id="menu-branch" name="outlet" {% if not can_set_brand_pdf %}required{% endif %}>
+          {% if can_set_brand_pdf %}
+          <option value="">Whole brand</option>
+          {% endif %}
+          {% for o in outlets %}
+          <option value="{{ o.pk }}">{{ o.official_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="menu-file">PDF file</label>
+        <input id="menu-file" type="file" name="menu_file" accept="application/pdf,.pdf" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Add PDF</button>
+    </form>
+  </div>
 </div>
 {% endblock %}
