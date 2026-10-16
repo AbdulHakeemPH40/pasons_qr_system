@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% load static icon_tags %}
+
+{% block title %}Your Profile · {{ outlet.official_name|default:brand.name_en }}{% endblock %}
+{% block description %}Manage your profile, mobile number, and reward coupons.{% endblock %}
+{% block body_class %}theme-warm{% endblock %}
+{% block page_class %}page--device page--glass page--profile{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+    <div class="device-screen">
+
+      <header class="sheet-head">
+        <a href="{{ back_url }}" class="sheet-back" aria-label="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </a>
+        <div>
+          <h1 class="sheet-title">Your profile</h1>
+          <span class="sheet-meta">
+            {{ brand.name_en }}
+            {% if outlet %}<span class="sheet-updated">· {{ outlet.official_name }}</span>{% endif %}
+          </span>
+        </div>
+        <span class="sheet-side">
+          {% if guest_wallet.ready %}
+          <span class="chip chip--open chip--sm">{{ guest_wallet.ready }} ready</span>
+          {% else %}
+          <span class="chip chip--gold chip--sm">Member</span>
+          {% endif %}
+        </span>
+      </header>
+
+      {% comment %}
+      Hero identity pass: shows the guest's current name, verified phone, and
+      whether their monthly phone change allowance is open or used.
+      {% endcomment %}
+      <section class="profile-pass reveal" style="--i: 0" aria-labelledby="guest-profile-title">
+        <div class="profile-pass__glow" aria-hidden="true"></div>
+        <div class="profile-pass__top">
+          <span class="profile-pass__avatar" aria-hidden="true">{% icon "user" %}</span>
+          <div class="profile-pass__identity">
+            <span class="profile-pass__eyebrow">Your Profile</span>
+            <h2 id="guest-profile-title" class="profile-pass__name">{{ profile.full_name|default:"Your Profile" }}</h2>
+            <p class="profile-pass__phone">{{ profile.phone|default:"No mobile number yet" }}</p>
+          </div>
+        </div>
+        <div class="profile-pass__pills">
+          <span class="profile-pill profile-pill--green">
+            <span class="profile-pill__dot" aria-hidden="true"></span>
+            Name editable anytime
+          </span>
+          {% if can_change_phone %}
+          <span class="profile-pill profile-pill--gold">
+            1 mobile update left this month
+          </span>
+          {% else %}
+          <span class="profile-pill profile-pill--locked">
+            Mobile locked until {{ next_phone_date|date:"j M" }}
+          </span>
+          {% endif %}
+        </div>
+      </section>
+
+      {% if saved %}
+      <div class="profile-banner profile-banner--ok reveal" style="--i: 1" role="status">
+        <span class="profile-banner__dot" aria-hidden="true"></span>
+        <div>
+          <strong>Profile updated</strong>
+          {% if phone_updated %}
+          <p>Your name and mobile number are saved. Your next mobile number change is available next month.</p>
+          {% else %}
+          <p>Your name has been updated.</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if error_text %}
+      <div class="profile-banner profile-banner--error reveal" style="--i: 1" role="alert">
+        <div>
+          <strong>Could not save changes</strong>
+          <p>{{ error_text }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      {% comment %}
+      Edit form: First name and last name can be updated anytime. Mobile number
+      can be updated only once per calendar month.
+      {% endcomment %}
+      <section class="profile-card reveal" style="--i: 1" aria-labelledby="profile-edit-heading">
+        <div class="profile-card__head">
+          <div>
+            <span class="profile-card__kicker">Account details</span>
+            <h3 id="profile-edit-heading" class="profile-card__title">Edit your details</h3>
+          </div>
+          <span class="profile-card__badge">Instant sync</span>
+        </div>
+
+        <form class="profile-form" method="post" action="{% url 'guest_profile_page' qr.redirect_key %}" novalidate>
+          {% csrf_token %}
+          <div class="profile-form__grid">
+            <label class="profile-field">
+              <span class="profile-field__label">First name</span>
+              <input type="text" name="first_name" value="{{ form_first_name }}"
+                     autocomplete="given-name" maxlength="80" required
+                     class="profile-field__input" placeholder="First name">
+            </label>
+            <label class="profile-field">
+              <span class="profile-field__label">Last name</span>
+              <input type="text" name="last_name" value="{{ form_last_name }}"
+                     autocomplete="family-name" maxlength="80"
+                     class="profile-field__input" placeholder="Last name">
+            </label>
+          </div>
+
+          <div class="profile-field{% if not can_change_phone %} profile-field--locked{% endif %}">
+            <div class="profile-field__row">
+              <label class="profile-field__label" for="profile-phone-input">Mobile number</label>
+              {% if can_change_phone %}
+              <span class="profile-field__tag profile-field__tag--open">1 change / month</span>
+              {% else %}
+              <span class="profile-field__tag profile-field__tag--locked">Locked this month</span>
+              {% endif %}
+            </div>
+            <input id="profile-phone-input" type="tel" name="phone" value="{{ form_phone }}"
+                   inputmode="tel" autocomplete="tel" maxlength="24"
+                   placeholder="{{ phone_hint }}"
+                   class="profile-field__input profile-field__input--mono"
+                   {% if not can_change_phone %}readonly aria-readonly="true"{% endif %} required>
+            {% if can_change_phone %}
+            <p class="profile-field__note">
+              Staff match this number when you redeem a coupon. You can update your mobile number <strong>once per calendar month</strong>.
+            </p>
+            {% else %}
+            <p class="profile-field__note profile-field__note--locked">
+              You already updated your mobile number on {{ profile.phone_changed_at|date:"j M Y" }}. You can change it again from <strong>{{ next_phone_date|date:"j M Y" }}</strong>, while your name can still be edited anytime.
+            </p>
+            {% endif %}
+          </div>
+
+          <button type="submit" class="profile-submit">
+            <span>Save changes</span>
+            <span class="profile-submit__orb" aria-hidden="true">{% icon "arrow" %}</span>
+          </button>
+        </form>
+      </section>
+
+      {% comment %}
+      Rewards & Coupons section for this brand. Keeps the guest-coupon classes
+      so both the landing preview and dedicated page share the same contract.
+      {% endcomment %}
+      <section class="profile-card profile-card--wallet reveal" style="--i: 2" aria-labelledby="profile-wallet-heading">
+        <div class="profile-card__head">
+          <div>
+            <span class="profile-card__kicker">{{ brand.name_en }}</span>
+            <h3 id="profile-wallet-heading" class="profile-card__title">Your rewards &amp; coupons</h3>
+          </div>
+          <span class="profile-card__count">{{ guest_wallet.coupons|length }} total</span>
+        </div>
+
+        <div class="guest-profile__list profile-wallet-list">
+          {% for row in guest_wallet.coupons %}
+          <article class="guest-coupon guest-coupon--{{ row.state }}">
+            <div class="guest-coupon__top">
+              <strong>{{ row.coupon.label }}</strong>
+              {% if row.state == "issued" %}
+              <span class="guest-coupon__state">Ready</span>
+              {% elif row.state == "redeemed" %}
+              <span class="guest-coupon__state">Used</span>
+              {% else %}
+              <span class="guest-coupon__state">Expired</span>
+              {% endif %}
+            </div>
+            <span class="guest-coupon__code">{{ row.coupon.code }}</span>
+            <div class="guest-coupon__meta">
+              {% if row.state == "issued" %}
+              <span>Show this before you pay. Valid until {{ row.coupon.expires_at|date:"j M" }}.</span>
+              {% elif row.state == "redeemed" %}
+              <span>Used {{ row.coupon.redeemed_at|date:"j M" }}.</span>
+              {% else %}
+              <span>This one can no longer be used.</span>
+              {% endif %}
+              {% if row.coupon.outlet %}
+              <span class="guest-coupon__branch">{{ row.coupon.outlet.official_name }}</span>
+              {% endif %}
+            </div>
+          </article>
+          {% empty %}
+          <p class="guest-profile__empty">No rewards yet for {{ brand.name_en }}. Win a game and your coupon will appear here.</p>
+          {% endfor %}
+        </div>
+      </section>
+
+    </div>
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+
+  <p class="stage-caption">
+    <strong>{{ brand.name_en }}</strong>{% if outlet %} · {{ outlet.official_name }}{% endif %}
+  </p>
+</div>
+{% endblock %}

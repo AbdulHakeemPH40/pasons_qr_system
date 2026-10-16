@@ -28,7 +28,10 @@ Rules that matter:
     exports dedupe by number.
 """
 
+from datetime import date
+
 from django.db import models
+from django.utils import timezone
 
 from apps.core.models import Brand, Outlet, TimeStampedModel
 
@@ -66,6 +69,11 @@ class GuestProfile(TimeStampedModel):
     phone_verified = models.BooleanField(
         default=False,
         help_text="False today (no OTP step); ready for a later WhatsApp code",
+    )
+    phone_changed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the guest last updated their mobile number on the profile page",
     )
 
     # --- Instagram follow claim (self-declared: Meta exposes no follow check) ---
@@ -134,3 +142,31 @@ class GuestProfile(TimeStampedModel):
         if self.google_sub or self.email_verified:
             return True
         return bool(self.first_name and self.last_name and self.phone)
+
+    def can_change_phone(self, now=None):
+        """A guest may change their mobile number at most once per calendar month.
+
+        First-time phone capture (when `phone` is blank) or keeping the same
+        number is always allowed; only replacing an existing number with a
+        different one spends the monthly allowance.
+        """
+        if not self.phone or not self.phone_changed_at:
+            return True
+        now = now or timezone.now()
+        local_now = timezone.localtime(now)
+        local_changed = timezone.localtime(self.phone_changed_at)
+        return (local_now.year, local_now.month) != (
+            local_changed.year,
+            local_changed.month,
+        )
+
+    def next_phone_change_date(self, now=None):
+        """First day of next calendar month when the phone lock is active."""
+        if self.can_change_phone(now=now):
+            return None
+        now = now or timezone.now()
+        local_now = timezone.localtime(now)
+        if local_now.month == 12:
+            return date(local_now.year + 1, 1, 1)
+        return date(local_now.year, local_now.month + 1, 1)
+

@@ -29,7 +29,7 @@ from .templatetags.social_tags import circle_links, ig_handle
 
 # Guest identity sheet context (apps/guests). Imported here because this
 # module owns the landing-window context; the sheet itself lives in that app.
-from apps.guests.context import sheet_context
+from apps.guests.context import guest_wallet, sheet_context
 
 DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
@@ -284,6 +284,9 @@ def _landing_context(request, brand, outlet, qr):
         "has_menu": True,
         "has_review": True,
         "has_instagram": True,
+        # Saved guest: the profile circle next to Call / WhatsApp / Instagram.
+        # None on a first visit, so the circle is not rendered at all.
+        "guest_wallet": guest_wallet(request, brand),
     }
 
     # Guest identity sheet (apps/guests): the follow question and the name +

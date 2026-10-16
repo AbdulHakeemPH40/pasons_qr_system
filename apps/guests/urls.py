@@ -28,4 +28,9 @@ urlpatterns = [
         views.identity_google,
         name="guest_identity_google",
     ),
+    path(
+        "q/<slug:key>/profile/",
+        views.guest_profile_page,
+        name="guest_profile_page",
+    ),
 ]

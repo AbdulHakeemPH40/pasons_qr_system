@@ -73,7 +73,9 @@
           {% endwith %}
         </a>
         {% endif %}
+        {% if guest_wallet %}{% include "partials/guest_profile_sheet.html" with button_only=1 %}{% endif %}
       </nav>
+      {% if guest_wallet %}{% include "partials/guest_profile_sheet.html" with sheet_only=1 %}{% endif %}
 
       {# ---- action cards: brand badge + title + sub + chevron ---- #}
       <section class="outlet-actions" aria-label="Restaurant options">

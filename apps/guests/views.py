@@ -32,7 +32,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from apps.core.models import QrCode
 
 from . import identity
-from .context import DRAFT_KEY, sheet_context
+from .context import DRAFT_KEY, PHONE_HINT, guest_wallet, sheet_context
 from .google import profile_fields_from_claims, verify_id_token
 from .phone import normalise_phone
 
@@ -200,3 +200,108 @@ def identity_google(request, key):
             "email": profile.email,
         }
     )
+
+
+PROFILE_ERROR_TEXT = {
+    "missing_name": "Please enter your first name.",
+    "bad_phone": "That mobile number does not look right. Try 050 123 4567.",
+    "phone_monthly_limit": "You can only change your mobile number once per month.",
+}
+
+
+@require_http_methods(["GET", "POST"])
+def guest_profile_page(request, key):
+    """Dedicated guest profile page: edit name anytime, mobile number once per month,
+    and view brand-scoped reward coupons.
+    """
+    qr = _qr(key)
+    if qr is None:
+        return render(request, "404.html", status=404)
+
+    landing = _landing_url(qr)
+    handle = getattr(request, "guest", None)
+    profile = handle.profile if handle is not None else None
+    if profile is None or not profile.is_identified:
+        return redirect(landing)
+
+    now = timezone.now()
+    error_code = ""
+    saved = request.GET.get("saved") == "1"
+    phone_updated = request.GET.get("phone_updated") == "1"
+
+    form_first_name = profile.first_name
+    form_last_name = profile.last_name
+    form_phone = profile.phone
+
+    if request.method == "POST":
+        first_name = (request.POST.get("first_name") or "").strip()[:80]
+        last_name = (request.POST.get("last_name") or "").strip()[:80]
+        typed_phone = (request.POST.get("phone") or "").strip()[:40]
+
+        form_first_name = first_name
+        form_last_name = last_name
+        form_phone = typed_phone or profile.phone
+
+        if not first_name:
+            error_code = "missing_name"
+        else:
+            # If the guest submitted a phone field, normalise and compare;
+            # if omitted (e.g. locked input), keep their existing number.
+            if "phone" in request.POST and typed_phone:
+                normalised_phone = normalise_phone(typed_phone)
+            elif "phone" in request.POST and not typed_phone:
+                normalised_phone = ""
+            else:
+                normalised_phone = profile.phone
+
+            phone_is_changing = normalised_phone != profile.phone
+
+            if not normalised_phone:
+                error_code = "bad_phone"
+            elif phone_is_changing and not profile.can_change_phone(now=now):
+                error_code = "phone_monthly_limit"
+                form_phone = profile.phone
+            else:
+                profile.first_name = first_name
+                profile.last_name = last_name
+                fields = ["first_name", "last_name", "updated_at"]
+                if phone_is_changing:
+                    was_blank = not profile.phone
+                    profile.phone = normalised_phone
+                    fields.append("phone")
+                    if not was_blank:
+                        profile.phone_changed_at = now
+                        fields.append("phone_changed_at")
+                profile.save(update_fields=fields)
+                params = {"saved": "1"}
+                if phone_is_changing:
+                    params["phone_updated"] = "1"
+                return _bounce(
+                    reverse("guest_profile_page", args=[qr.redirect_key]),
+                    **params,
+                )
+
+    wallet = guest_wallet(request, qr.brand)
+    can_change_phone = profile.can_change_phone(now=now)
+    next_phone_date = profile.next_phone_change_date(now=now)
+
+    context = {
+        "qr": qr,
+        "brand": qr.brand,
+        "outlet": qr.outlet,
+        "back_url": landing,
+        "guest_wallet": wallet,
+        "profile": profile,
+        "form_first_name": form_first_name,
+        "form_last_name": form_last_name,
+        "form_phone": form_phone,
+        "phone_hint": PHONE_HINT,
+        "can_change_phone": can_change_phone,
+        "next_phone_date": next_phone_date,
+        "saved": saved,
+        "phone_updated": phone_updated,
+        "error_code": error_code,
+        "error_text": PROFILE_ERROR_TEXT.get(error_code, ""),
+    }
+    return render(request, "guests/profile.html", context)
+

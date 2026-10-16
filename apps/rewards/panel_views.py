@@ -13,7 +13,7 @@ brand, a branch manager sees their own branches.
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -24,8 +24,10 @@ from apps.core.panel_permissions import (
     scoped_brands,
     scoped_outlets,
 )
+from apps.guests.models import GuestProfile
+from apps.guests.phone import normalise_phone
 
-from .models import RewardCoupon
+from .models import RewardCoupon, RewardType
 
 
 def scoped_coupons(user):
@@ -58,6 +60,37 @@ def _retire_expired():
     ).update(status=RewardCoupon.Status.EXPIRED, updated_at=timezone.now())
 
 
+def allowance_totals(coupons):
+    """How much this scope has actually given away.
+
+    Counts redeemed coupons only. An issued coupon is a promise, not a cost,
+    and a voided one was never handed over. Desserts are a count. Discounts
+    are a count plus the percentage points given (a 10% coupon adds 10).
+    """
+    redeemed = coupons.filter(status=RewardCoupon.Status.REDEEMED)
+    desserts = redeemed.filter(reward_type=RewardType.DESSERT).count()
+    discounts = redeemed.filter(reward_type=RewardType.PERCENT)
+    return {
+        "desserts_redeemed": desserts,
+        "discounts_redeemed": discounts.count(),
+        "discount_points": discounts.aggregate(total=Sum("percent"))["total"] or 0,
+    }
+
+
+def find_guest_by_mobile(raw):
+    """The profiles that share the number staff typed, or none.
+
+    Staff type whatever the guest says ("050 123 4567"). Storage is E.164, so
+    the lookup normalises first and only then matches. A number that cannot
+    be a phone returns no profiles rather than a loose text search, which
+    would otherwise match a fragment of someone else's number.
+    """
+    phone = normalise_phone(raw)
+    if not phone:
+        return GuestProfile.objects.none(), ""
+    return GuestProfile.objects.filter(phone=phone), phone
+
+
 @login_required
 @require_GET
 def panel_rewards(request):
@@ -77,6 +110,24 @@ def panel_rewards(request):
     if code:
         coupons = coupons.filter(code__icontains=code)
 
+    # Mobile lookup is the till workflow: the guest gives their number, staff
+    # type it, and only that guest's coupons in THIS scope come back. A branch
+    # manager therefore cannot see, or redeem, a win from another branch.
+    mobile = (request.GET.get("mobile") or "").strip()
+    looked_up = None
+    mobile_normalised = ""
+    if mobile:
+        profiles, mobile_normalised = find_guest_by_mobile(mobile)
+        profile_ids = list(profiles.values_list("pk", flat=True))
+        coupons = coupons.filter(profile_id__in=profile_ids)
+        # Name the guest only when this scope actually holds one of their
+        # coupons. Otherwise a branch manager who types a number learns that
+        # a guest exists at another brand, which is the leak this page must
+        # not have.
+        if coupons.exists():
+            looked_up = profiles.order_by("-updated_at").first()
+
+    visible = scoped_coupons(request.user)
     context = {
         "title": "Rewards",
         "nav_active": "rewards",
@@ -84,16 +135,14 @@ def panel_rewards(request):
         "statuses": RewardCoupon.Status.choices,
         "active_status": status,
         "code_query": code,
-        "issued_count": scoped_coupons(request.user)
-        .filter(status=RewardCoupon.Status.ISSUED)
-        .count(),
-        "redeemed_count": scoped_coupons(request.user)
-        .filter(status=RewardCoupon.Status.REDEEMED)
-        .count(),
-        "expired_count": scoped_coupons(request.user)
-        .filter(status=RewardCoupon.Status.EXPIRED)
-        .count(),
+        "mobile_query": mobile,
+        "mobile_normalised": mobile_normalised,
+        "looked_up": looked_up,
+        "issued_count": visible.filter(status=RewardCoupon.Status.ISSUED).count(),
+        "redeemed_count": visible.filter(status=RewardCoupon.Status.REDEEMED).count(),
+        "expired_count": visible.filter(status=RewardCoupon.Status.EXPIRED).count(),
     }
+    context.update(allowance_totals(visible))
     return render(request, "panel/rewards_list.html", context)
 
 

@@ -1,0 +1,188 @@
+{% load icon_tags %}
+{% comment %}
+Saved-guest wallet. Rendered only when guest_wallet is set, so a first
+visit never shows the circle. The button stays in the contact row. The
+sheet is a sibling, not a child of that row, so the circles stay round.
+Coupons are this guest's, for this brand only.
+{% endcomment %}
+{% if not sheet_only %}
+<a href="{% url 'guest_profile_page' qr.redirect_key %}" class="contact-circle contact-circle--profile" id="guest-profile-open"
+  aria-label="Your profile">
+  {% icon "user" %}
+</a>
+{% endif %}
+
+{% if not button_only %}
+<div class="guest-profile" id="guest-profile" hidden>
+  <div class="guest-profile__scrim" data-profile-close></div>
+  <section class="guest-profile__sheet" role="dialog" aria-modal="true" aria-labelledby="guest-profile-title">
+    <div class="guest-profile__grab" data-profile-grab aria-hidden="true"></div>
+    <header class="guest-profile__head" data-profile-grab>
+      <div>
+        <p class="guest-profile__eyebrow">Your profile</p>
+        <h2 id="guest-profile-title">{{ guest_wallet.profile.full_name|default:"Your Profile" }}</h2>
+        <p class="guest-profile__phone">{{ guest_wallet.profile.phone|default:"No mobile number yet" }}</p>
+      </div>
+      <button type="button" class="guest-profile__close" data-profile-close aria-label="Close">
+        {% icon "back" %}
+      </button>
+    </header>
+
+    <div class="guest-profile__list">
+      {% for row in guest_wallet.coupons %}
+      <article class="guest-coupon guest-coupon--{{ row.state }}">
+        <div class="guest-coupon__top">
+          <strong>{{ row.coupon.label }}</strong>
+          {% if row.state == "issued" %}
+          <span class="guest-coupon__state">Ready</span>
+          {% elif row.state == "redeemed" %}
+          <span class="guest-coupon__state">Used</span>
+          {% else %}
+          <span class="guest-coupon__state">Expired</span>
+          {% endif %}
+        </div>
+        <span class="guest-coupon__code">{{ row.coupon.code }}</span>
+        <div class="guest-coupon__meta">
+          {% if row.state == "issued" %}
+          <span>Show this before you pay. Valid until {{ row.coupon.expires_at|date:"j M" }}.</span>
+          {% elif row.state == "redeemed" %}
+          <span>Used {{ row.coupon.redeemed_at|date:"j M" }}.</span>
+          {% else %}
+          <span>This one can no longer be used.</span>
+          {% endif %}
+          {% if row.coupon.outlet %}
+          <span class="guest-coupon__branch">{{ row.coupon.outlet.official_name }}</span>
+          {% endif %}
+        </div>
+      </article>
+      {% empty %}
+      <p class="guest-profile__empty">No rewards yet. Win a game and it will show here.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<script>
+  (function () {
+    var open = document.getElementById("guest-profile-open");
+    var sheet = document.getElementById("guest-profile");
+    if (!open || !sheet) return;
+
+    var panel = sheet.querySelector(".guest-profile__sheet");
+    var scrim = sheet.querySelector(".guest-profile__scrim");
+    var closeBtn = sheet.querySelector(".guest-profile__close");
+    var hideTimer = null;
+
+    function renderedY() {
+      var tr = window.getComputedStyle(panel).transform;
+      if (!tr || tr === "none") return 0;
+      var m = tr.match(/^matrix(3d)?\((.+)\)$/);
+      if (!m) return 0;
+      var p = m[2].split(",").map(parseFloat);
+      return m[1] ? p[13] : p[5];
+    }
+
+    function resetDrag() {
+      panel.style.transition = "";
+      panel.style.transform = "";
+      panel.style.opacity = "";
+      if (scrim) scrim.style.opacity = "";
+    }
+
+    function show() {
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      resetDrag();
+      sheet.hidden = false;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { sheet.classList.add("is-open"); });
+      });
+      if (closeBtn) closeBtn.focus({ preventScroll: true });
+    }
+
+    function hide() {
+      sheet.classList.remove("is-open");
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(function () {
+        sheet.hidden = true;
+        hideTimer = null;
+        resetDrag();
+      }, 320);
+      open.focus();
+    }
+
+    /* drag to dismiss: the sheet follows the finger 1:1 and continues at
+       release velocity. Upward pulls are rubber-banded. */
+    var dragging = false, startY = 0, lastY = 0, lastT = 0, dy = 0, vel = 0;
+
+    function dragStart(event) {
+      if (event.button != null && event.button !== 0) return;
+      if (event.target.closest("[data-profile-close]")) return;
+      dragging = true;
+      dy = renderedY();
+      startY = event.clientY - dy;
+      lastY = event.clientY;
+      lastT = event.timeStamp || Date.now();
+      vel = 0;
+      panel.style.transition = "none";
+      if (event.pointerId != null && panel.setPointerCapture) {
+        try { panel.setPointerCapture(event.pointerId); } catch (err) {}
+      }
+    }
+
+    function dragMove(event) {
+      if (!dragging) return;
+      var t = event.timeStamp || Date.now();
+      var dt = Math.max(t - lastT, 16);
+      vel = (event.clientY - lastY) / dt * 1000;
+      lastY = event.clientY;
+      lastT = t;
+      dy = event.clientY - startY;
+      var y = dy > 0 ? dy : dy * 0.35;
+      panel.style.transform = "translate3d(0, " + y + "px, 0)";
+      if (scrim) {
+        var h = panel.offsetHeight || 1;
+        scrim.style.opacity = String(Math.max(0, 1 - Math.abs(y) / (h * 1.1)));
+      }
+    }
+
+    function dragEnd() {
+      if (!dragging) return;
+      dragging = false;
+      var h = panel.offsetHeight || 1;
+      var projected = dy + vel * 0.15;
+      if (projected > h * 0.28 || vel > 650) {
+        /* keep flying the way the finger was going, then close */
+        panel.style.transition = "transform 220ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms linear";
+        panel.style.transform = "translate3d(0, " + (h + 48) + "px, 0)";
+        panel.style.opacity = "0";
+        if (scrim) scrim.style.opacity = "0";
+        hide();
+      } else {
+        /* spring back from wherever the sheet is right now */
+        panel.style.transition = "";
+        panel.style.transform = "";
+        if (scrim) scrim.style.opacity = "";
+      }
+    }
+
+    open.addEventListener("click", function (event) {
+      if (open.tagName === "A" && open.getAttribute("href")) return;
+      event.preventDefault();
+      show();
+    });
+    sheet.addEventListener("click", function (event) {
+      if (event.target.closest("[data-profile-close]")) hide();
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !sheet.hidden) hide();
+    });
+
+    sheet.querySelectorAll("[data-profile-grab]").forEach(function (zone) {
+      zone.addEventListener("pointerdown", dragStart);
+    });
+    panel.addEventListener("pointermove", dragMove);
+    panel.addEventListener("pointerup", dragEnd);
+    panel.addEventListener("pointercancel", dragEnd);
+  })();
+</script>
+{% endif %}

@@ -6,7 +6,7 @@
   <div>
     <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Rewards</h1>
     <p class="muted" style="margin: 4px 0 0;">
-      Coupons won in the Games Zone. A guest shows the code, you redeem it here once.
+      A guest gives their mobile number. Find them, see what they won, and redeem it once.
     </p>
   </div>
 </div>
@@ -24,9 +24,47 @@
     <span>Expired</span>
     <strong>{{ expired_count }}</strong>
   </div>
+  <div class="panel-stat">
+    <span>Desserts given</span>
+    <strong>{{ desserts_redeemed }}</strong>
+  </div>
+  <div class="panel-stat">
+    <span>Discounts given</span>
+    <strong>{{ discounts_redeemed }}</strong>
+    <div class="caption muted">{{ discount_points }}% points in total</div>
+  </div>
 </div>
 
+{% if mobile_query %}
+<div class="panel-card" style="margin-bottom: var(--sp-3); padding: var(--sp-3);">
+  {% if looked_up %}
+  <strong>{{ looked_up.full_name|default:"Guest" }}</strong>
+  <span class="caption muted">{{ mobile_normalised }}</span>
+  <p class="muted" style="margin: 6px 0 0;">
+    Coupons below are this guest's, and only for the branches you manage.
+  </p>
+  {% else %}
+  <strong>No guest found</strong>
+  <p class="muted" style="margin: 6px 0 0;">
+    Nothing matches {{ mobile_query }}. Ask the guest to check the number on their profile.
+  </p>
+  {% endif %}
+</div>
+{% endif %}
+
 <form method="get" style="display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); flex-wrap: wrap; align-items: flex-end;">
+  <label style="display: flex; flex-direction: column; gap: 4px;">
+    <span class="caption muted">Guest mobile</span>
+    <input
+      type="tel"
+      name="mobile"
+      value="{{ mobile_query }}"
+      placeholder="050 123 4567"
+      autocomplete="off"
+      inputmode="tel"
+      style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);"
+    >
+  </label>
   <label style="display: flex; flex-direction: column; gap: 4px;">
     <span class="caption muted">Coupon code</span>
     <input
@@ -49,7 +87,7 @@
     </select>
   </label>
   <button type="submit" class="btn btn-outline btn-sm">Find</button>
-  {% if code_query %}
+  {% if code_query or mobile_query %}
   <a href="{% url 'panel_rewards' %}" class="btn btn-outline btn-sm">Clear</a>
   {% endif %}
 </form>
@@ -118,7 +156,9 @@
       {% empty %}
       <tr>
         <td colspan="8" class="muted" style="text-align: center; padding: var(--sp-4);">
-          {% if code_query %}
+          {% if mobile_query %}
+            No coupons for that mobile number in your branches.
+          {% elif code_query %}
             No coupon matches <strong>{{ code_query }}</strong>.
           {% else %}
             No rewards yet. They appear the moment a guest wins a game.

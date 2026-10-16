@@ -113,6 +113,10 @@ GLYPHS = {
         f'<circle {_STROKE} cx="16.2" cy="9" r="2"/>'
         f'<path {_STROKE} d="M15.2 14.6c1.8.2 3.2 1.3 3.7 3.4"/>'
     ),
+    "user": (
+        f'<circle {_STROKE} cx="12" cy="8" r="3.2"/>'
+        f'<path {_STROKE} d="M5.2 19.2c.8-3.2 3.2-5 6.8-5s6 1.8 6.8 5"/>'
+    ),
     "list": (
         f'<path {_STROKE} d="M8.5 6.5h11M8.5 12h11M8.5 17.5h11"/>'
         f'<path {_STROKE} d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/>'

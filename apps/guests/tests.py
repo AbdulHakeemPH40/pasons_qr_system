@@ -116,6 +116,244 @@ class AnonymousBrowseWritesNothingTests(GuestQrFixtures):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(GuestProfile.objects.count(), 0)
         self.assertNotIn(COOKIE, response.cookies)
+        self.assertNotContains(response, "guest-profile-open")
+
+
+class SavedGuestWalletTests(GuestQrFixtures):
+    """A saved profile gets a button. A first visit does not."""
+
+    def _saved(self, **overrides):
+        data = {
+            "guest_id": "wallet-guest",
+            "first_name": "Layla",
+            "last_name": "Noor",
+            "phone": "+971509990001",
+            "first_brand": self.brand,
+            "first_outlet": self.outlet,
+        }
+        data.update(overrides)
+        profile = GuestProfile.objects.create(**data)
+        self.client.cookies[COOKIE] = identity.sign_guest_id(profile.guest_id)
+        return profile
+
+    def test_a_saved_profile_shows_the_profile_button_with_name_and_mobile(self):
+        self._saved()
+        response = self.client.get(self.landing_url)
+        self.assertContains(response, "guest-profile-open")
+        self.assertContains(response, "Layla Noor")
+        self.assertContains(response, "+971509990001")
+        # Django prints a multi-line {# #} note as page text. That note
+        # sat in the contact row and crushed the circles.
+        self.assertNotContains(response, "Saved-guest wallet")
+        body = response.content.decode()
+        row = body.split('class="contact-row"', 1)[1].split("</nav>", 1)[0]
+        self.assertNotIn("guest-profile__sheet", row)
+        self.assertIn('id="guest-profile"', body)
+
+    def test_the_wallet_shows_ready_used_and_expired_for_this_brand_only(self):
+        from datetime import timedelta
+
+        from apps.rewards.models import RewardCoupon, RewardTier, RewardType
+
+        profile = self._saved()
+        other = Brand.objects.create(name_en="Other Wallet", code="OTHER-WALLET", status="active")
+        RewardCoupon.objects.create(
+            code="WAL-READY1",
+            profile=profile,
+            brand=self.brand,
+            outlet=self.outlet,
+            game_slug="chess-master",
+            tier=RewardTier.GOOD,
+            reward_type=RewardType.DESSERT,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        RewardCoupon.objects.create(
+            code="WAL-USED01",
+            profile=profile,
+            brand=self.brand,
+            outlet=self.outlet,
+            game_slug="chess-master",
+            tier=RewardTier.HIGH,
+            reward_type=RewardType.PERCENT,
+            percent=10,
+            status=RewardCoupon.Status.REDEEMED,
+            redeemed_at=timezone.now(),
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        RewardCoupon.objects.create(
+            code="WAL-OLD001",
+            profile=profile,
+            brand=self.brand,
+            outlet=self.outlet,
+            game_slug="memory-match",
+            tier=RewardTier.GOOD,
+            reward_type=RewardType.DESSERT,
+            expires_at=timezone.now() - timedelta(days=1),
+        )
+        RewardCoupon.objects.create(
+            code="WAL-OTHER1",
+            profile=profile,
+            brand=other,
+            game_slug="chess-master",
+            tier=RewardTier.GOOD,
+            reward_type=RewardType.DESSERT,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        response = self.client.get(self.landing_url)
+        self.assertContains(response, "WAL-READY1")
+        self.assertContains(response, "Ready")
+        self.assertContains(response, "WAL-USED01")
+        self.assertContains(response, "Used")
+        self.assertContains(response, "WAL-OLD001")
+        self.assertContains(response, "Expired")
+        self.assertNotContains(response, "WAL-OTHER1")
+
+    def test_profile_button_links_to_the_dedicated_profile_page(self):
+        self._saved()
+        profile_url = reverse("guest_profile_page", args=[self.qr.redirect_key])
+        response = self.client.get(self.landing_url)
+        self.assertContains(response, f'href="{profile_url}"')
+
+
+class DedicatedGuestProfilePageTests(GuestQrFixtures):
+    """Dedicated /q/<key>/profile/ page: name editable anytime, mobile once per month."""
+
+    @property
+    def profile_url(self):
+        return reverse("guest_profile_page", args=[self.qr.redirect_key])
+
+    def _saved(self, **overrides):
+        data = {
+            "guest_id": "dedicated-profile-guest",
+            "first_name": "Abdul",
+            "last_name": "Hakeem",
+            "phone": "+971564669930",
+            "first_brand": self.brand,
+            "first_outlet": self.outlet,
+        }
+        data.update(overrides)
+        profile = GuestProfile.objects.create(**data)
+        self.client.cookies[COOKIE] = identity.sign_guest_id(profile.guest_id)
+        return profile
+
+    def test_anonymous_visitor_is_redirected_to_landing(self):
+        response = self.client.get(self.profile_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], self.landing_url)
+
+    def test_renders_dedicated_profile_page_with_guest_details_and_coupons(self):
+        from datetime import timedelta
+
+        from apps.rewards.models import RewardCoupon, RewardTier, RewardType
+
+        profile = self._saved()
+        RewardCoupon.objects.create(
+            code="KIN-86HD7D",
+            profile=profile,
+            brand=self.brand,
+            outlet=self.outlet,
+            game_slug="chess-master",
+            tier=RewardTier.GOOD,
+            reward_type=RewardType.DESSERT,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        response = self.client.get(self.profile_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Abdul Hakeem")
+        self.assertContains(response, "+971564669930")
+        self.assertContains(response, "KIN-86HD7D")
+        self.assertContains(response, "1 change / month")
+        self.assertContains(response, '<span class="profile-pass__eyebrow">Your Profile</span>')
+        self.assertNotContains(response, "Saved Guest Pass")
+
+    def test_name_can_be_changed_multiple_times_without_locking_phone(self):
+        profile = self._saved()
+        for new_first, new_last in (("Hakeem", "K"), ("Abdul", "Rahman"), ("Zayd", "Ali")):
+            resp = self.client.post(
+                self.profile_url,
+                {
+                    "first_name": new_first,
+                    "last_name": new_last,
+                    "phone": "+971564669930",
+                },
+            )
+            self.assertEqual(resp.status_code, 302)
+            profile.refresh_from_db()
+            self.assertEqual(profile.first_name, new_first)
+            self.assertEqual(profile.last_name, new_last)
+            self.assertIsNone(profile.phone_changed_at)
+            self.assertTrue(profile.can_change_phone())
+
+    def test_mobile_number_can_be_updated_once_per_calendar_month_only(self):
+        profile = self._saved()
+        # First mobile change in the current month succeeds:
+        resp1 = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Hakeem",
+                "phone": "050 222 3344",
+            },
+        )
+        self.assertEqual(resp1.status_code, 302)
+        self.assertIn("phone_updated=1", resp1["Location"])
+        profile.refresh_from_db()
+        self.assertEqual(profile.phone, "+971502223344")
+        self.assertIsNotNone(profile.phone_changed_at)
+        self.assertFalse(profile.can_change_phone())
+
+        # Second mobile change in the same month is rejected:
+        resp2 = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Hakeem",
+                "phone": "050 999 8877",
+            },
+        )
+        self.assertEqual(resp2.status_code, 200)
+        self.assertContains(
+            resp2, "You can only change your mobile number once per month."
+        )
+        profile.refresh_from_db()
+        self.assertEqual(profile.phone, "+971502223344")
+
+        # Even while mobile is locked for the month, changing the name still works:
+        resp3 = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Kareem",
+                "phone": "+971502223344",
+            },
+        )
+        self.assertEqual(resp3.status_code, 302)
+        profile.refresh_from_db()
+        self.assertEqual(profile.last_name, "Kareem")
+        self.assertEqual(profile.phone, "+971502223344")
+
+    def test_mobile_number_can_be_changed_again_in_the_next_calendar_month(self):
+        from datetime import datetime
+
+        profile = self._saved(
+            phone="+971502223344",
+            phone_changed_at=timezone.make_aware(datetime(2026, 9, 15, 12, 0)),
+        )
+        self.assertTrue(profile.can_change_phone())
+        resp = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Hakeem",
+                "phone": "050 777 6655",
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        profile.refresh_from_db()
+        self.assertEqual(profile.phone, "+971507776655")
+        self.assertFalse(profile.can_change_phone())
+
 
 
 class GuestCookieCycleTests(TestCase):

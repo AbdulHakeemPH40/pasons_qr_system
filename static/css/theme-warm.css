@@ -343,6 +343,248 @@ body.theme-warm .identity-name { color: var(--ink); }
 }
 
 /* generated badge images (media/icons/*.png) inside the contact circles */
+/* Saved-guest profile circle. Same size as Call / WhatsApp / Instagram,
+   cream face so it reads as "yours" rather than a brand badge. */
+.contact-circle--profile {
+  background: var(--cream, #F5EFE3);
+  border: 1px solid rgba(34, 48, 31, 0.12);
+  color: var(--ink, #22301F);
+  cursor: pointer;
+  padding: 0;
+}
+.contact-circle--profile .icon { width: 28px; height: 28px; }
+
+/* --------------------------------------------------------------------------
+   SAVED-GUEST WALLET — iOS 26 liquid-glass bottom sheet
+   -----------------------------------------------------------------------
+   The sheet is a floating glass panel over the waves, same material family
+   as the specials / menu / composer glass. Note the specificity: the
+   body.theme-warm .device-screen > * rule above pins every direct child to
+   position: relative; z-index: 1 (to clear the background layer), which
+   overrode this overlay and left it rendering as an inline card. The
+   doubled scope below wins over that rule on purpose. On desktop the
+   .device translateZ(0) containing block pins the sheet to the phone
+   screen; on real phones it pins to the viewport. */
+body.theme-warm .guest-profile,
+body.theme-warm .device-screen > .guest-profile {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+}
+body.theme-warm .guest-profile[hidden] { display: none; }
+
+.guest-profile__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(22, 34, 22, 0.38);
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+body.theme-warm .guest-profile.is-open .guest-profile__scrim { opacity: 1; }
+
+.guest-profile__sheet {
+  position: relative;
+  width: min(430px, calc(100% - 20px));
+  max-height: min(80dvh, 660px);
+  margin-bottom: max(12px, env(safe-area-inset-bottom));
+  overflow: auto;
+  overscroll-behavior: contain;
+  color: var(--ink, #22301F);
+  border-radius: 30px;
+  padding: 8px 18px 22px;
+  /* liquid glass: lens highlight top-left, warm-white gradient body */
+  background:
+    radial-gradient(120% 70% at 16% 0%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.64));
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.14),
+    0 24px 56px -20px rgba(23, 58, 36, 0.5);
+  transform: translate3d(0, 18px, 0) scale(0.985);
+  opacity: 0;
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+body.theme-warm .guest-profile.is-open .guest-profile__sheet {
+  transform: translate3d(0, 0, 0) scale(1);
+  opacity: 1;
+}
+
+/* grabber: the drag handle that makes the sheet feel physical */
+.guest-profile__grab {
+  width: 38px;
+  height: 5px;
+  margin: 6px auto 2px;
+  border-radius: var(--r-pill, 999px);
+  background: rgba(34, 48, 31, 0.22);
+  cursor: grab;
+  touch-action: none;
+}
+
+.guest-profile__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 6px 2px 2px;
+  touch-action: none;
+}
+.guest-profile__eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-deep, #A8893E);
+  font-weight: 700;
+}
+.guest-profile__head h2 {
+  margin: 3px 0 0;
+  font-size: 1.55rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.guest-profile__phone {
+  margin: 3px 0 0;
+  color: var(--link-sub, #6F7D6A);
+  font-weight: 600;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.guest-profile__close {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.5));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 6px 14px -8px rgba(23, 58, 36, 0.4);
+  color: var(--ink, #22301F);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 100ms ease-out;
+}
+.guest-profile__close:active { transform: scale(0.92); }
+.guest-profile__close .icon {
+  width: 18px;
+  height: 18px;
+  transform: rotate(-90deg); /* chevron points down: dismiss downward */
+}
+
+.guest-profile__list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.guest-profile__empty {
+  margin: 4px 0 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: var(--link-sub, #6F7D6A);
+  font-size: var(--fs-sm, 0.78125rem);
+  line-height: 1.55;
+}
+
+/* Coupon cards sit on the frosted sheet as near-solid passes: two
+   translucent layers stacked would kill the text contrast. */
+.guest-coupon {
+  display: grid;
+  gap: 9px;
+  padding: 14px 15px 13px;
+  border-radius: 20px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.78));
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 22px -16px rgba(23, 58, 36, 0.45);
+}
+.guest-coupon__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.guest-coupon strong {
+  font-size: 1.06rem;
+  letter-spacing: -0.01em;
+}
+.guest-coupon__code {
+  justify-self: start;
+  padding: 5px 11px;
+  border-radius: 10px;
+  background: rgba(34, 48, 31, 0.05);
+  border: 1px dashed rgba(34, 48, 31, 0.22);
+  font-family: ui-monospace, Menlo, monospace;
+  letter-spacing: 0.12em;
+  font-size: 0.82rem;
+  color: var(--ink, #22301F);
+}
+.guest-coupon__meta {
+  display: grid;
+  gap: 3px;
+  color: var(--link-sub, #6F7D6A);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.guest-coupon__branch {
+  color: var(--ink-muted, #6F7D6A);
+  font-weight: 600;
+}
+.guest-coupon__state {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: var(--r-pill, 999px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+}
+.guest-coupon--issued .guest-coupon__state {
+  color: #2E5B3E;
+  background: rgba(46, 91, 62, 0.12);
+}
+.guest-coupon--redeemed .guest-coupon__state {
+  color: #7A5E17;
+  background: rgba(168, 137, 62, 0.16);
+}
+.guest-coupon--expired .guest-coupon__state,
+.guest-coupon--void .guest-coupon__state {
+  color: #8a4b3a;
+  background: rgba(138, 75, 58, 0.12);
+}
+
+/* Reduced transparency: near-solid sheet and cards, text stays legible. */
+@media (prefers-reduced-transparency: reduce) {
+  .guest-profile__sheet {
+    background: var(--glass-fill-solid, rgba(255, 255, 255, 0.95));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .guest-coupon { background: var(--card-white, #FFFFFF); }
+}
+
+/* Reduced motion: short opacity cross-fade only. Drag stays live (direct
+   manipulation); its inline transform still wins over these rules. */
+@media (prefers-reduced-motion: reduce) {
+  .guest-profile__sheet {
+    transform: none;
+    transition: opacity 120ms linear;
+    scroll-behavior: auto;
+  }
+  .guest-profile.is-open .guest-profile__sheet { transform: none; }
+  .guest-profile__scrim { transition: opacity 120ms linear; }
+  .guest-profile__close { transition: none; }
+}
+
 .contact-circle img {
   width: 100%;
   height: 100%;
@@ -3090,3 +3332,456 @@ body.theme-warm .page--play .game-reward__ticket[data-variant="dessert"] {
     opacity: 0.4;
   }
 }
+
+/* ================================================================
+   DEDICATED GUEST PROFILE PAGE (/q/<key>/profile/)
+   iOS 26 liquid-glass pass, instant name editing, and once-per-month
+   mobile number change guard.
+   ================================================================ */
+
+body.theme-warm .page--profile .device-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 28px;
+}
+
+/* The desktop phone frame (.device-screen) is a fixed-height flex column.
+   Without flex-shrink: 0 and min-height: min-content, any child with
+   overflow: hidden (.profile-pass) has an automatic minimum height of 0
+   and gets crushed vertically into a thin strip when the page scrolls. */
+body.theme-warm .page--profile .device-screen > * {
+  flex-shrink: 0;
+}
+
+/* ---- Hero identity card ---- */
+body.theme-warm .page--profile .profile-pass {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  min-height: min-content;
+  height: auto;
+  border-radius: 26px;
+  padding: 18px 18px 16px;
+  background:
+    radial-gradient(125% 95% at 12% 0%, rgba(246, 216, 121, 0.24), rgba(246, 216, 121, 0) 56%),
+    linear-gradient(155deg, rgba(28, 56, 38, 0.94) 0%, rgba(20, 40, 27, 0.90) 100%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    0 22px 46px -22px rgba(16, 34, 22, 0.62);
+  color: #F7F2E6;
+}
+
+body.theme-warm .page--profile .profile-pass__glow {
+  position: absolute;
+  top: -40px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(246, 216, 121, 0.28) 0%, rgba(246, 216, 121, 0) 70%);
+  pointer-events: none;
+}
+
+body.theme-warm .page--profile .profile-pass__top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+body.theme-warm .page--profile .profile-pass__avatar {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 19px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(100% 90% at 25% 15%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(155deg, rgba(246, 216, 121, 0.24), rgba(168, 137, 62, 0.14));
+  border: 1px solid rgba(246, 216, 121, 0.48);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 10px 22px -12px rgba(0, 0, 0, 0.45);
+  color: #F6D879;
+}
+
+body.theme-warm .page--profile .profile-pass__avatar .icon {
+  width: 28px;
+  height: 28px;
+}
+
+body.theme-warm .page--profile .profile-pass__identity {
+  min-width: 0;
+  flex: 1;
+}
+
+body.theme-warm .page--profile .profile-pass__eyebrow {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #F6D879;
+}
+
+body.theme-warm .page--profile .profile-pass__name {
+  margin: 3px 0 0;
+  font-family: var(--font-display, "Fraunces", Georgia, serif);
+  font-size: 1.48rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body.theme-warm .page--profile .profile-pass__phone {
+  margin: 4px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(247, 242, 230, 0.84);
+  font-variant-numeric: tabular-nums;
+}
+
+body.theme-warm .page--profile .profile-pass__pills {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+body.theme-warm .page--profile .profile-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(247, 242, 230, 0.94);
+}
+
+body.theme-warm .page--profile .profile-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #5cd67d;
+  box-shadow: 0 0 8px rgba(92, 214, 125, 0.85);
+}
+
+body.theme-warm .page--profile .profile-pill--gold {
+  background: rgba(246, 216, 121, 0.18);
+  border-color: rgba(246, 216, 121, 0.42);
+  color: #F6D879;
+}
+
+body.theme-warm .page--profile .profile-pill--locked {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.20);
+  color: rgba(247, 242, 230, 0.78);
+}
+
+/* ---- Status / error banners ---- */
+body.theme-warm .page--profile .profile-banner {
+  flex-shrink: 0;
+  min-height: min-content;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 15px;
+  border-radius: 20px;
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+body.theme-warm .page--profile .profile-banner strong {
+  display: block;
+  font-size: 0.84rem;
+  margin-bottom: 2px;
+}
+
+body.theme-warm .page--profile .profile-banner p {
+  margin: 0;
+}
+
+body.theme-warm .page--profile .profile-banner--ok {
+  background: linear-gradient(165deg, rgba(235, 250, 239, 0.90), rgba(220, 244, 227, 0.78));
+  border: 1px solid rgba(53, 104, 74, 0.32);
+  color: #1d462c;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+body.theme-warm .page--profile .profile-banner__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #2e7d47;
+  box-shadow: 0 0 0 3px rgba(46, 125, 71, 0.18);
+}
+
+body.theme-warm .page--profile .profile-banner--error {
+  background: linear-gradient(165deg, rgba(253, 237, 234, 0.94), rgba(249, 222, 217, 0.84));
+  border: 1px solid rgba(180, 65, 50, 0.36);
+  color: #7a271c;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* ---- Liquid-glass cards (edit details + reward wallet) ---- */
+body.theme-warm .page--profile .profile-card {
+  flex-shrink: 0;
+  min-height: min-content;
+  border-radius: 26px;
+  padding: 18px 16px 18px;
+  background:
+    radial-gradient(120% 70% at 14% 0%, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.58));
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.90),
+    inset 0 -1px 0 rgba(34, 48, 31, 0.05),
+    0 20px 44px -22px rgba(23, 58, 36, 0.38);
+  color: var(--ink, #22301F);
+}
+
+body.theme-warm .page--profile .profile-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+body.theme-warm .page--profile .profile-card__kicker {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-deep, #A8893E);
+}
+
+body.theme-warm .page--profile .profile-card__title {
+  margin: 2px 0 0;
+  font-family: var(--font-display, "Fraunces", Georgia, serif);
+  font-size: 1.18rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ink, #22301F);
+}
+
+body.theme-warm .page--profile .profile-card__badge,
+body.theme-warm .page--profile .profile-card__count {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(46, 91, 62, 0.10);
+  border: 1px solid rgba(46, 91, 62, 0.18);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--wave-green, #2E5B3E);
+}
+
+/* ---- Edit form & fields ---- */
+body.theme-warm .page--profile .profile-form {
+  display: grid;
+  gap: 13px;
+}
+
+body.theme-warm .page--profile .profile-form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 350px) {
+  body.theme-warm .page--profile .profile-form__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.theme-warm .page--profile .profile-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+body.theme-warm .page--profile .profile-field__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+body.theme-warm .page--profile .profile-field__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(34, 48, 31, 0.78);
+}
+
+body.theme-warm .page--profile .profile-field__tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.theme-warm .page--profile .profile-field__tag--open {
+  background: rgba(168, 137, 62, 0.16);
+  color: #7A5E17;
+}
+
+body.theme-warm .page--profile .profile-field__tag--locked {
+  background: rgba(34, 48, 31, 0.09);
+  color: rgba(34, 48, 31, 0.65);
+}
+
+body.theme-warm .page--profile .profile-field__input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(34, 48, 31, 0.16);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 1px 2px rgba(34, 48, 31, 0.05);
+  color: var(--ink, #22301F);
+  font-size: 0.94rem;
+  font-weight: 600;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+body.theme-warm .page--profile .profile-field__input--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+body.theme-warm .page--profile .profile-field__input:focus {
+  outline: none;
+  border-color: var(--wave-green, #2E5B3E);
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(46, 91, 62, 0.16);
+}
+
+body.theme-warm .page--profile .profile-field--locked .profile-field__input {
+  background: rgba(34, 48, 31, 0.05);
+  border-style: dashed;
+  border-color: rgba(34, 48, 31, 0.20);
+  color: rgba(34, 48, 31, 0.62);
+  cursor: not-allowed;
+}
+
+body.theme-warm .page--profile .profile-field__note {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--link-sub, #6F7D6A);
+}
+
+body.theme-warm .page--profile .profile-field__note--locked {
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: rgba(168, 137, 62, 0.11);
+  border: 1px solid rgba(168, 137, 62, 0.25);
+  color: #5e4710;
+}
+
+/* ---- Primary save button (forest liquid-glass capsule + gold orb) ---- */
+body.theme-warm .page--profile .profile-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 2px;
+  padding: 9px 10px 9px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background:
+    radial-gradient(100% 90% at 20% 0%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(180deg, #35684a 0%, #21422d 100%);
+  color: #FFFFFF;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 24px -12px rgba(22, 43, 29, 0.55);
+  cursor: pointer;
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-warm .page--profile .profile-submit:active {
+  transform: scale(0.98);
+}
+
+body.theme-warm .page--profile .profile-submit__orb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #F6D879 0%, #D9A83C 100%);
+  color: #231802;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+body.theme-warm .page--profile .profile-submit__orb .icon {
+  width: 17px;
+  height: 17px;
+}
+
+body.theme-warm .page--profile .profile-wallet-list {
+  margin-top: 4px;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body.theme-warm .page--profile .profile-pass {
+    background: #1c3826;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  body.theme-warm .page--profile .profile-card {
+    background: rgba(255, 255, 255, 0.96);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.theme-warm .page--profile .profile-submit {
+    transition: none;
+  }
+  body.theme-warm .page--profile .profile-submit:active {
+    transform: none;
+  }
+}
+

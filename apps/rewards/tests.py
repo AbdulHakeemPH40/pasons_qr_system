@@ -1336,6 +1336,133 @@ class PanelRewardTests(ProfileRewardFixtures):
         self.assertEqual(coupon.status, RewardCoupon.Status.REDEEMED)
         self.assertEqual(coupon.redeemed_by, manager)
 
+    def test_staff_find_a_guest_by_the_mobile_they_typed(self):
+        coupon = self._coupon(code="KIN-MOBILE")
+        self.client.force_login(self.head_office)
+        response = self.client.get(
+            reverse("panel_rewards"), {"mobile": "050 123 4567", "status": "all"}
+        )
+        self.assertContains(response, "Reem Al Suwaidi")
+        self.assertContains(response, coupon.code)
+        self.assertContains(response, "+971501234567")
+
+    def test_a_mobile_search_hides_every_other_guest(self):
+        self._coupon(code="KIN-MINE99")
+        other = GuestProfile.objects.create(
+            guest_id="other-mobile",
+            first_name="Omar",
+            last_name="Hassan",
+            phone="+971509990099",
+        )
+        self._coupon(code="KIN-OTHER9", profile=other)
+        self.client.force_login(self.head_office)
+        response = self.client.get(
+            reverse("panel_rewards"), {"mobile": "0501234567", "status": "all"}
+        )
+        self.assertContains(response, "KIN-MINE99")
+        self.assertNotContains(response, "KIN-OTHER9")
+        self.assertNotContains(response, "Omar Hassan")
+
+    def test_an_unknown_mobile_shows_nobody(self):
+        self._coupon()
+        self.client.force_login(self.head_office)
+        response = self.client.get(reverse("panel_rewards"), {"mobile": "0509999999"})
+        self.assertContains(response, "No guest found")
+        self.assertNotContains(response, "KIN-ABC123")
+
+    def test_a_branch_manager_cannot_find_another_branch_by_mobile(self):
+        from apps.core.models import Brand, Outlet
+        from apps.core.panel_permissions import apply_role_to_user
+
+        other_brand = Brand.objects.create(
+            name_en="Hidden Brand", code="HIDDEN-RW", status="active"
+        )
+        other_outlet = Outlet.objects.create(
+            code="HIDDEN-RW-1",
+            slug="hidden-rewards-branch",
+            official_name="Hidden Branch",
+            brand=other_brand,
+            opening_hours=_hours_open_all_day(),
+            active=True,
+        )
+        hidden = GuestProfile.objects.create(
+            guest_id="hidden-guest",
+            first_name="Noor",
+            last_name="Ali",
+            phone="+971501111111",
+        )
+        self._coupon(
+            code="KIN-HIDDEN",
+            profile=hidden,
+            brand=other_brand,
+            outlet=other_outlet,
+        )
+        manager = User.objects.create_user("branch-lookup", password="pw-br-12345")
+        apply_role_to_user(manager, "outlet_manager", None, [self.outlet])
+        self.client.force_login(manager)
+
+        response = self.client.get(
+            reverse("panel_rewards"), {"mobile": "0501111111", "status": "all"}
+        )
+        self.assertNotContains(response, "KIN-HIDDEN")
+        self.assertNotContains(response, "Noor Ali")
+
+    def test_totals_count_redeemed_desserts_and_discounts_only(self):
+        self._coupon(
+            code="KIN-DESERT",
+            status=RewardCoupon.Status.REDEEMED,
+            reward_type=RewardType.DESSERT,
+        )
+        self._coupon(
+            code="KIN-TENOFF",
+            status=RewardCoupon.Status.REDEEMED,
+            reward_type=RewardType.PERCENT,
+            percent=10,
+        )
+        self._coupon(code="KIN-WAITING", reward_type=RewardType.DESSERT)
+        self.client.force_login(self.head_office)
+        response = self.client.get(reverse("panel_rewards"), {"status": "all"})
+        self.assertContains(response, "Desserts given")
+        self.assertContains(response, "Discounts given")
+        self.assertContains(response, "10% points in total")
+
+    def test_a_branch_managers_totals_exclude_another_branch(self):
+        from apps.core.models import Brand, Outlet
+        from apps.core.panel_permissions import apply_role_to_user
+
+        self._coupon(
+            code="KIN-OURS01",
+            status=RewardCoupon.Status.REDEEMED,
+            reward_type=RewardType.DESSERT,
+        )
+        other_brand = Brand.objects.create(
+            name_en="Far Brand", code="FAR-RW", status="active"
+        )
+        other_outlet = Outlet.objects.create(
+            code="FAR-RW-1",
+            slug="far-rewards-branch",
+            official_name="Far Branch",
+            brand=other_brand,
+            opening_hours=_hours_open_all_day(),
+            active=True,
+        )
+        self._coupon(
+            code="KIN-THEIRS",
+            status=RewardCoupon.Status.REDEEMED,
+            reward_type=RewardType.PERCENT,
+            percent=10,
+            brand=other_brand,
+            outlet=other_outlet,
+        )
+        manager = User.objects.create_user("branch-totals", password="pw-br-12345")
+        apply_role_to_user(manager, "outlet_manager", None, [self.outlet])
+        self.client.force_login(manager)
+
+        response = self.client.get(reverse("panel_rewards"), {"status": "all"})
+        self.assertContains(response, "KIN-OURS01")
+        self.assertNotContains(response, "KIN-THEIRS")
+        self.assertContains(response, "0% points in total")
+
     def test_redeeming_is_written_to_the_change_log(self):
         from apps.core.models import ChangeLog
 

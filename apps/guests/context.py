@@ -28,6 +28,9 @@ cleared here, on the very next render of the sheet.
 
 from django.conf import settings
 from django.urls import reverse
+from django.utils import timezone
+
+from apps.rewards.models import RewardCoupon
 
 # Error codes the submit view bounces back with, mapped to guest-facing copy.
 ERROR_TEXT = {
@@ -94,3 +97,44 @@ def sheet_context(request, qr, next_path, base="entry"):
         "id_phone": draft.get("phone", ""),
         "id_greet": (profile.first_name if (joined and profile) else ""),
     }
+
+
+def guest_wallet(request, brand):
+    """The saved profile and its coupons, for the landing-page profile button.
+
+    Returns None when this browser has no saved profile, so the button stays
+    off the page for a first visit. Coupons are this guest's only, and only
+    for the brand whose QR they scanned, so a King Chef win never appears on
+    a Paramount page.
+
+    An issued coupon past its date reads as expired here without a write.
+    The panel is what retires the row.
+    """
+    handle = getattr(request, "guest", None)
+    profile = handle.profile if handle is not None else None
+    if profile is None or not profile.is_identified:
+        return None
+
+    now = timezone.now()
+    rows = []
+    if brand is not None:
+        coupons = (
+            RewardCoupon.objects.filter(profile=profile, brand=brand)
+            .select_related("outlet")
+            .order_by("-issued_at")[:20]
+        )
+        for coupon in coupons:
+            if coupon.status == RewardCoupon.Status.ISSUED and coupon.expires_at <= now:
+                state = "expired"
+            else:
+                state = coupon.status
+            rows.append({"coupon": coupon, "state": state})
+
+    return {
+        "profile": profile,
+        "coupons": rows,
+        "ready": sum(1 for row in rows if row["state"] == RewardCoupon.Status.ISSUED),
+        "can_change_phone": profile.can_change_phone(now=now),
+        "next_phone_change_date": profile.next_phone_change_date(now=now),
+    }
+
