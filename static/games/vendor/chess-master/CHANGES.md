@@ -25,6 +25,15 @@ Electron app.
 
 ## What was changed
 
+- **Ladder extension (`js/score.js`, 2026-10-16).** The Games Zone reward
+  ladder is climbed in order and only a WIN climbs it, so the shell has to
+  know which level was played and how the game ended. `ScoreKeeper` now
+  publishes both as plain text in two hidden spans it creates itself
+  (`#chess--level` = the guest-facing level 1-4, `#chess--result` =
+  `win` | `draw` | `loss`), written in `addResultBonus` and cleared in
+  `reset`. The vendored markup and game logic are untouched; the shell reads
+  them through the bridge in `apps/games/registry.py`. This is an
+  observation only: nothing in the game knows about rewards.
 - **Difficulty presets trimmed to 3-6** (`js/engine.js` DIFFICULTY_LEVELS:
   Club ~1600, Advanced ~2000, Expert ~2500, Master ~3000+). Looked up by id
   (`difficultyById`), so no code path can select a softer level.

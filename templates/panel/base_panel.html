@@ -371,12 +371,18 @@
       {% if "specials" in nav_caps %}
       <a href="{% url 'panel_specials' %}" class="{% if nav_active == 'specials' %}active{% endif %}">{% icon "sparkle" %} Specials</a>
       {% endif %}
+      {% if "rewards" in nav_caps %}
+      <a href="{% url 'panel_rewards' %}" class="{% if nav_active == 'rewards' %}active{% endif %}">{% icon "gift" %} Rewards</a>
+      {% endif %}
       {% if "menus" in nav_caps %}
       <a href="{% url 'panel_menus' %}" class="{% if nav_active == 'menus' %}active{% endif %}">{% icon "book" %} Menus</a>
       <a href="{% url 'panel_menu_items' %}" class="{% if nav_active == 'menu_items' %}active{% endif %}">{% icon "utensils" %} Menu Items</a>
       {% endif %}
       {% if "leads" in nav_caps %}
       <a href="{% url 'panel_leads' %}" class="{% if nav_active == 'leads' %}active{% endif %}">{% icon "inbox" %} Leads</a>
+      {% endif %}
+      {% if "guests" in nav_caps %}
+      <a href="{% url 'panel_guests' %}" class="{% if nav_active == 'guests' %}active{% endif %}">{% icon "users" %} Guest Contacts</a>
       {% endif %}
       {% if "feedback" in nav_caps %}
       <a href="{% url 'panel_feedback' %}" class="{% if nav_active == 'feedback' %}active{% endif %}">{% icon "chat" %} Feedback</a>

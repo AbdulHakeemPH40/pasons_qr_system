@@ -130,10 +130,16 @@ HTMLActuator.prototype.message = function (won) {
 
   this.messageContainer.classList.add(type);
   this.messageContainer.getElementsByTagName("p")[0].textContent = message;
+  // Pasons: the shell reads this to know the 2048 tile was reached. A loss
+  // clears it, so a dead board can never be claimed as a reach.
+  var mark = document.getElementById("tiles--result");
+  if (mark) mark.textContent = won ? "win" : "";
 };
 
 HTMLActuator.prototype.clearMessage = function () {
   // IE only takes one value to remove at a time.
   this.messageContainer.classList.remove("game-won");
   this.messageContainer.classList.remove("game-over");
+  var mark = document.getElementById("tiles--result");
+  if (mark) mark.textContent = "";
 };

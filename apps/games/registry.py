@@ -24,8 +24,9 @@ Because of that model every entry carries:
                            visible-> any match has a layout box
 
 Games pages carry no offer copy and no personal data. Best scores live on
-the guest's own device. The landing card's "Win a discount or dessert" perk
-(client copy 2026-10-14) is honoured by staff, not by this code.
+the guest's own device. The landing card promises a gift and leaves the
+prize to management (client copy 2026-10-16); the win itself is issued by
+apps/rewards and is honoured by staff, not by this code.
 """
 
 from dataclasses import dataclass, field
@@ -44,6 +45,32 @@ class Game:
     credit: str         # attribution line for the play page
     bridge: dict = field(default_factory=dict)
     enabled: bool = True
+    # What a REAL round of this game looks like, used by apps/rewards as an
+    # effort floor. Below either number the round is treated as a throwaway
+    # and counts for nothing. These are floors, not proof: the values arrive
+    # from the guest's browser and a bot can fake them. What they buy is
+    # effort, not security.
+    effort: dict = field(default_factory=dict)
+    # HOW this game pays, if it pays at all (client rules 2026-10-16):
+    #   mode "none"    pure play. The game is entertainment and pays nothing.
+    #   mode "ladder"  levels that must be won in order. Only the rungs named
+    #                  in `paying_rungs` pay, and they pay the rule for the
+    #                  tier named there (good = the dessert, high = the
+    #                  discount). Lower rungs are the cost of entry.
+    #   mode "streak"  a run of qualifying rounds. Only `prize_tier` pays,
+    #                  and only once `rounds` of them land inside
+    #                  `window_days` days. Never more than one prize.
+    #   mode "threshold"  one scoring round. `prize_tier` pays when that
+    #                  round clears the tier's line in `reward`, and never
+    #                  otherwise. Never more than one prize.
+    earn: dict = field(default_factory=dict)
+    # Reward lines, in that game's own scoring units. These are the DEFAULT
+    # lines: a RewardRule row for the same game and tier overrides the value,
+    # which is how staff retune the bar without a code change. Under the
+    # ladder rule `min_score` is a floor a round must also clear; under the
+    # streak rule it is the line that makes a single round QUALIFY. Empty
+    # dict = this game pays nothing.
+    reward: dict = field(default_factory=dict)
 
 
 GAMES = (
@@ -57,8 +84,18 @@ GAMES = (
         embed="games/vendor/2048/index.html",
         license="MIT",
         credit="2048 by Gabriele Cirulli, MIT licence",
+        # THE TILE (client 2026-10-16, fourth pass). Reaching the 2048 tile
+        # pays. The first reach pays the free dessert. Once that guest has
+        # five real reaches stored against their name and mobile, the next
+        # reach pays 10% off, and never another dessert. A high score that
+        # never made the tile pays nothing. The result span is written by the
+        # vendored actuator only when the tile is actually merged.
+        effort={"min_seconds": 60, "min_actions": 20},
+        earn={"mode": "reaches", "need": 5, "first_tier": "good", "later_tier": "high"},
+        reward={"good": 2048, "high": 2048},
         bridge={
             "score": {"kind": "text", "sel": ".score-container"},
+            "result": {"kind": "text", "sel": "#tiles--result"},
             "over": {"kind": "class", "sel": ".game-message", "cls": "game-over"},
             # 2048 resumes the last board from this key on load; clear it so
             # "Play again" starts fresh. Its own bestScore key is left alone.
@@ -75,6 +112,15 @@ GAMES = (
         embed="games/vendor/flappy-burger/index.html",
         license="Apache-2.0",
         credit="Flappy-style engine by Nebez Felkner, Apache-2.0, Pasons art",
+        # DESSERT AT 25 (client 2026-10-16, third pass). Flappy Burger pays a
+        # FREE DESSERT when a real round clears 25 pipes, and never a coupon
+        # and never the 10% discount. The `good` line below is both the
+        # threshold a round must clear and the value staff retune with a
+        # RewardRule row. The weekly cooldown is what keeps this from being
+        # easy: one dessert per mobile per calendar month.
+        effort={"min_seconds": 25, "min_actions": 15},
+        earn={"mode": "threshold", "prize_tier": "good"},
+        reward={"good": 25},
         bridge={
             # Flappy Burger erases #bigscore when the scoreboard appears
             # (showScore() -> setBigScore(true)) and re-renders the final
@@ -98,6 +144,13 @@ GAMES = (
         embed="games/vendor/memory-match/index.html",
         license="MIT",
         credit="Memory Game by mmenavas, MIT licence",
+        # NEVER A COUPON (client 2026-10-16): Memory Match pays a free
+        # dessert and nothing else, and only after five real rounds inside a
+        # week. The `good` line below is what makes a single round QUALIFY;
+        # five throwaway games must not buy a dessert.
+        effort={"min_seconds": 45, "min_actions": 8},
+        earn={"mode": "streak", "rounds": 5, "window_days": 7, "prize_tier": "good"},
+        reward={"good": 400},
         bridge={
             # Pasons extension: the game keeps its own points clock
             # (match +100 with a streak bonus, -25 per miss, +15 per second
@@ -126,6 +179,16 @@ GAMES = (
             "Stockfish.js engine GPLv3 (nmrugg/stockfish.js), chess.js by "
             "Jeff Hlywa (BSD-2), Pasons mobile port"
         ),
+        # THE LADDER (client 2026-10-16). Four rungs, Level 1 to Level 4,
+        # mapped onto the four difficulties. Win rung N to unlock rung N+1.
+        # Level 1 and Level 2 pay NOTHING: they are the cost of entry. A
+        # Level 3 win pays the free dessert (tier "good"); a Level 4 win pays
+        # the 10% discount (tier "high"). "level" is the guest-facing level
+        # 1-4, which the Pasons score extension renders into #chess--level
+        # as `difficulty - 2` (see js/score.js and CHANGES.md).
+        effort={"min_seconds": 90, "min_actions": 12},
+        earn={"mode": "ladder", "levels": 4, "paying_rungs": {3: "good", 4: "high"}},
+        reward={"good": 300, "high": 600},
         bridge={
             # Pasons score extension (chess-master/js/score.js): the human's
             # capture points (10/30/30/50/90) climb during play, and a result
@@ -135,8 +198,23 @@ GAMES = (
             # Game-over is the setup-independent #gameover-modal (display:none
             # until the game ends, so the "visible" reader sees a layout box
             # only then).
+            # `level` and `result` are read at game over so the ladder can be
+            # advanced server side: the rung has to be climbed in order, and
+            # only a WIN climbs it.
             "score": {"kind": "text", "sel": "#chess--score"},
+            "level": {"kind": "text", "sel": "#chess--level"},
+            "result": {"kind": "text", "sel": "#chess--result"},
             "over": {"kind": "visible", "sel": "#gameover-modal"},
+            # Rung locking, applied by the shell into the setup modal. The
+            # guest-facing level is `levelAttr` minus `levelOffset`
+            # (data-diff 3-6 is shown as Level 1-4, see CHANGES.md), and any
+            # button above the guest's unlocked rung is disabled. The server
+            # enforces this again at claim time: the UI is a courtesy.
+            "lock": {
+                "sel": "#difficulty-row .diff-option",
+                "levelAttr": "data-diff",
+                "levelOffset": 2,
+            },
         },
     ),
 )

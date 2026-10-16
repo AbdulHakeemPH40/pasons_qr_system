@@ -149,31 +149,25 @@
         </a>
         {% endif %}
 
-        {# Perk promise per client copy 2026-10-14: staff honour the discount or dessert. #}
+        {# Perk promise per client copy 2026-10-16: management decides what the #}
+        {# win is, so this card never promises a specific item. The exact prize #}
+        {# is decided per brand in the panel reward rules. #}
         <a href="{% url 'qr_game' qr.redirect_key %}"
           class="btn-action btn-action--tint-green reveal" style="--i: 5">
           <span class="btn-action__icon btn-action__icon--gold" aria-hidden="true">{% icon "gamepad" %}</span>
           <span class="btn-action__text">
             <span class="btn-action__title">PLAY A GAME</span>
-            <span class="btn-action__sub">Win a discount or dessert</span>
+            <span class="btn-action__sub">Win a gift, our team picks it</span>
           </span>
           <span class="btn-action__arrow" aria-hidden="true">{% icon "chevron" %}</span>
         </a>
       </section>
 
-      {# Lucky-draw popup (client copy 2026-10-14): celebrates the follow tap #}
-      {# first, then hands off to the tap-tracked Instagram redirect. The    #}
-      {# redirect is the ONE entry log, so the draw list never doubles.      #}
-      <div class="ig-draw" id="ig-draw-popup" hidden>
-        <div class="ig-draw__backdrop" data-draw-close></div>
-        <div class="ig-draw__sheet" role="dialog" aria-modal="true" aria-labelledby="ig-draw-title">
-          <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
-          <h2 class="ig-draw__title" id="ig-draw-title">You are entered in the lucky draw!</h2>
-          <p class="ig-draw__sub">Followers get exclusive gifts and surprises. Open Instagram to confirm your entry.</p>
-          <a class="ig-draw__cta" id="ig-draw-open" href="{% url 'qr_instagram' qr.redirect_key %}" target="_blank" rel="noopener">Open Instagram</a>
-          <button type="button" class="ig-draw__close" data-draw-close>Maybe later</button>
-        </div>
-      </div>
+      {# Guest identity sheet: the follow-for-a-gift invitation, "did you    #}
+      {# follow?" question, and the first name + mobile form. One component  #}
+      {# shared with the Instagram fallback page. The tap-tracked redirect   #}
+      {# stays the ONE draw-entry log, so the draw list never doubles.       #}
+      {% if id_sheet %}{% include "partials/guest_identity_sheet.html" %}{% endif %}
 
     </div>
 

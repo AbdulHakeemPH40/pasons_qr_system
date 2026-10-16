@@ -27,6 +27,10 @@ from .models import Brand, Campaign, QrCode, SmartPage
 from .review_assist import suggest_variants
 from .templatetags.social_tags import circle_links, ig_handle
 
+# Guest identity sheet context (apps/guests). Imported here because this
+# module owns the landing-window context; the sheet itself lives in that app.
+from apps.guests.context import sheet_context
+
 DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 
@@ -230,6 +234,18 @@ def _landing_qr(brand, outlet):
     return _PageKey(qr)
 
 
+def _identity_next(request):
+    """Where the identity sheet comes back to: the page the guest is on.
+
+    Only our own /q/ and /p/ paths are returned; the submit view allow-lists
+    them again, so this is belt and braces against an open redirect.
+    """
+    path = request.path or ""
+    if path.startswith(("/q/", "/p/")):
+        return path
+    return "/"
+
+
 def _landing_context(request, brand, outlet, qr):
     """The scanned-shop window. /q/<key>/ and old /p/<slug>/ links share it."""
     hours_owner = outlet if (outlet and outlet.opening_hours) else None
@@ -248,7 +264,7 @@ def _landing_context(request, brand, outlet, qr):
 
     address_line = (outlet.address if outlet else "") or getattr(brand, "corporate_address", "")
     lang = _language(request)
-    return {
+    context = {
         "qr": qr,
         "brand": brand,
         "outlet": outlet,
@@ -269,6 +285,19 @@ def _landing_context(request, brand, outlet, qr):
         "has_review": True,
         "has_instagram": True,
     }
+
+    # Guest identity sheet (apps/guests): the follow question and the name +
+    # mobile form. It needs a QR key to post to, and /p/<slug>/ can reach this
+    # window with no code at all, so the sheet is simply left out when there
+    # is no key to hang the form on.
+    if qr is not None:
+        context.update(
+            sheet_context(request, qr, next_path=_identity_next(request))
+        )
+    else:
+        context["id_sheet"] = False
+
+    return context
 
 
 def _wa_link(number):

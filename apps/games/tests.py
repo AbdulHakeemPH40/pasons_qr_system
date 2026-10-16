@@ -9,14 +9,17 @@ the public contract:
 
   /q/<key>/game/   logs the Play tap and redirects to the hub (old QR sheets)
   /games/          lists the enabled games with licence chips and credits
-  /games/<slug>/   embeds the vendored page + bridge JSON, no offer copy
-  /games/event/    records played / finished GameEvent rows, rejects junk
-  landing          shows the PLAY A GAME card promising "Win a discount or dessert"
-                   (client copy 2026-10-14, honoured by staff)
+  /games/<slug>/   embeds the vendored page, its bridge JSON and a round token
+  /games/event/    records played / finished GameEvent rows, rejects junk, and
+                   is the ONLY place a reward is issued (apps/rewards)
+  landing          shows the PLAY A GAME card promising a gift and leaving
+                   the prize to management (client copy 2026-10-16), which a
+                   real coupon now pays (client decision 2026-10-16)
 """
 
 from pathlib import Path
 import os
+import re
 
 from django.conf import settings
 from django.test import TestCase
@@ -205,15 +208,167 @@ class GamesZoneRoutesTests(GamesZoneFixtures):
         )
         self.assertContains(good, f"/q/{self.qr.redirect_key}/")
 
-    def test_no_offer_or_discount_copy_anywhere(self):
-        """Hub and play pages stay offer-free: the perk promise lives only on
-        the landing card, never inside the games zone pages themselves."""
-        hub = self.client.get(reverse("games_hub"))
-        play = self.client.get(reverse("games_play", args=["2048"]))
-        for response in (hub, play):
+    # Offer wording. The client's rule (2026-10-16) changed what may appear
+    # here: a guest must be TOLD before a game starts what signing in is
+    # worth ("win a discount & dessert"), so the play page may name the
+    # prizes. What it must never do is show a win before one is earned.
+    OFFER_WORDS = ("discount", "coupon", "reward", "win a", "% off", "free dessert")
+
+    def test_the_hub_stays_offer_free(self):
+        """The hub lists games. It is not a prize board."""
+        body = self.client.get(reverse("games_hub")).content.decode().lower()
+        for word in self.OFFER_WORDS:
+            self.assertNotIn(word, body)
+
+    def test_the_play_page_never_shows_a_win_before_one_is_earned(self):
+        """No coupon, no code, no "you won" in a page served to everyone.
+
+        The rules of the climb may be on the page (the client asked to be
+        told what a win pays). The reward CARD is built by the shared shell,
+        and only after the server confirms a win, so the promise never turns
+        into a claimed prize before one is earned.
+        """
+        for slug in ("chess-master", "memory-match", "2048", "flappy-burger"):
+            response = self.client.get(reverse("games_play", args=[slug]))
             body = response.content.decode().lower()
-            for word in ("discount", "coupon", "reward", "win a"):
-                self.assertNotIn(word, body)
+            self.assertNotIn("you won", body, slug)
+            self.assertNotIn("show this code", body, slug)
+            self.assertNotIn("game-reward__code", body, slug)
+            self.assertNotIn("redeemed", body, slug)
+
+    def test_the_sign_in_prompt_is_only_for_a_guest_who_is_not_verified(self):
+        """The prompt before every game start, for an unverified guest."""
+        from apps.guests import identity
+        from apps.guests.models import GuestProfile
+
+        url = reverse("games_play", args=["chess-master"])
+        anonymous = self.client.get(url)
+        self.assertContains(anonymous, 'id="game-nudge"')
+        self.assertContains(anonymous, "Win a discount or a free dessert")
+
+        profile = GuestProfile.objects.create(
+            guest_id="offer-free-guest",
+            first_name="Reem",
+            last_name="Al Suwaidi",
+            phone="+971501234567",
+        )
+        self.client.cookies[identity.COOKIE_NAME] = identity.sign_guest_id(
+            profile.guest_id
+        )
+        verified = self.client.get(url)
+        self.assertNotContains(verified, 'id="game-nudge"')
+
+    def test_the_play_page_never_prints_the_winning_recipe(self):
+        """A guest must not be able to read how many plays or points pay.
+
+        Naming a prize is fine. Printing the bar ("score 25", "5 rounds",
+        "level 3 pays the dessert") is the misuse the restaurant pays for.
+        """
+        forbidden = (
+            "score 25",
+            "25 or more",
+            "5 good rounds",
+            "rounds this week",
+            "of 5",
+            "level 3 for",
+            "level 4 for",
+            "beat level",
+            "just for fun",
+            "rewards live in the other games",
+        )
+        for slug in ("chess-master", "memory-match", "flappy-burger", "2048"):
+            body = (
+                self.client.get(reverse("games_play", args=[slug]))
+                .content.decode()
+                .lower()
+            )
+            for phrase in forbidden:
+                self.assertNotIn(phrase, body, f"{slug} leaks {phrase!r}")
+
+    def test_the_prompt_never_blocks_play(self):
+        """A guest without login plays any game at any level, no restriction."""
+        response = self.client.get(reverse("games_play", args=["chess-master"]))
+        body = response.content.decode()
+        self.assertIn("Play without rewards", body)
+        self.assertNotIn("Sign in to play", body)
+        # the game itself is loaded regardless of the prompt
+        self.assertIn("game-frame", body)
+
+    def test_the_reward_card_wording_lives_in_the_shell_not_the_page(self):
+        shell = (
+            Path(settings.BASE_DIR) / "static" / "games" / "core" / "shell.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("You won", shell)
+        self.assertIn("game-reward__code", shell)
+        # The ticket stub copy, exactly as approved in the win-card draft 2
+        # (2026-10-16). The old card had this as a sentence with a full stop;
+        # the approved ticket sets it as a stub line without one.
+        self.assertIn("Show this code to our staff before you pay", shell)
+        self.assertIn("Your code", shell)
+        self.assertIn("How to use", shell)
+        self.assertIn("one use only", shell)
+
+    def test_both_games_versions_match(self):
+        """play.html declares GAMES_V twice, and they cannot share a scope.
+
+        The content block uses it for the vendored iframe src, the scripts
+        block for the shell scripts. A Django block cannot see another
+        block's variable, so each has its own. When they drift the shell is
+        served under a stale cache key and a returning guest keeps the old
+        behaviour, which is exactly what happened on 2026-10-16.
+        """
+        source = (
+            Path(settings.BASE_DIR) / "templates" / "games" / "play.html"
+        ).read_text(encoding="utf-8")
+        versions = re.findall(r'GAMES_V="([^"]+)"', source)
+        self.assertEqual(len(versions), 2, versions)
+        self.assertEqual(
+            len(set(versions)), 1, f"GAMES_V drifted out of step: {versions}"
+        )
+
+        # the served page really does load the shell under that same version
+        response = self.client.get(reverse("games_play", args=["2048"]))
+        self.assertContains(response, f"shell.js?v={versions[0]}")
+        self.assertContains(
+            response, f'games/vendor/2048/index.html?v={versions[0]}'
+        )
+
+    def test_the_win_card_is_the_approved_silver_ticket(self):
+        """The won-coupon card is the client-approved ticket (2026-10-16).
+
+        Four cropped corners plus a notch out of both sides, cut by a CSS
+        mask; a dashed tear line; the code ABOVE that line and a usage stub
+        below it; two faces (warm gold dessert, plain silver discount).
+        renderReward in core/shell.js builds it, theme-warm.css cuts it.
+        """
+        shell = (
+            Path(settings.BASE_DIR) / "static" / "games" / "core" / "shell.js"
+        ).read_text(encoding="utf-8")
+        css = (
+            Path(settings.BASE_DIR) / "static" / "css" / "theme-warm.css"
+        ).read_text(encoding="utf-8")
+
+        for marker in (
+            "game-reward__ticket",
+            "game-reward__perf",
+            "game-reward__stub",
+            "game-reward__shell",
+            "data-variant",
+        ):
+            self.assertIn(marker, shell)
+
+        # the ticket cut: corner bites and side notches are a mask, so the
+        # outer shadow lives on the wrapper
+        self.assertIn("mask-composite: intersect", css)
+        self.assertIn("--gr-stub", css)
+        self.assertIn(".game-reward__shell", css)
+
+        # the code box is built ABOVE the tear line on the ticket
+        self.assertLess(
+            shell.index("game-reward__codewrap"),
+            shell.index("game-reward__perf"),
+            "the code box must be built above the tear line",
+        )
 
 
 class GamesEventBeaconTests(GamesZoneFixtures):
@@ -620,17 +775,29 @@ class ChessMasterTests(GamesZoneFixtures):
 
 
 class LandingPlayCardTests(GamesZoneFixtures):
-    def test_landing_card_promises_discount_or_dessert(self):
-        """Client copy 2026-10-14 (via user): the card advertises the perk
-        "Win a discount or dessert", honoured by staff. Supersedes the
-        2026-10-10 play-only card copy. Coupon language stays out."""
+    def test_landing_card_promises_a_gift_and_no_specific_item(self):
+        """Client copy 2026-10-16 (via user): the card promises a gift and
+        leaves the prize to management. It must NOT name a dessert and must
+        NOT name a discount. Supersedes the 2026-10-14 "Win a discount or
+        dessert" copy.
+
+        The rule stays scoped to the ACTION CARDS, which never promise a
+        code. The identity sheet below them does name a "coupon" in the
+        mobile-match note (client copy 2026-10-16, asserted in
+        apps/guests/tests.py)."""
         response = self.client.get(
             reverse("qr_landing", args=[self.qr.redirect_key])
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "PLAY A GAME")
-        self.assertContains(response, "Win a discount or dessert")
+        self.assertContains(response, "Win a gift, our team picks it")
         self.assertContains(
             response, reverse("qr_game", args=[self.qr.redirect_key])
         )
-        self.assertNotIn("coupon", response.content.decode().lower())
+        body = response.content.decode()
+        cards = body.split('<section class="outlet-actions"', 1)[1]
+        cards = cards.split("</section>", 1)[0].lower()
+        self.assertNotIn("coupon", cards)
+        self.assertNotIn("voucher", cards)
+        self.assertNotIn("dessert", cards)
+        self.assertNotIn("discount", cards)

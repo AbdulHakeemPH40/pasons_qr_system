@@ -145,6 +145,14 @@ for _origin in tunnel_trusted_origins(DEBUG, TUNNEL_HOST_SUFFIXES):
 if DEBUG and TUNNEL_HOST_SUFFIXES:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# --- guest identity: Google sign-in --------------------------------------
+# The guest identity sheet renders "Continue with Google" ONLY when a client
+# id is set here, so local development and the test suite never load Google's
+# script. The secret is not used by the ID-token flow (the token is verified
+# server-side against Google) and is kept for a future code-exchange flow.
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
+
 # --- applications --------------------------------------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -161,6 +169,8 @@ INSTALLED_APPS = [
     "apps.engagement",
     "apps.analytics",
     "apps.games",
+    "apps.guests",
+    "apps.rewards",
 ]
 
 MIDDLEWARE = [
@@ -170,6 +180,10 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Guest identity: attaches a lazy request.guest and sets the signed
+    # pq_guest cookie when a view creates a profile. Costs zero queries on a
+    # request that has no cookie or never looks at identity (apps/guests).
+    "apps.guests.middleware.GuestIdentityMiddleware",
     "apps.core.middleware.PanelCapabilityMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

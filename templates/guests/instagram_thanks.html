@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load icon_tags %}
+
+{% comment %}
+Instagram fallback page (plan 2026-10-16, task 2).
+
+Opens the shared guest identity sheet straight at the follow question. Its
+real job is to be a stable link the client can put in an Instagram bio:
+"already follow us? claim your gift here". It also catches a guest who lands
+here from browser history, where the landing page's JavaScript state is gone
+and the return-from-Instagram detection cannot run.
+
+Multi-line notes use the comment-block tag on purpose: a multi-line {# #}
+comment renders as literal page text in this project.
+{% endcomment %}
+
+{% block title %}Claim your gift · {{ brand.name_en }}{% endblock %}
+{% block description %}Already follow us? Claim your follower gift.{% endblock %}
+{% block body_class %}theme-warm{% endblock %}
+{% block page_class %}page--device{% endblock %}
+
+{% block content %}
+<div class="device-stage">
+  <div class="device">
+    <div class="device-island" aria-hidden="true"></div>
+
+    <div class="device-screen">
+      <header class="scan-identity">
+        <div class="avatar{% if brand.code == 'DONARIST' %} avatar--on-dark{% endif %}">
+          {% if brand.logo %}
+            <img src="{{ brand.logo.url }}" alt="{{ brand.name_en }} logo" width="104" height="104" decoding="async">
+          {% else %}
+            {{ brand.name_en|slice:":1"|upper }}
+          {% endif %}
+        </div>
+        <h1 class="scan-outlet">{{ brand.name_en }}{% if outlet %} · {{ outlet.official_name }}{% endif %}</h1>
+        <p class="scan-loc">{% icon "pin" %}<span>Follower gift</span></p>
+      </header>
+
+      {% if id_sheet %}{% include "partials/guest_identity_sheet.html" %}{% endif %}
+
+      <p class="id-back"><a href="{{ id_next }}">Back to {{ brand.name_en }}</a></p>
+    </div>
+
+    <div class="device-home-indicator" aria-hidden="true"></div>
+  </div>
+</div>
+{% endblock %}

@@ -27,7 +27,28 @@ export class ScoreKeeper {
     this.el = document.getElementById(elementId);
     this.capturePoints = 0;
     this.resultBonus = 0;
+    // Ladder extension (Pasons, see CHANGES.md): the Games Zone shell has to
+    // know WHICH level was played and WHETHER it was won, because the reward
+    // ladder is climbed in order and only a win climbs it. Both are rendered
+    // as plain text into small hidden elements the bridge can read. Created
+    // here so the vendored markup stays untouched.
+    this.levelEl = ScoreKeeper.bridgeElement('chess--level');
+    this.resultEl = ScoreKeeper.bridgeElement('chess--result');
     this.render();
+  }
+
+  /** A hidden <span id=...> next to the score element, for the bridge. */
+  static bridgeElement(id) {
+    let el = document.getElementById(id);
+    if (el) return el;
+    el = document.createElement('span');
+    el.id = id;
+    el.hidden = true;
+    el.style.display = 'none';
+    const anchor = document.getElementById('chess--score');
+    if (anchor && anchor.parentNode) anchor.parentNode.appendChild(el);
+    else document.body.appendChild(el);
+    return el;
   }
 
   /** Points for one captured piece type (p/n/b/r/q). */
@@ -66,7 +87,25 @@ export class ScoreKeeper {
     } else {
       this.resultBonus = 0;
     }
+    // Ladder extension (Pasons): publish the guest-facing level (1-4, which
+    // is levelLabel(difficulty) = difficulty - 2) and the outcome. Only a
+    // WIN climbs the ladder, so the shell must be able to tell a win from a
+    // draw or a loss; the score alone cannot.
+    this.setLevel(level - 2);
+    this.setResult(humanWon ? 'win' : drawn ? 'draw' : 'loss');
     this.render();
+  }
+
+  /** Guest-facing level 1-4, for the ladder. */
+  setLevel(displayLevel) {
+    this.level = displayLevel | 0;
+    if (this.levelEl) this.levelEl.textContent = String(this.level);
+  }
+
+  /** 'win' | 'draw' | 'loss', for the ladder. */
+  setResult(outcome) {
+    this.outcome = outcome || '';
+    if (this.resultEl) this.resultEl.textContent = this.outcome;
   }
 
   /** Total score: capture points + result bonus. */
@@ -78,6 +117,8 @@ export class ScoreKeeper {
   reset() {
     this.capturePoints = 0;
     this.resultBonus = 0;
+    this.setLevel(0);
+    this.setResult('');
     this.render();
   }
 

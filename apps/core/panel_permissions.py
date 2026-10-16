@@ -24,18 +24,25 @@ CAP_FEEDBACK = "feedback"
 CAP_ANALYTICS = "analytics"
 CAP_USERS = "users"
 CAP_CHANGELOG = "changelog"
+CAP_GUESTS = "guests"
+CAP_REWARDS = "rewards"
 
 # Branch managers run their assigned outlets. They do not create staff or
-# change platform structure.
+# change platform structure. They DO redeem the coupons a guest won at their
+# branch, so Rewards belongs here: the win is honoured at the till.
 OUTLET_MANAGER_CAPABILITIES = frozenset({
     CAP_DASHBOARD, CAP_OUTLETS, CAP_QRCODES, CAP_SPECIALS, CAP_MENUS,
-    CAP_LEADS, CAP_FEEDBACK, CAP_ANALYTICS, CAP_CHANGELOG,
+    CAP_LEADS, CAP_FEEDBACK, CAP_ANALYTICS, CAP_CHANGELOG, CAP_REWARDS,
 })
 
 # Brand managers use the same dashboard, plus Users, so they can create the
-# branch managers for their own brand. Brands and branches stay with Django
-# admin / Head Office.
-BRAND_MANAGER_CAPABILITIES = OUTLET_MANAGER_CAPABILITIES | frozenset({CAP_USERS})
+# branch managers for their own brand. They also read their own brand's guest
+# contacts, because the brand owns that list. A BRANCH manager does not: it is
+# a shop-floor role, and an export of personal data should not travel with
+# every shift. Brands and branches stay with Django admin / Head Office.
+BRAND_MANAGER_CAPABILITIES = OUTLET_MANAGER_CAPABILITIES | frozenset({
+    CAP_USERS, CAP_GUESTS,
+})
 
 # Kept so older imports still name the branch-manager set.
 MANAGER_CAPABILITIES = OUTLET_MANAGER_CAPABILITIES
@@ -46,11 +53,11 @@ MANAGER_CAPABILITIES = OUTLET_MANAGER_CAPABILITIES
 DEPARTMENT_CAPABILITIES = {
     "MARKETING": frozenset({
         CAP_DASHBOARD, CAP_SPECIALS, CAP_QRCODES, CAP_ANALYTICS,
-        CAP_LEADS, CAP_FEEDBACK,
+        CAP_LEADS, CAP_FEEDBACK, CAP_GUESTS, CAP_REWARDS,
     }),
     "OPERATIONS": frozenset({
         CAP_DASHBOARD, CAP_OUTLETS, CAP_QRCODES, CAP_MENUS,
-        CAP_SPECIALS, CAP_LEADS,
+        CAP_SPECIALS, CAP_LEADS, CAP_REWARDS,
     }),
     "FINANCE": frozenset({
         CAP_DASHBOARD, CAP_ANALYTICS,
@@ -61,7 +68,7 @@ DEPARTMENT_CAPABILITIES = {
     "IT": frozenset({
         CAP_DASHBOARD, CAP_BRANDS, CAP_OUTLETS, CAP_QRCODES, CAP_SPECIALS,
         CAP_MENUS, CAP_LEADS, CAP_FEEDBACK, CAP_ANALYTICS, CAP_USERS,
-        CAP_CHANGELOG,
+        CAP_CHANGELOG, CAP_GUESTS, CAP_REWARDS,
     }),
 }
 
@@ -69,7 +76,7 @@ DEPARTMENT_CAPABILITIES = {
 ALL_CAPABILITIES = frozenset({
     CAP_DASHBOARD, CAP_BRANDS, CAP_OUTLETS, CAP_QRCODES, CAP_SPECIALS,
     CAP_MENUS, CAP_LEADS, CAP_FEEDBACK, CAP_ANALYTICS, CAP_USERS,
-    CAP_CHANGELOG,
+    CAP_CHANGELOG, CAP_GUESTS, CAP_REWARDS,
 })
 
 

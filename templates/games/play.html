@@ -8,7 +8,7 @@
 
 {% block content %}
 {# GAMES_V also guards the vendored iframe src so a game update is not served from cache. Keep in sync with the scripts block below. #}
-{% with GAMES_V="2026-10-14-19" %}
+{% with GAMES_V="2026-10-16-7" %}
 <div class="device-stage">
   <div class="device">
     <div class="device-island" aria-hidden="true"></div>
@@ -34,12 +34,18 @@
         <span class="game-hud__best" id="game-best" aria-label="Best score on this phone">Best —</span>
       </div>
 
+      {# Where this guest stands. core/shell.js fills it from #games-progress: #}
+      {# the chess ladder rung, or the run of rounds behind a dessert. Shown so #}
+      {# the climb is visible, which is the point of asking for one.            #}
+      <p class="game-ladder" id="game-ladder" hidden></p>
+
       {# The vendored open-source game runs unmodified in this same-origin #}
       {# iframe; core/shell.js reads score and game-over through the bridge. #}
       <div class="game-host" id="game-host"
            data-slug="{{ game.slug }}"
            data-qr="{{ qr_key }}"
            data-beacon="{% url 'games_event' %}"
+           data-token="{{ round_token }}"
            data-csrf="{{ csrf_token }}">
         <iframe id="game-frame" class="game-frame"
                 src="{% static game.embed %}?v={{ GAMES_V }}"
@@ -47,6 +53,33 @@
                 scrolling="no"
                 allow="autoplay"></iframe>
         <div class="game-overlay" id="game-overlay" data-state="hidden"></div>
+
+        {% if not guest_verified %}
+        {# Shown before the game starts to a guest who is not verified yet.   #}
+        {# It never blocks play (client rule 2026-10-16: a guest without login #}
+        {# plays any game at any level with no restriction), it only says what #}
+        {# signing in is worth. Dismissed by core/shell.js.                    #}
+        <div class="game-nudge" id="game-nudge" role="note">
+          <p class="game-nudge__eyebrow">Play free. No sign-in needed.</p>
+          <p class="game-nudge__title">
+            {% if game_progress.mode == "ladder" or game_progress.mode == "reaches" %}
+              Win a discount or a free dessert
+            {% elif game_progress.mode == "none" %}
+              Play for fun
+            {% else %}
+              Win a free dessert
+            {% endif %}
+          </p>
+          <p class="game-nudge__body">
+            A good game can win a prize. Play it out, then see.
+            Add your name and mobile number, or use Google, to be able to claim.
+          </p>
+          <div class="game-nudge__row">
+            <a class="game-cta" href="{{ back }}">Sign in to earn</a>
+            <button class="game-cta game-cta--ghost" type="button" id="game-nudge-close">Play without rewards</button>
+          </div>
+        </div>
+        {% endif %}
       </div>
 
       {% comment %}
@@ -75,12 +108,16 @@
 {# Plain variable autoescaping would HTML-escape the quotes and break JSON.parse in shell.js/theme.js. #}
 {{ theme_payload|json_script:"games-theme" }}
 {{ bridge_payload|json_script:"games-bridge" }}
+{{ game_progress|json_script:"games-progress" }}
 {% endwith %}
 {% endblock %}
 
 {% block scripts %}
-{# GAMES_V: bump whenever any script under static/games/ changes #}
-{% with GAMES_V="2026-10-14-19" %}
+{# GAMES_V: bump whenever any script under static/games/ changes.          #}
+{# Keep this in step with the GAMES_V at the top of this template: the CSS #}
+{# guards the iframe src, this one guards the shell scripts. A mismatch     #}
+{# serves a stale shell.js from cache. test_both_games_versions_match.      #}
+{% with GAMES_V="2026-10-16-7" %}
 <script src="{% static 'games/core/storage.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/theme.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/shell.js' %}?v={{ GAMES_V }}"></script>

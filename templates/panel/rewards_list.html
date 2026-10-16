@@ -1,0 +1,132 @@
+{% extends "panel/base_panel.html" %}
+{% load icon_tags %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Rewards</h1>
+    <p class="muted" style="margin: 4px 0 0;">
+      Coupons won in the Games Zone. A guest shows the code, you redeem it here once.
+    </p>
+  </div>
+</div>
+
+<div class="panel-stats">
+  <div class="panel-stat">
+    <span>Ready to redeem</span>
+    <strong>{{ issued_count }}</strong>
+  </div>
+  <div class="panel-stat">
+    <span>Redeemed</span>
+    <strong>{{ redeemed_count }}</strong>
+  </div>
+  <div class="panel-stat">
+    <span>Expired</span>
+    <strong>{{ expired_count }}</strong>
+  </div>
+</div>
+
+<form method="get" style="display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); flex-wrap: wrap; align-items: flex-end;">
+  <label style="display: flex; flex-direction: column; gap: 4px;">
+    <span class="caption muted">Coupon code</span>
+    <input
+      type="text"
+      name="code"
+      value="{{ code_query }}"
+      placeholder="e.g. KIN-4K7M2P"
+      autocomplete="off"
+      spellcheck="false"
+      style="padding: 8px; border-radius: 8px; border: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.06em; font-family: ui-monospace, Menlo, monospace;"
+    >
+  </label>
+  <label style="display: flex; flex-direction: column; gap: 4px;">
+    <span class="caption muted">Status</span>
+    <select name="status" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+      <option value="all" {% if active_status == "all" %}selected{% endif %}>All</option>
+      {% for val, label in statuses %}
+      <option value="{{ val }}" {% if active_status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" class="btn btn-outline btn-sm">Find</button>
+  {% if code_query %}
+  <a href="{% url 'panel_rewards' %}" class="btn btn-outline btn-sm">Clear</a>
+  {% endif %}
+</form>
+
+<div class="panel-table-wrap">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Reward</th>
+        <th>Guest</th>
+        <th>Brand / branch</th>
+        <th>Won</th>
+        <th>Valid until</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for coupon in coupons %}
+      <tr>
+        <td>
+          <strong style="font-family: ui-monospace, Menlo, monospace; letter-spacing: 0.06em;">{{ coupon.code }}</strong>
+        </td>
+        <td>
+          {{ coupon.label }}
+          <div class="caption muted">{{ coupon.get_tier_display }}</div>
+        </td>
+        <td>
+          {{ coupon.profile.full_name|default:"Guest" }}
+          <div class="caption muted">
+            {{ coupon.profile.phone|default:"no number given" }}
+          </div>
+        </td>
+        <td>
+          {{ coupon.brand.name_en|default:"No brand" }}
+          <div class="caption muted">{{ coupon.outlet.official_name|default:"Whole brand" }}</div>
+        </td>
+        <td>
+          {{ coupon.score }} pts
+          <div class="caption muted">{{ coupon.game_slug }}</div>
+        </td>
+        <td>
+          {{ coupon.expires_at|date:"Y-m-d" }}
+          {% if coupon.status == "redeemed" and coupon.redeemed_at %}
+          <div class="caption muted">used {{ coupon.redeemed_at|date:"Y-m-d H:i" }}</div>
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge-status {% if coupon.status == 'issued' %}badge-active{% else %}badge-inactive{% endif %}">
+            {{ coupon.get_status_display }}
+          </span>
+          {% if coupon.redeemed_by %}
+          <div class="caption muted">by {{ coupon.redeemed_by.username }}</div>
+          {% endif %}
+        </td>
+        <td>
+          {% if coupon.status == "issued" %}
+          <form method="post" action="{% url 'panel_coupon_redeem' coupon.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm">Redeem</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="muted" style="text-align: center; padding: var(--sp-4);">
+          {% if code_query %}
+            No coupon matches <strong>{{ code_query }}</strong>.
+          {% else %}
+            No rewards yet. They appear the moment a guest wins a game.
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

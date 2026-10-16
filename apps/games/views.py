@@ -7,10 +7,19 @@ Three public surfaces:
   /games/          hub listing the enabled games in the outlet's brand colours
   /games/<slug>/   full-screen play page with Exit back to the QR page
 
-The games pages themselves carry no offer copy and no personal data; the only
-server-side record is the existing TapEvent analytics row. The landing card
-advertises the perk "Win a discount or dessert" (client copy 2026-10-14),
-which staff honour manually; no in-game reward mechanism exists yet.
+The games pages themselves carry no offer copy and no personal data, and the
+only record of a plain round is the TapEvent / GameEvent analytics row.
+
+A FINISHED round can win a real reward (see apps/rewards), but only through
+visible hard work. The play page embeds a short-lived round token, the shell
+posts it with the final score plus how the round was played, and
+`games_event` decides whether a coupon is issued. Playing is never gated: a
+guest without login plays any game at any level with no restriction. Being
+VERIFIED (name and mobile, or Google) is only ever the gate on being PAID.
+
+Scores, durations and action counts all arrive from the browser, so the
+per-guest cooldown keyed on the mobile number and the per-brand monthly cap
+are the real limits, never the score itself.
 """
 
 from django.http import JsonResponse
@@ -19,6 +28,15 @@ from django.urls import reverse
 
 from apps.analytics.models import TapEvent
 from apps.core.models import Brand, Outlet, QrCode
+from apps.guests.identity import ensure_profile
+from apps.rewards.services import (
+    REASON_TEXT,
+    Reason,
+    evaluate_round,
+    progress_payload,
+    sign_round_token,
+    verify_round_token,
+)
 
 from .models import GameEvent
 from .registry import enabled_games, get_game
@@ -140,6 +158,15 @@ def games_play(request, slug):
     qr_key = ""
     if back.startswith("/q/"):
         qr_key = back[3:].strip("/")
+
+    # The play page needs to know where this guest stands before the game
+    # starts: the chess ladder locks the levels above their rung, and an
+    # unverified guest sees the sign-in prompt. One indexed lookup, only on
+    # this page; the menu and specials never touch identity.
+    profile = getattr(request, "guest", None)
+    profile = profile.profile if profile is not None else None
+    progress = progress_payload(profile, game.slug)
+
     return render(
         request,
         "games/play.html",
@@ -151,7 +178,12 @@ def games_play(request, slug):
             "qr_key": qr_key,
             "theme_payload": _theme_payload(brand),
             "bridge_payload": game.bridge,
+            # Claimed once when the round ends. See apps/rewards/services.py.
+            "round_token": sign_round_token(game.slug),
             "place_name": _place_name(brand, outlet),
+            # Ladder / streak state and whether this guest can be paid.
+            "game_progress": progress,
+            "guest_verified": progress.get("verified", False),
         },
     )
 
@@ -183,13 +215,94 @@ def games_event(request):
     key = (request.POST.get("qr") or "")[:80]
     if key:
         qr = QrCode.objects.filter(redirect_key=key).first()
+    brand = qr.brand if qr else None
+    outlet = qr.outlet if qr else None
     GameEvent.objects.create(
         game_slug=slug,
         kind=kind,
         score=score,
-        brand=qr.brand if qr else None,
-        outlet=qr.outlet if qr else None,
+        brand=brand,
+        outlet=outlet,
         qr_code=qr,
         session_key=request.session.session_key or "",
     )
-    return JsonResponse({"ok": True})
+
+    payload = {"ok": True, "reward": None, "identified": False}
+    if kind == "finished":
+        payload.update(_reward_for_round(request, slug, score, brand, outlet))
+    return JsonResponse(payload)
+
+
+def _reward_for_round(request, slug, score, brand, outlet):
+    """Decide what a finished round earned, if anything.
+
+    A missing, forged or stale round token means no coupon. The analytics row
+    above is still written, so a plain POST to this endpoint can never mint a
+    reward on its own.
+
+    The extra fields (`level`, `result`, `duration`, `actions`) are what turn
+    a score into a claim: the ladder has to know which rung was played and
+    whether it was won, and the effort floor has to know the round was really
+    played. All of them come from the browser and none of them are proof.
+    """
+    token = (request.POST.get("token") or "")[:512]
+
+    def _refusal(reason):
+        """Same shape as a real answer, so the shell can always explain why."""
+        return {
+            "reward": None,
+            "identified": False,
+            "verified": False,
+            "reason": reason,
+            "message": REASON_TEXT.get(reason, ""),
+            "progress": progress_payload(None, slug),
+        }
+
+    if not verify_round_token(token, slug):
+        return _refusal(Reason.TOKEN)
+
+    profile, _created = ensure_profile(request, brand=brand, outlet=outlet)
+    if profile is None:
+        return _refusal(Reason.NO_PROFILE)
+
+    def _int(name):
+        try:
+            return int(request.POST.get(name) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    outcome = evaluate_round(
+        profile,
+        slug,
+        score,
+        brand=brand,
+        outlet=outlet,
+        level=_int("level"),
+        result=(request.POST.get("result") or "")[:8],
+        duration=_int("duration"),
+        actions=_int("actions"),
+    )
+
+    reward = None
+    if outcome.coupon is not None:
+        reward = {
+            "code": outcome.coupon.code,
+            "label": outcome.coupon.label,
+            "expires_at": outcome.coupon.expires_at.isoformat(),
+            # The two facts the win ticket needs to pick its face: a dessert
+            # shows the prize words, a percentage shows the number.
+            "kind": outcome.coupon.reward_type,
+            "percent": int(outcome.coupon.percent or 0),
+        }
+    # Being verified is the gate on being PAID, never on playing. The name
+    # and mobile form stays an invitation to everyone else (client rule
+    # 2026-10-16: a guest without login plays any game at any level with no
+    # restriction, they simply do not earn anything).
+    return {
+        "reward": reward,
+        "identified": bool(profile.phone),
+        "verified": profile.is_verified,
+        "reason": outcome.reason,
+        "message": outcome.message,
+        "progress": outcome.progress,
+    }

@@ -37,6 +37,14 @@
     if (bridgeEl) {
       try { bridge = JSON.parse(bridgeEl.textContent) || {}; } catch (e) { bridge = {}; }
     }
+    /* Where this guest stands: the chess ladder rung, or the run of rounds
+       behind a dessert. Embedded by the server (apps/rewards), so the climb
+       is decided there and this shell only draws it. */
+    var progress = {};
+    var progressEl = document.getElementById("games-progress");
+    if (progressEl) {
+      try { progress = JSON.parse(progressEl.textContent) || {}; } catch (e) { progress = {}; }
+    }
     var storage = window.GamesStorage || {
       get: function () { return 0; },
       submit: function (s, v) { return v; }
@@ -48,6 +56,23 @@
     var played = false;
     var reloading = false;
     var doc = null;
+    /* Proof of play, as honest as a browser can make it: how long the round
+       ran and how much the guest actually touched it. Both go to the reward
+       engine so a one-tap "round" counts for nothing. Neither is proof - a
+       bot can fake them - but faking them is the work the engine wants. */
+    var startedAt = 0;
+    var actions = 0;
+
+    function elapsedSeconds() {
+      if (!startedAt) return 0;
+      return Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+    }
+
+    function noteAction() {
+      actions += 1;
+      if (!startedAt) startedAt = Date.now();
+      markPlayed();
+    }
 
     function paintBest() {
       bestEl.textContent = best > 0 ? "Best " + best : "Best —";
@@ -59,6 +84,9 @@
     }
 
     /* ---- analytics beacon: GameEvent rows for the play funnel ---- */
+    /* Fire-and-forget, so only the "played" signal travels this way. The
+       "finished" signal needs its answer read, because the server decides
+       whether the round earned a coupon: see claimRound below. */
     function beacon(kind, value) {
       var url = host.dataset.beacon;
       if (!url) return;
@@ -68,6 +96,7 @@
         body.append("kind", kind);
         body.append("score", String(value | 0));
         if (host.dataset.qr) body.append("qr", host.dataset.qr);
+        if (host.dataset.token) body.append("token", host.dataset.token);
         var token = host.dataset.csrf;
         if (token) body.append("csrfmiddlewaretoken", token);
         if (navigator.sendBeacon) navigator.sendBeacon(url, body);
@@ -75,6 +104,233 @@
       } catch (e) {
         /* analytics must never break a game */
       }
+    }
+
+    /* ---- reward claim: the finished signal, with its answer ----
+       sendBeacon cannot read a response, so the finished round goes out as a
+       fetch. The round token (embedded by the server in the page) tells the
+       backend a play page for this game was really loaded; the per-guest
+       cooldown and the per-brand cap are what actually limit the payout. */
+    /* A plain-text bridge reader, for the two facts the reward ladder needs:
+       which level was played, and how it ended. The score alone cannot tell
+       a win from a draw. Returns "" when the game publishes nothing. */
+    function readBridgeText(key) {
+      var cfg = bridge[key];
+      if (!doc || !cfg || !cfg.sel) return "";
+      try {
+        var el = doc.querySelector(cfg.sel);
+        return el ? String(el.textContent || "").trim() : "";
+      } catch (e) {
+        return "";
+      }
+    }
+
+    function claimRound(value) {
+      var url = host.dataset.beacon;
+      if (!url) return null;
+      var body = new FormData();
+      body.append("slug", slug);
+      body.append("kind", "finished");
+      body.append("score", String(value | 0));
+      /* Proof of play + the ladder facts. All of it is decided server side
+         (apps/rewards); sending it is the only way the engine can tell a
+         climbed rung from a jumped one. */
+      body.append("duration", String(elapsedSeconds()));
+      body.append("actions", String(actions));
+      body.append("level", readBridgeText("level"));
+      body.append("result", readBridgeText("result"));
+      if (host.dataset.qr) body.append("qr", host.dataset.qr);
+      if (host.dataset.token) body.append("token", host.dataset.token);
+      var token = host.dataset.csrf;
+      if (token) body.append("csrfmiddlewaretoken", token);
+      return fetch(url, {
+        method: "POST",
+        body: body,
+        credentials: "same-origin"
+      }).then(function (response) { return response.json(); });
+    }
+
+    /* Renders the won coupon into the game-over overlay as the SILVER WIN
+       TICKET (client-approved design, 2026-10-16): four cropped corners, a
+       dashed tear line with a notch scooped out of both sides, the code ABOVE
+       the line and a usage stub below it. One ticket, two faces: a warm gold
+       dessert face, and a plain silver discount face where the number is the
+       prize. A reward can only be issued to a VERIFIED guest now (name +
+       mobile, or Google), so there is no "add your details" nudge here - that
+       line lives on the refusal card instead, which is where it is true. */
+    function renderReward(box, data) {
+      var reward = data.reward || {};
+      box.innerHTML = "";
+      box.className = "game-reward game-reward--ticket";
+
+      /* Which face: a percentage coupon shows its number, anything else shows
+         the prize words. Falls back to reading the label, so a payload with
+         no `kind` still draws the right face. */
+      var kind = reward.kind || "";
+      if (!kind) kind = /%|\boff\b/i.test(reward.label || "") ? "percent" : "dessert";
+      var variant = kind === "percent" ? "discount" : "dessert";
+
+      /* The game that was won, and the level for the games that climb. */
+      var name = "";
+      var title = document.querySelector(".sheet-title");
+      if (title) name = (title.textContent || "").trim();
+      var level = readBridgeText("level");
+      if (level) name = (name ? name + " - Level " : "Level ") + level;
+
+      var shell = document.createElement("div");
+      shell.className = "game-reward__shell";
+      shell.setAttribute("data-variant", variant);
+      var ticket = document.createElement("article");
+      ticket.className = "game-reward__ticket";
+      ticket.setAttribute("data-variant", variant);
+      ticket.setAttribute("aria-live", "polite");
+
+      ticket.innerHTML =
+        '<div class="game-reward__brushed" aria-hidden="true"></div>' +
+        '<div class="game-reward__sheen" aria-hidden="true"></div>' +
+        '<div class="game-reward__body">' +
+          '<header class="game-reward__top">' +
+            '<span class="game-reward__brand">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ' +
+              'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                '<circle cx="12" cy="12" r="9"></circle>' +
+                '<path d="M8.5 13.5c1 1.6 2.2 2.4 3.5 2.4s2.5-.8 3.5-2.4"></path>' +
+                '<circle cx="9.2" cy="10" r="0.9" fill="currentColor" stroke="none"></circle>' +
+                '<circle cx="14.8" cy="10" r="0.9" fill="currentColor" stroke="none"></circle>' +
+              '</svg>Pasons Group</span>' +
+            '<span class="game-reward__game"></span>' +
+          '</header>' +
+          '<div class="game-reward__prizeblock">' +
+            '<p class="game-reward__kicker">You won</p>' +
+            '<p class="game-reward__value"></p>' +
+            '<p class="game-reward__sub"></p>' +
+          '</div>' +
+          '<div class="game-reward__codewrap">' +
+            '<div><p class="game-reward__codelabel">Your code</p>' +
+            '<p class="game-reward__codevalue"></p></div>' +
+            '<span class="game-reward__seal" aria-hidden="true">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="#7A5E17" stroke-width="1.5" ' +
+              'stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M12 3.2l2.3 4.9 5.2.7-3.8 3.7.95 5.3L12 15.3 7.35 17.8l.95-5.3L4.5 8.8l5.2-.7z"></path>' +
+              '</svg></span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="game-reward__perf" aria-hidden="true"></div>' +
+        '<footer class="game-reward__stub">' +
+          '<div><p class="game-reward__stublabel">How to use</p>' +
+          '<p class="game-reward__stubcopy">Show this code to our staff before you pay</p></div>' +
+          '<div class="game-reward__stubaside">' +
+            '<p class="game-reward__stubvalid"></p>' +
+            '<p class="game-reward__stubfine">one use only</p>' +
+          '</div>' +
+        '</footer>';
+
+      ticket.querySelector(".game-reward__game").textContent = name || "Games Zone";
+      if (kind === "percent") {
+        var pct = parseInt(reward.percent, 10);
+        if (!pct) {
+          var m = String(reward.label || "").match(/\d+/);
+          pct = m ? parseInt(m[0], 10) : 0;
+        }
+        ticket.querySelector(".game-reward__value").innerHTML =
+          pct + '<span class="pct">%</span> <em>off</em>';
+        ticket.querySelector(".game-reward__sub").textContent =
+          "your whole bill, food and drinks";
+      } else {
+        var words = document.createElement("em");
+        words.textContent = reward.label || "Free dessert";
+        ticket.querySelector(".game-reward__value").appendChild(words);
+        ticket.querySelector(".game-reward__sub").textContent =
+          "chef's pick of the day, on the house";
+      }
+      ticket.querySelector(".game-reward__codevalue").textContent = reward.code || "";
+      /* Validity read from the real expiry, so the stub cannot go stale. */
+      var valid = "Valid 14 days";
+      if (reward.expires_at) {
+        var days = Math.round(
+          (new Date(reward.expires_at).getTime() - Date.now()) / 86400000
+        );
+        if (days >= 1) valid = "Valid " + days + " day" + (days === 1 ? "" : "s");
+      }
+      ticket.querySelector(".game-reward__stubvalid").textContent = valid;
+
+      shell.appendChild(ticket);
+      box.appendChild(shell);
+      box.hidden = false;
+
+      /* Reveal + pointer tilt, the motion the client approved in the draft. */
+      if (window.requestAnimationFrame) {
+        requestAnimationFrame(function () { ticket.classList.add("is-in"); });
+      } else {
+        ticket.classList.add("is-in");
+      }
+      var reduce = window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var fine = window.matchMedia &&
+        window.matchMedia("(pointer: fine)").matches;
+      if (fine && !reduce && window.requestAnimationFrame) {
+        var targetRX = 0, targetRY = 0, curRX = 0, curRY = 0, rafId = 0;
+        var maxTilt = 7;
+        var tick = function () {
+          curRX += (targetRX - curRX) * 0.12;
+          curRY += (targetRY - curRY) * 0.12;
+          ticket.style.transform =
+            "rotateX(" + curRX.toFixed(2) + "deg) rotateY(" + curRY.toFixed(2) + "deg)";
+          if (Math.abs(targetRX - curRX) > 0.01 || Math.abs(targetRY - curRY) > 0.01) {
+            rafId = window.requestAnimationFrame(tick);
+          } else {
+            rafId = 0;
+          }
+        };
+        shell.addEventListener("pointermove", function (e) {
+          if (e.pointerType && e.pointerType !== "mouse") return;
+          var r = ticket.getBoundingClientRect();
+          targetRY = ((e.clientX - r.left) / r.width - 0.5) * maxTilt * 2;
+          targetRX = -((e.clientY - r.top) / r.height - 0.5) * maxTilt * 2;
+          if (!rafId) rafId = window.requestAnimationFrame(tick);
+        });
+        shell.addEventListener("pointerleave", function () {
+          targetRX = 0;
+          targetRY = 0;
+          if (!rafId) rafId = window.requestAnimationFrame(tick);
+          ticket.style.animationPlayState = "running";
+        });
+        shell.addEventListener("pointerenter", function () {
+          ticket.style.animationPlayState = "paused";
+        });
+      }
+    }
+
+    /* No reward, so say why and where the guest now stands. The climb IS the
+       rule, so a refusal that says nothing would just read as a broken game.
+       Text only, same card, never louder than the win. */
+    function renderProgress(box, data) {
+      if (!data || !data.message) return;
+      box.innerHTML = "";
+      var note = document.createElement("p");
+      note.className = "game-reward__hint";
+      note.textContent = data.message;
+      box.appendChild(note);
+
+      var p = data.progress || {};
+      var line = "";
+      if (p.mode === "ladder" && p.levels) {
+        line = "Level " + (p.rung || 1) + " of " + p.levels + " unlocked.";
+      }
+      if (line) {
+        var where = document.createElement("p");
+        where.className = "game-reward__tag";
+        where.textContent = line;
+        box.appendChild(where);
+      }
+      if (data.verified === false) {
+        var nudge = document.createElement("a");
+        nudge.className = "game-reward__nudge";
+        nudge.href = exitHref();
+        nudge.textContent = "Add your name and mobile to claim rewards";
+        box.appendChild(nudge);
+      }
+      box.hidden = false;
     }
 
     function markPlayed() {
@@ -162,7 +418,8 @@
       markPlayed();
       best = storage.submit(slug, score);
       paintBest();
-      beacon("finished", score);
+      /* One request carries both the finished signal and the reward claim. */
+      var claim = claimRound(score);
 
       overlay.dataset.state = "over";
       overlay.innerHTML = "";
@@ -194,6 +451,28 @@
       overlay.appendChild(s);
       overlay.appendChild(sub);
       overlay.appendChild(row);
+
+      /* Reward slot. Left empty and hidden until the server answers, so the
+         game-over screen is never held back waiting on the network, and a
+         failed claim simply shows the ordinary overlay. */
+      var prizeBox = document.createElement("div");
+      prizeBox.className = "game-reward";
+      prizeBox.hidden = true;
+      overlay.appendChild(prizeBox);
+      if (claim) {
+        claim
+          .then(function (data) {
+            if (!data) return;
+            /* A win shows the coupon. Anything else shows why not, and where
+               the guest now stands on the climb. */
+            if (data.reward) renderReward(prizeBox, data);
+            else renderProgress(prizeBox, data);
+            if (data.progress) paintLadder(data.progress);
+          })
+          .catch(function () {
+            /* a reward must never break the game-over screen */
+          });
+      }
     }
 
     /* ---- restart: reload the vendored page for a clean round ---- */
@@ -215,6 +494,9 @@
       reloading = true;
       score = 0;
       scoreEl.textContent = "0";
+      /* a fresh round is a fresh proof of play */
+      startedAt = 0;
+      actions = 0;
       overlay.dataset.state = "hidden";
       overlay.innerHTML = "";
 
@@ -243,6 +525,73 @@
     }
 
     if (restartBtn) restartBtn.addEventListener("click", restart);
+
+    /* ---- the pre-game prompt (a guest who is not verified) ---- */
+    /* Shown before the game starts and never in its way: one tap drops it
+       and the game has been running underneath the whole time. Client rule
+       2026-10-16: playing is open to everyone at every level, this only says
+       what verifying is worth. */
+    var nudge = document.getElementById("game-nudge");
+    var nudgeClose = document.getElementById("game-nudge-close");
+    if (nudge && nudgeClose) {
+      nudgeClose.addEventListener("click", function () {
+        if (nudge.parentNode) nudge.parentNode.removeChild(nudge);
+      });
+    }
+
+    /* ---- ladder locking (the chess setup modal) ---- */
+    /* The guest-facing level is `levelAttr` minus `levelOffset`, and any
+       level above the unlocked rung is disabled. A courtesy only: the server
+       refuses the claim again at the end of the round (apps/rewards), so the
+       UI can never unlock a rung on its own. */
+    function applyLadder() {
+      var cfg = bridge.lock;
+      if (!cfg || !cfg.sel || !doc) return;
+      var rung = parseInt(progress.rung, 10) || 1;
+      var offset = parseInt(cfg.levelOffset, 10) || 0;
+      var attr = cfg.levelAttr || "data-level";
+      var els;
+      try { els = doc.querySelectorAll(cfg.sel); } catch (e) { return; }
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        var raw = parseInt(el.getAttribute(attr), 10);
+        if (isNaN(raw)) continue;
+        var locked = raw - offset > rung;
+        if ("disabled" in el) el.disabled = locked;
+        el.setAttribute("aria-disabled", locked ? "true" : "false");
+        el.style.opacity = locked ? "0.35" : "";
+        el.style.cursor = locked ? "not-allowed" : "";
+        /* keep the vendored tooltip when unlocked, replace it when locked */
+        if (el.getAttribute("data-pasons-title") === null) {
+          el.setAttribute("data-pasons-title", el.getAttribute("title") || "");
+        }
+        el.setAttribute(
+          "title",
+          locked
+            ? "This level is not open yet."
+            : el.getAttribute("data-pasons-title")
+        );
+      }
+    }
+
+    /* ---- where this guest stands on the climb ---- */
+    function paintLadder(p) {
+      var el = document.getElementById("game-ladder");
+      if (!el) return;
+      p = p || progress;
+      var text = "";
+      if (p.mode === "ladder" && p.levels) {
+        text = "Level " + (parseInt(p.rung, 10) || 1) + " of " + p.levels + " unlocked.";
+      }
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.textContent = text;
+      el.hidden = false;
+    }
+    paintLadder(progress);
 
     /* ---- fit-to-card scaler ---- */
     /* Every vendored game lays out at its own natural size (2048 is a fixed
@@ -353,12 +702,16 @@
       over = false;
       reloading = false;
       try {
-        /* first real interaction inside the game counts as "played" */
-        doc.addEventListener("pointerdown", markPlayed, { once: true });
-        doc.addEventListener("keydown", markPlayed, { once: true });
+        /* Every real interaction counts, not just the first one: the reward
+           engine needs to see that the round was played out. pointerdown and
+           keydown only - hover, focus and scrolling are not playing. */
+        doc.addEventListener("pointerdown", noteAction);
+        doc.addEventListener("keydown", noteAction);
       } catch (e) { /* ignore */ }
       /* a new game document has its own layout: re-fit it to the card */
       fitFrame(true);
+      /* and its own setup screen: re-apply the ladder lock to it */
+      applyLadder();
     }
 
     frame.addEventListener("load", function () {

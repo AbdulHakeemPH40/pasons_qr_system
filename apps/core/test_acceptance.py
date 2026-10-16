@@ -195,16 +195,28 @@ class QrFlowTests(AcceptanceFixtures):
         self.assertEqual(self.client.session["qr"], self.qr_intl.pk)
 
     def test_landing_shows_play_card_with_perk_promise(self):
-        """Client copy 2026-10-14 (via user): the card advertises the perk
-        'Win a discount or dessert', honoured by staff. Supersedes the
-        2026-10-10 play-only decision for the landing card copy."""
+        """Client copy 2026-10-16 (via user): the card promises a gift and
+        leaves the prize to management. It must NOT name a dessert and must
+        NOT name a discount. Supersedes the 2026-10-14 copy.
+
+        The rule is scoped to the ACTION CARDS. They never promise a code,
+        so no "coupon" and no "voucher" appears in that section. The identity
+        sheet below it does name a "coupon" in the mobile-match note, which
+        is client copy from 2026-10-16 and is asserted in
+        apps/guests/tests.py.
+        """
         landing = self.client.get(reverse("qr_landing", args=["kcic-table-001"]))
         self.assertEqual(landing.status_code, 200)
         self.assertContains(landing, "PLAY A GAME")
-        self.assertContains(landing, "Win a discount or dessert")
+        self.assertContains(landing, "Win a gift, our team picks it")
         self.assertContains(landing, reverse("qr_game", args=["kcic-table-001"]))
-        # The promise is perk-only: no coupon language.
-        self.assertNotIn("coupon", landing.content.decode().lower())
+        # The promise is perk-only: the cards never offer a code, and they
+        # never name the prize.
+        body = landing.content.decode()
+        cards = body.split('<section class="outlet-actions"', 1)[1]
+        cards = cards.split("</section>", 1)[0].lower()
+        self.assertNotIn("coupon", cards)
+        self.assertNotIn("voucher", cards)
         # The printed-sheet URL keeps working and opens the games hub.
         entry = self.client.get("/q/kcic-table-001/game/")
         self.assertEqual(entry.status_code, 302)
@@ -232,25 +244,47 @@ class QrFlowTests(AcceptanceFixtures):
         self.assertEqual(response.status_code, 302)
         self.assertIn("kingchef.internationalcity", response["Location"])
 
-    def test_instagram_card_promises_gift_with_lucky_draw_popup(self):
-        """Client copy 2026-10-14 (via user): the Instagram card sub-line
-        reads 'Follow and win a special gift' and tapping the card opens a
-        lucky-draw popup ('You are entered in the lucky draw!'). Instagram
-        never reports who followed, so the tap-tracked redirect stays the
-        single draw-entry log: the popup's CTA must point at it, and the
-        card keeps its href as the no-JS fallback."""
+    def test_instagram_card_opens_the_identity_sheet(self):
+        """Client copy 2026-10-14, extended 2026-10-16.
+
+        The Instagram card sub-line reads "Follow and win a special gift".
+        Tapping the card opens the identity sheet, which begins with the
+        follow-for-a-gift invitation and then runs the follow conversation:
+        entry (open Instagram, tap-tracked) -> "Did you follow us?" -> the
+        name and mobile form -> confirmation. The gift is NOT the game
+        dessert and NOT the game discount: management decides what it is, so
+        the sheet never promises a specific item.
+
+        Instagram never reports who followed, so the Yes answer is
+        SELF-DECLARED and the panel labels it that way. The tap-tracked
+        redirect therefore stays the single entry log: the contact circle,
+        the card (its no-JS fallback) and the sheet's CTA all point at it, so
+        every tap is one TapEvent and the draw list never doubles.
+        """
         landing = self.client.get(reverse("qr_landing", args=["kcic-table-001"]))
         self.assertEqual(landing.status_code, 200)
+        body = landing.content.decode()
         self.assertContains(landing, "Follow and win a special gift")
-        self.assertNotIn("New plates and stories", landing.content.decode())
-        # the popup celebrates the entry and is hidden until the card tap
-        self.assertContains(landing, "You are entered in the lucky draw")
+        self.assertNotIn("New plates and stories", body)
+
+        # the sheet opens with the gift invitation, hidden until the card tap
+        self.assertContains(landing, "Follow us and get a gift")
         self.assertContains(landing, 'id="ig-draw-popup" hidden')
-        # one entry log only: the three Instagram links (contact circle,
-        # card as no-JS fallback, popup CTA) all use the same redirect, so
-        # every tap is one TapEvent and the draw list never doubles.
+
+        # all four panels of the follow conversation ship in the page
+        for panel in ("entry", "ask", "form", "done"):
+            self.assertIn(f'data-panel="{panel}"', body)
+        self.assertContains(landing, "Did you follow us?")
+
+        # the form asks for a name and a mobile, and needs the consent line
+        for field in ("first_name", "last_name", "phone"):
+            self.assertIn(f'name="{field}"', body)
+        self.assertIn('name="consent"', body)
+        self.assertIn('name="phone" value="" inputmode="tel"', body)
+
+        # one entry log only
         tracked = reverse("qr_instagram_redirect", args=["kcic-table-001"])
-        self.assertEqual(landing.content.decode().count(f'href="{tracked}"'), 3)
+        self.assertEqual(body.count(f'href="{tracked}"'), 3)
         self.assertEqual(
             TapEvent.objects.filter(
                 qr_code=self.qr_intl, action=TapEvent.ActionType.INSTAGRAM

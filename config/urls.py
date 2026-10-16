@@ -19,7 +19,10 @@ from django.views.generic import RedirectView
 from apps.analytics import views as analytics_views
 from apps.core import views
 from apps.games import views as games_views
+from apps.guests import panel_views as guest_panel_views
+from apps.guests import urls as guest_urls
 from apps.menu import views as menu_views
+from apps.rewards import panel_views as reward_panel_views
 
 from django.contrib.auth import views as auth_views
 from apps.core import panel_views
@@ -51,6 +54,10 @@ urlpatterns = [
     # point at /q/<key>/game/ — the name stays, it now opens the games hub.
     path("q/<slug:key>/game/", games_views.qr_game, name="qr_game"),
     path("games/", include("apps.games.urls")),
+
+    # Guest identity (apps/guests): the Instagram fallback page and the one
+    # view that writes a guest's name + mobile onto their cookie's profile.
+    path("", include(guest_urls)),
 
     # Custom Panel routes (Spec Part D)
     path("panel/login/", auth_views.LoginView.as_view(template_name="panel/login.html"), name="login"),
@@ -89,6 +96,20 @@ urlpatterns = [
     path("panel/users/<int:pk>/edit/", panel_views.panel_user_edit, name="panel_user_edit"),
     path("panel/analytics/", analytics_views.dashboard, name="panel_analytics"),
     path("panel/changelog/", panel_views.panel_changelog, name="panel_changelog"),
+    # Won rewards: the coupon list and the once-only redeem at the till.
+    path("panel/rewards/", reward_panel_views.panel_rewards, name="panel_rewards"),
+    path(
+        "panel/rewards/<int:pk>/redeem/",
+        reward_panel_views.panel_coupon_redeem,
+        name="panel_coupon_redeem",
+    ),
+    # Collected guest contacts: the same list the campaign CSV is built from.
+    path("panel/guests/", guest_panel_views.panel_guests, name="panel_guests"),
+    path(
+        "panel/guests/export.csv",
+        guest_panel_views.panel_guests_export,
+        name="panel_guests_export",
+    ),
 
     path(
         "dashboard/",

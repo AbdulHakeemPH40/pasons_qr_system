@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Win card, draft 2 - ticket shape - Pasons Games Zone</title>
+<style>
+  /* ==========================================================================
+     DRAFT ONLY. This file is a design copy for review.
+     Nothing here is wired into the project. Same type (Fraunces) and the same
+     palette tokens as the live guest pages, so the card reads as one family.
+
+     Draft 2 changes, from the client's references:
+     1. The card is cut like a ticket: a quarter-circle bite out of all 4 corners.
+     2. A dashed tear line runs across the card, with a notch scooped out of the
+        left and the right edge exactly at that line.
+     3. The "Your code" box sits ABOVE the tear line. Below the line is the stub:
+        how to use it and how long it is valid.
+     ========================================================================== */
+
+  @font-face {
+    font-family: "Fraunces";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("static/fonts/Fraunces-var.woff2") format("woff2");
+  }
+
+  :root {
+    --ink: #22301F;
+    --cream: #F5EFE3;
+    --gold-deep: #A8893E;
+    --gold-line: #C2A24B;
+    --wave-green: #2E5B3E;
+    --muted: #6F7D6A;
+    --tint-green: #EDF4E8;
+
+    --font-display: "Fraunces", "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* the silver ramp */
+    --silver-1: #FDFDFE;
+    --silver-2: #E4E8EC;
+    --silver-3: #C6CCD3;
+    --silver-4: #AEB5BD;
+    --silver-5: #E9EDF1;
+  }
+
+  * { box-sizing: border-box; }
+
+  /* figures are the card frames: no UA side margins */
+  figure { margin: 0; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 520px at 82% -12%, rgba(46, 91, 62, 0.10), transparent 62%),
+      radial-gradient(900px 460px at -10% 108%, rgba(168, 137, 62, 0.12), transparent 60%),
+      var(--cream);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    letter-spacing: 0;
+  }
+
+  .wrap {
+    width: min(1080px, 100% - 40px);
+    margin: 0 auto;
+    padding: 40px 0 72px;
+  }
+
+  /* ---- page header ------------------------------------------------------ */
+
+  .kicker {
+    margin: 0 0 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.9rem, 1.2rem + 2.6vw, 3rem);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+  }
+
+  .lede {
+    max-width: 56ch;
+    margin: 14px 0 0;
+    font-size: 1.02rem;
+    color: var(--muted);
+  }
+
+  .rule {
+    height: 1px;
+    margin: 30px 0;
+    background: linear-gradient(90deg, var(--gold-line), rgba(194, 162, 75, 0.15) 55%, transparent);
+    border: 0;
+  }
+
+  /* ---- stage: the hero card -------------------------------------------- */
+
+  .stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+    gap: 40px;
+    align-items: center;
+    padding: 8px 0 6px;
+  }
+
+  .stage__side { min-width: 0; }
+
+  .stage__side h2 {
+    margin: 0 0 10px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  .stage__side p {
+    margin: 0 0 18px;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  .stage__card {
+    justify-self: center;
+    /* room for the float + tilt so nothing clips */
+    padding: 26px 30px 34px;
+    min-width: 0;
+  }
+
+  /* ---- ticket shell -----------------------------------------------------
+     The scooped corners and side notches are a CSS mask on the card, so the
+     outer shadow has to live on a wrapper: filter drop-shadow follows the
+     real cut silhouette, a box shadow would just draw a rectangle. */
+
+  .ticket-shell {
+    perspective: 1100px;
+    filter:
+      drop-shadow(0 14px 26px rgba(34, 48, 31, 0.18))
+      drop-shadow(0 2px 4px rgba(34, 48, 31, 0.10));
+  }
+
+  .ticket-shell[data-variant="dessert"] {
+    filter:
+      drop-shadow(0 14px 28px rgba(168, 137, 62, 0.30))
+      drop-shadow(0 2px 4px rgba(34, 48, 31, 0.10));
+  }
+
+  /* ---- the silver ticket ------------------------------------------------ */
+
+  .card {
+    --scoop: 19px;    /* the corner bites */
+    --bite: 12px;     /* the side notches at the tear line */
+    --stub-h: 84px;   /* bottom stub height, also where the tear line sits */
+    --pad-x: 22px;
+
+    position: relative;
+    width: min(360px, 82vw);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--ink);
+    isolation: isolate;
+    background:
+      linear-gradient(135deg,
+        var(--silver-1) 0%,
+        var(--silver-2) 16%,
+        var(--silver-3) 34%,
+        var(--silver-5) 50%,
+        var(--silver-4) 66%,
+        var(--silver-2) 84%,
+        var(--silver-3) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+    transform-style: preserve-3d;
+    transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.1), opacity 0.5s ease;
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+
+    /* the ticket cut: quarter-circle bite out of every corner, plus a notch
+       out of the left and right edge exactly at the tear line */
+    -webkit-mask-image:
+      radial-gradient(circle var(--scoop) at 0 0,   transparent calc(var(--scoop) - 0.8px), #000 var(--scoop)),
+      radial-gradient(circle var(--scoop) at 100% 0, transparent calc(var(--scoop) - 0.8px), #000 var(--scoop)),
+      radial-gradient(circle var(--scoop) at 0 100%, transparent calc(var(--scoop) - 0.8px), #000 var(--scoop)),
+      radial-gradient(circle var(--scoop) at 100% 100%, transparent calc(var(--scoop) - 0.8px), #000 var(--scoop)),
+      radial-gradient(circle var(--bite) at 0 calc(100% - var(--stub-h)),   transparent calc(var(--bite) - 0.8px), #000 var(--bite)),
+      radial-gradient(circle var(--bite) at 100% calc(100% - var(--stub-h)), transparent calc(var(--bite) - 0.8px), #000 var(--bite));
+    mask-image:
+      radial-gradient(circle var(--scoop) at 0 0,   transparent calc(var(--scoop) - 0.8px), #000 var(--scoop)),
+      radial-gradient(circle var(--scoop) at 100% 0, transparent calc(var(--scoop) - 0.8px), #000 var(--scoop)),
+      radial-gradient(circle var(--scoop) at 0 100%, transparent calc(var(--scoop) - 0.8px), #000 var(--scoop)),
+      radial-gradient(circle var(--scoop) at 100% 100%, transparent calc(var(--scoop) - 0.8px), #000 var(--scoop)),
+      radial-gradient(circle var(--bite) at 0 calc(100% - var(--stub-h)),   transparent calc(var(--bite) - 0.8px), #000 var(--bite)),
+      radial-gradient(circle var(--bite) at 100% calc(100% - var(--stub-h)), transparent calc(var(--bite) - 0.8px), #000 var(--bite));
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+
+  .card.is-in {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    animation: cardFloat 9s ease-in-out 0.6s infinite alternate;
+  }
+
+  @keyframes cardFloat {
+    from { translate: 0 0; }
+    to   { translate: 0 -9px; }
+  }
+
+  /* brushed metal hairlines */
+  .card__brushed {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+      repeating-linear-gradient(112deg,
+        rgba(255, 255, 255, 0.08) 0 1px,
+        transparent 1px 4px),
+      repeating-linear-gradient(112deg,
+        rgba(34, 48, 31, 0.035) 0 1px,
+        transparent 1px 7px);
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+  }
+
+  /* the light sweep */
+  .card__sheen {
+    position: absolute;
+    inset: -40% -60%;
+    z-index: 2;
+    background: linear-gradient(104deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.55) 47%,
+      rgba(255, 255, 255, 0.85) 50%,
+      rgba(255, 255, 255, 0.35) 54%,
+      transparent 62%);
+    transform: translateX(-70%) rotate(0.001deg);
+    animation: sheenSweep 6.5s ease-in-out 1.1s infinite;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.75;
+  }
+
+  @keyframes sheenSweep {
+    0%   { transform: translateX(-70%); }
+    42%  { transform: translateX(70%); }
+    100% { transform: translateX(70%); }
+  }
+
+  .card__body {
+    position: relative;
+    z-index: 3;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 22px var(--pad-x) 20px;
+  }
+
+  .card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .card__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(34, 48, 31, 0.72);
+  }
+
+  .card__brand svg { width: 18px; height: 18px; display: block; }
+
+  .card__game {
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.52);
+    border: 1px solid rgba(34, 48, 31, 0.10);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--wave-green);
+    white-space: nowrap;
+  }
+
+  .card__prize { min-height: 128px; }
+
+  .card__kicker {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+  }
+
+  .card__value {
+    margin: 2px 0 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2.5rem, 2rem + 2.4vw, 3.35rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    color: var(--ink);
+  }
+
+  .card__value em {
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  .card__value .pct {
+    font-size: 0.52em;
+    letter-spacing: -0.01em;
+    vertical-align: 0.62em;
+    margin-left: 0.06em;
+  }
+
+  .card__sub {
+    margin: 8px 0 0;
+    font-size: 0.92rem;
+    color: rgba(34, 48, 31, 0.68);
+    max-width: 30ch;
+  }
+
+  /* value swap animation on chip press */
+  .card__prize.is-swap .card__value,
+  .card__prize.is-swap .card__sub,
+  .card__prize.is-swap .card__kicker {
+    animation: prizeSwap 0.52s cubic-bezier(0.2, 0.9, 0.25, 1.1);
+  }
+
+  @keyframes prizeSwap {
+    0%   { opacity: 0; transform: translateY(10px) scale(0.97); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* the code box: solid frosted panel, ABOVE the tear line. The only dashed
+     element on the ticket is the tear line itself. */
+  .card__code {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 11px 14px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.56);
+    border: 1px solid rgba(168, 137, 62, 0.38);
+  }
+
+  .card__code-label {
+    margin: 0;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(34, 48, 31, 0.55);
+  }
+
+  .card__code-value {
+    margin: 1px 0 0;
+    font-family: var(--font-mono);
+    font-size: 1.14rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: #2A2F36;
+  }
+
+  .card__seal {
+    flex: none;
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid rgba(168, 137, 62, 0.5);
+    background:
+      conic-gradient(from 210deg, rgba(255,255,255,0.85), rgba(168,137,62,0.22), rgba(255,255,255,0.9), rgba(168,137,62,0.18), rgba(255,255,255,0.85));
+  }
+
+  .card__seal svg { width: 22px; height: 22px; display: block; }
+
+  /* the dashed tear line, centered on the side notches */
+  .card__perf {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--stub-h) - 1px);
+    height: 2px;
+    z-index: 3;
+    background: repeating-linear-gradient(90deg,
+      rgba(34, 48, 31, 0.34) 0 12px,
+      transparent 12px 21px);
+    pointer-events: none;
+  }
+
+  /* the stub, below the tear line */
+  .card__stub {
+    position: relative;
+    z-index: 3;
+    height: var(--stub-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px var(--pad-x);
+  }
+
+  .stub__label {
+    margin: 0 0 3px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(34, 48, 31, 0.5);
+  }
+
+  .stub__copy {
+    margin: 0;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: rgba(34, 48, 31, 0.72);
+    max-width: 22ch;
+  }
+
+  .stub__aside { text-align: right; }
+
+  .stub__valid {
+    margin: 0;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: rgba(34, 48, 31, 0.85);
+    white-space: nowrap;
+  }
+
+  .stub__fine {
+    margin: 1px 0 0;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: rgba(34, 48, 31, 0.5);
+    white-space: nowrap;
+  }
+
+  /* variant tint: the dessert face gets the warm gold glow */
+  .card[data-variant="dessert"] {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 0 0 1px rgba(168, 137, 62, 0.30);
+  }
+
+  /* ---- variant chips ---------------------------------------------------- */
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 16px;
+  }
+
+  .chip-btn {
+    appearance: none;
+    cursor: pointer;
+    padding: 9px 15px;
+    border-radius: 999px;
+    border: 1px solid rgba(34, 48, 31, 0.16);
+    background: rgba(255, 255, 255, 0.66);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink);
+    transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  }
+
+  .chip-btn:hover { transform: translateY(-1px); border-color: var(--gold-line); }
+  .chip-btn:active { transform: translateY(0) scale(0.97); transition-duration: 0.08s; }
+
+  .chip-btn[aria-pressed="true"] {
+    background: var(--wave-green);
+    border-color: var(--wave-green);
+    color: var(--cream);
+  }
+
+  .chip-btn:focus-visible {
+    outline: 3px solid var(--gold-deep);
+    outline-offset: 2px;
+  }
+
+  .micro {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  /* ---- two faces section ------------------------------------------------ */
+
+  .section-title {
+    margin: 0 0 6px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.55rem;
+    letter-spacing: -0.022em;
+  }
+
+  .section-note {
+    margin: 0 0 22px;
+    max-width: 62ch;
+    color: var(--muted);
+  }
+
+  .faces {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 26px;
+    align-items: start;
+    margin-top: 8px;
+  }
+
+  .face {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .face figcaption {
+    max-width: 34ch;
+    text-align: center;
+    font-size: 0.86rem;
+    color: var(--muted);
+  }
+
+  .ticket-shell--mini {
+    perspective: none;
+    filter: drop-shadow(0 10px 20px rgba(34, 48, 31, 0.16));
+  }
+
+  .ticket-shell--mini[data-variant="dessert"] {
+    filter: drop-shadow(0 10px 22px rgba(168, 137, 62, 0.26));
+  }
+
+  .card--mini {
+    --pad-x: 18px;
+    --stub-h: 78px;
+    width: min(320px, 100%);
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .card--mini .card__body { gap: 14px; padding: 18px var(--pad-x) 14px; }
+  .card--mini .card__prize { min-height: 96px; }
+  .card--mini .card__value { font-size: 2.25rem; }
+
+  /* ---- algorithm strip -------------------------------------------------- */
+
+  .algo {
+    margin-top: 46px;
+    padding: 26px 26px 22px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(34, 48, 31, 0.10);
+  }
+
+  .algo h2 {
+    margin: 28px 0 4px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.45rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  .algo h2:first-child { margin-top: 0; }
+
+  .algo > p {
+    margin: 0 0 18px;
+    color: var(--muted);
+    max-width: 66ch;
+  }
+
+  .table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+
+  th, td {
+    padding: 11px 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(34, 48, 31, 0.10);
+    vertical-align: top;
+  }
+
+  th {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  td:first-child { font-weight: 600; }
+
+  .tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  .tag--dessert { background: #F3E4AE; color: #7A5E17; }
+  .tag--pct     { background: var(--tint-green); color: var(--wave-green); }
+  .tag--none    { background: rgba(34, 48, 31, 0.08); color: var(--muted); }
+
+  .knob {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 22px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: var(--tint-green);
+    border: 1px solid rgba(46, 91, 62, 0.18);
+  }
+
+  .knob__scale {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.12rem;
+    color: var(--wave-green);
+  }
+
+  .knob__scale i {
+    font-style: normal;
+    padding: 2px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(46, 91, 62, 0.22);
+    font-size: 0.98rem;
+  }
+
+  .knob p {
+    margin: 0;
+    flex: 1 1 320px;
+    font-size: 0.9rem;
+    color: var(--wave-green);
+  }
+
+  .rules {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 22px;
+  }
+
+  .game-rule {
+    margin: 0;
+    padding: 16px 16px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(34, 48, 31, 0.10);
+    min-width: 0;
+  }
+
+  .game-rule h3 {
+    margin: 0 0 8px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .game-rule p {
+    margin: 0 0 10px;
+    color: var(--ink);
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .game-rule ul {
+    margin: 0;
+    padding-left: 1.1em;
+    color: var(--muted);
+    font-size: 0.86rem;
+  }
+
+  .game-rule li + li { margin-top: 4px; }
+
+  .limits {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 0 22px;
+  }
+
+  .limit {
+    margin: 0;
+    padding: 14px 14px 12px;
+    border-radius: 14px;
+    background: var(--cream);
+    border: 1px solid rgba(34, 48, 31, 0.08);
+  }
+
+  .limit strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+  }
+
+  .limit span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  @media (max-width: 760px) {
+    .rules, .limits { grid-template-columns: 1fr; }
+  }
+
+  /* ---- review footer ---------------------------------------------------- */
+
+  .review {
+    margin-top: 34px;
+    padding: 22px 24px;
+    border-left: 3px solid var(--gold-line);
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 0 16px 16px 0;
+  }
+
+  .review h2 {
+    margin: 0 0 8px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: -0.018em;
+  }
+
+  .review ul { margin: 0; padding-left: 18px; color: var(--muted); }
+  .review li { margin: 5px 0; }
+  .review strong { color: var(--ink); }
+
+  /* ---- responsive ------------------------------------------------------- */
+
+  @media (max-width: 880px) {
+    .stage {
+      grid-template-columns: 1fr;
+      gap: 22px;
+    }
+    .stage__side { order: 2; text-align: center; }
+    .stage__side p { margin-left: auto; margin-right: auto; }
+    .chips { justify-content: center; }
+    .stage__card { order: 1; padding: 18px 0 26px; }
+    .faces { grid-template-columns: 1fr; justify-items: center; }
+    .algo { padding: 20px 16px 16px; }
+    .wrap { width: min(1080px, 100% - 28px); padding-top: 28px; }
+    .card { --scoop: 17px; --bite: 11px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card,
+    .card.is-in { animation: none; transition: opacity 0.2s ease; transform: none; }
+    .card__sheen { animation: none; opacity: 0.4; }
+    .card__prize.is-swap .card__value,
+    .card__prize.is-swap .card__sub,
+    .card__prize.is-swap .card__kicker { animation: none; }
+    .chip-btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <p class="kicker">Games Zone rewards - design draft 2</p>
+    <h1>The win ticket</h1>
+    <p class="lede">
+      What the guest sees the moment a game is won. One silver ticket with two faces:
+      a free dessert, or a discount between 5 and 10 percent. Draft 2 cuts the card
+      like a real ticket: cropped corners, a dashed tear line with notches on both
+      sides, and the code sitting above that line. This file is a copy for review.
+      Tell me what to change, and I will apply the final design to the project only
+      after you approve it.
+    </p>
+  </header>
+
+  <hr class="rule">
+
+  <!-- ====================== the animated hero ticket ====================== -->
+  <section class="stage" aria-label="Reward ticket preview">
+    <figure class="stage__card" id="stageCard">
+      <div class="ticket-shell" data-variant="d10">
+        <article class="card" id="heroCard" data-variant="d10" aria-live="polite">
+          <div class="card__brushed" aria-hidden="true"></div>
+          <div class="card__sheen" aria-hidden="true"></div>
+
+          <div class="card__body">
+            <header class="card__top">
+              <span class="card__brand">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M8.5 13.5c1 1.6 2.2 2.4 3.5 2.4s2.5-.8 3.5-2.4"></path>
+                  <circle cx="9.2" cy="10" r="0.9" fill="currentColor" stroke="none"></circle>
+                  <circle cx="14.8" cy="10" r="0.9" fill="currentColor" stroke="none"></circle>
+                </svg>
+                Pasons Group
+              </span>
+              <span class="card__game" id="cardGame">Chess Master - Level 4</span>
+            </header>
+
+            <div class="card__prize" id="cardPrize">
+              <p class="card__kicker" id="cardKicker">You won</p>
+              <p class="card__value" id="cardValue">10<span class="pct">%</span> <em>off</em></p>
+              <p class="card__sub" id="cardSub">your whole bill, food and drinks</p>
+            </div>
+
+            <div class="card__code">
+              <div>
+                <p class="card__code-label">Your code</p>
+                <p class="card__code-value" id="cardCode">KIN-PDMUFA</p>
+              </div>
+              <span class="card__seal" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#7A5E17" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3.2l2.3 4.9 5.2.7-3.8 3.7.95 5.3L12 15.3 7.35 17.8l.95-5.3L4.5 8.8l5.2-.7z"></path>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="card__perf" aria-hidden="true"></div>
+
+          <footer class="card__stub">
+            <div>
+              <p class="stub__label">How to use</p>
+              <p class="stub__copy">Show this code to our staff before you pay</p>
+            </div>
+            <div class="stub__aside">
+              <p class="stub__valid" id="cardValid">Valid 14 days</p>
+              <p class="stub__fine">one use only</p>
+            </div>
+          </footer>
+        </article>
+      </div>
+    </figure>
+
+    <div class="stage__side">
+      <h2>One ticket, any prize</h2>
+      <p>
+        The same silver ticket carries every reward. Only the prize line changes, so a
+        dessert and a 10 percent discount feel like the same win.
+      </p>
+
+      <div class="chips" role="group" aria-label="Switch the prize shown on the ticket">
+        <button class="chip-btn" type="button" data-set="dessert" aria-pressed="false">Free dessert</button>
+        <button class="chip-btn" type="button" data-set="d5" aria-pressed="false">5% off</button>
+        <button class="chip-btn" type="button" data-set="d7" aria-pressed="false">7% off</button>
+        <button class="chip-btn" type="button" data-set="d10" aria-pressed="true">10% off</button>
+      </div>
+
+      <p class="micro">
+        Move your pointer across the ticket to see it tilt. The light moves on its own.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========================== both faces ============================== -->
+  <hr class="rule">
+
+  <section aria-label="The two faces of the ticket">
+    <h2 class="section-title">The two faces</h2>
+    <p class="section-note">
+      Same ticket, two prizes. The dessert face is warm and gold. The discount face is
+      plain silver, because the number is the prize.
+    </p>
+
+    <div class="faces">
+      <figure class="face">
+        <div class="ticket-shell ticket-shell--mini" data-variant="dessert">
+          <article class="card card--mini" data-variant="dessert">
+            <div class="card__brushed" aria-hidden="true"></div>
+            <div class="card__body">
+              <header class="card__top">
+                <span class="card__brand">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M8.5 13.5c1 1.6 2.2 2.4 3.5 2.4s2.5-.8 3.5-2.4"></path>
+                    <circle cx="9.2" cy="10" r="0.9" fill="currentColor" stroke="none"></circle>
+                    <circle cx="14.8" cy="10" r="0.9" fill="currentColor" stroke="none"></circle>
+                  </svg>
+                  Pasons Group
+                </span>
+                <span class="card__game">Memory Match</span>
+              </header>
+
+              <div class="card__prize">
+                <p class="card__kicker">You won</p>
+                <p class="card__value"><em>Free dessert</em></p>
+                <p class="card__sub">chef's pick of the day, on the house</p>
+              </div>
+
+              <div class="card__code">
+                <div>
+                  <p class="card__code-label">Your code</p>
+                  <p class="card__code-value">KIN-YCNMD5</p>
+                </div>
+                <span class="card__seal" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#7A5E17" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3.2l2.3 4.9 5.2.7-3.8 3.7.95 5.3L12 15.3 7.35 17.8l.95-5.3L4.5 8.8l5.2-.7z"></path>
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <div class="card__perf" aria-hidden="true"></div>
+
+            <footer class="card__stub">
+              <div>
+                <p class="stub__label">How to use</p>
+                <p class="stub__copy">Show this code to our staff before you pay</p>
+              </div>
+              <div class="stub__aside">
+                <p class="stub__valid">Valid 14 days</p>
+                <p class="stub__fine">one use only</p>
+              </div>
+            </footer>
+          </article>
+        </div>
+        <figcaption>
+          Dessert face. Gold light, warm shadow. The prize is an item, so the words
+          carry it, not a number.
+        </figcaption>
+      </figure>
+
+      <figure class="face">
+        <div class="ticket-shell ticket-shell--mini" data-variant="d10">
+          <article class="card card--mini" data-variant="d10">
+            <div class="card__brushed" aria-hidden="true"></div>
+            <div class="card__body">
+              <header class="card__top">
+                <span class="card__brand">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M8.5 13.5c1 1.6 2.2 2.4 3.5 2.4s2.5-.8 3.5-2.4"></path>
+                    <circle cx="9.2" cy="10" r="0.9" fill="currentColor" stroke="none"></circle>
+                    <circle cx="14.8" cy="10" r="0.9" fill="currentColor" stroke="none"></circle>
+                  </svg>
+                  Pasons Group
+                </span>
+                <span class="card__game">Chess Master - Level 4</span>
+              </header>
+
+              <div class="card__prize">
+                <p class="card__kicker">You won</p>
+                <p class="card__value">10<span class="pct">%</span> <em>off</em></p>
+                <p class="card__sub">your whole bill, food and drinks</p>
+              </div>
+
+              <div class="card__code">
+                <div>
+                  <p class="card__code-label">Your code</p>
+                  <p class="card__code-value">KIN-PDMUFA</p>
+                </div>
+                <span class="card__seal" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#7A5E17" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3.2l2.3 4.9 5.2.7-3.8 3.7.95 5.3L12 15.3 7.35 17.8l.95-5.3L4.5 8.8l5.2-.7z"></path>
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <div class="card__perf" aria-hidden="true"></div>
+
+            <footer class="card__stub">
+              <div>
+                <p class="stub__label">How to use</p>
+                <p class="stub__copy">Show this code to our staff before you pay</p>
+              </div>
+              <div class="stub__aside">
+                <p class="stub__valid">Valid 14 days</p>
+                <p class="stub__fine">one use only</p>
+              </div>
+            </footer>
+          </article>
+        </div>
+        <figcaption>
+          Discount face. The percentage is the hero, so the ticket stays quiet around it.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ========================= the full rules ============================= -->
+  <section class="algo" aria-label="Full reward rules">
+    <h2>Full reward rules</h2>
+    <p>
+      Written from the live engine on 16 October 2026. Playing is always free.
+      A prize is paid only after the work below, and only to a guest who has
+      given a name and a mobile number, or signed in with Google.
+    </p>
+
+    <div class="rules">
+      <article class="game-rule">
+        <h3>Chess Master</h3>
+        <p>Four levels. Win the level you are on to open the next one. You cannot skip.</p>
+        <ul>
+          <li>Level 1 win: nothing. Level 2 opens.</li>
+          <li>Level 2 win: nothing. Level 3 opens.</li>
+          <li>Level 3 win: free dessert. Level 4 opens.</li>
+          <li>Level 4 win: 10% off the whole bill.</li>
+        </ul>
+      </article>
+
+      <article class="game-rule">
+        <h3>2048</h3>
+        <p>The prize is the 2048 tile, not a high score. A big score that never made the tile pays nothing.</p>
+        <ul>
+          <li>First time the tile is reached: free dessert.</li>
+          <li>Reaches 2, 3 and 4: nothing. They are stored, not paid.</li>
+          <li>Fifth reach, and every later reach: 10% off. Never another dessert.</li>
+        </ul>
+      </article>
+
+      <article class="game-rule">
+        <h3>Memory Match</h3>
+        <p>Never a discount. A dessert only, after a run of real rounds.</p>
+        <ul>
+          <li>Five qualifying rounds inside 7 days.</li>
+          <li>A round qualifies at 400 points or more.</li>
+          <li>A short or weak round does not count toward the five.</li>
+        </ul>
+      </article>
+
+      <article class="game-rule">
+        <h3>Flappy Burger</h3>
+        <p>Never a discount. One scoring round is enough, if it is a real round.</p>
+        <ul>
+          <li>25 pipes or more: free dessert.</li>
+          <li>24 pipes or fewer: nothing.</li>
+          <li>The round must last at least 25 seconds, with 15 taps.</li>
+        </ul>
+      </article>
+    </div>
+
+    <h2>What one guest can take in a month</h2>
+    <p>
+      The count is on the mobile number, not the phone and not the browser.
+      Clearing cookies, or playing on another device with the same number,
+      does not start a new allowance.
+    </p>
+    <div class="limits">
+      <p class="limit">
+        <strong>One free dessert</strong>
+        <span>Per mobile number, per calendar month. Chess, 2048, Memory Match and Flappy Burger all share this one dessert.</span>
+      </p>
+      <p class="limit">
+        <strong>One 10% discount</strong>
+        <span>Separate from the dessert. A dessert does not use up the discount, and a discount does not use up the dessert.</span>
+      </p>
+      <p class="limit">
+        <strong>A new month resets both</strong>
+        <span>Redeeming at the till does not. A voided coupon does not count. Each code is valid 14 days and can be used once.</span>
+      </p>
+    </div>
+
+    <div class="knob">
+      <span class="knob__scale">
+        <i>Name</i> + <i>mobile</i>
+      </span>
+      <p>
+        Play history is stored on the profile that holds the name and mobile.
+        A guest who has not signed in can play, and the climb is kept, but
+        nothing is paid until the name and number are on that profile.
+        A round that is too short to be real play pays nothing.
+      </p>
+    </div>
+
+    <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Game</th>
+          <th scope="col">A real round</th>
+          <th scope="col">When it pays</th>
+          <th scope="col">Prize</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Chess Master</td>
+          <td>90 seconds, 12 moves</td>
+          <td>Win Level 3, then win Level 4</td>
+          <td><span class="tag tag--dessert">Dessert</span> then <span class="tag tag--pct">10% off</span></td>
+        </tr>
+        <tr>
+          <td>2048</td>
+          <td>60 seconds, 20 moves</td>
+          <td>First 2048 tile, then the 5th reach</td>
+          <td><span class="tag tag--dessert">Dessert</span> then <span class="tag tag--pct">10% off</span></td>
+        </tr>
+        <tr>
+          <td>Memory Match</td>
+          <td>45 seconds, 8 taps</td>
+          <td>5 rounds of 400 or more, inside 7 days</td>
+          <td><span class="tag tag--dessert">Dessert only</span></td>
+        </tr>
+        <tr>
+          <td>Flappy Burger</td>
+          <td>25 seconds, 15 taps</td>
+          <td>One round of 25 pipes or more</td>
+          <td><span class="tag tag--dessert">Dessert only</span></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ============================ review ================================ -->
+  <section class="review" aria-label="What I need from you">
+    <h2>What to tell me before this goes into the project</h2>
+    <ul>
+      <li><strong>Corner cut.</strong> The 4 cropped corners: bigger bites, smaller bites, or straight bevel cuts instead?</li>
+      <li><strong>Tear line.</strong> Dashes longer or shorter? Should the notches on the left and right be bigger or smaller?</li>
+      <li><strong>Stub copy.</strong> Keep "How to use / Show this code to our staff before you pay / Valid 14 days", or reword it?</li>
+      <li><strong>Shine.</strong> Keep the moving light, slow it down, or remove it?</li>
+      <li><strong>Tilt.</strong> Keep the pointer tilt, or make the ticket still?</li>
+      <li><strong>Colours.</strong> Keep the silver and gold, or should the silver go warmer?</li>
+      <li><strong>The discount steps.</strong> Today every discount is 10%. The 5% and 7% faces on this page are not paid by any game yet.</li>
+    </ul>
+  </section>
+
+</div>
+
+<script>
+  (function () {
+    "use strict";
+
+    var prizes = {
+      dessert: {
+        variant: "dessert",
+        game: "Memory Match - 5 rounds",
+        kicker: "You won",
+        value: "<em>Free dessert</em>",
+        sub: "chef's pick of the day, on the house",
+        code: "KIN-YCNMD5"
+      },
+      d5: {
+        variant: "d5",
+        game: "Chess Master - Level 3",
+        kicker: "You won",
+        value: '5<span class="pct">%</span> <em>off</em>',
+        sub: "your whole bill, food and drinks",
+        code: "KIN-5PCT01"
+      },
+      d7: {
+        variant: "d7",
+        game: "Flappy Burger - 25 pipes",
+        kicker: "You won",
+        value: '7<span class="pct">%</span> <em>off</em>',
+        sub: "your whole bill, food and drinks",
+        code: "KIN-7PCT02"
+      },
+      d10: {
+        variant: "d10",
+        game: "Chess Master - Level 4",
+        kicker: "You won",
+        value: '10<span class="pct">%</span> <em>off</em>',
+        sub: "your whole bill, food and drinks",
+        code: "KIN-PDMUFA"
+      }
+    };
+
+    var card = document.getElementById("heroCard");
+    var shell = card.parentNode;
+    var prizeBlock = document.getElementById("cardPrize");
+    var elGame = document.getElementById("cardGame");
+    var elKicker = document.getElementById("cardKicker");
+    var elValue = document.getElementById("cardValue");
+    var elSub = document.getElementById("cardSub");
+    var elCode = document.getElementById("cardCode");
+    var chips = Array.prototype.slice.call(document.querySelectorAll(".chip-btn"));
+
+    function setPrize(key) {
+      var p = prizes[key];
+      if (!p) return;
+
+      card.setAttribute("data-variant", p.variant);
+      shell.setAttribute("data-variant", p.variant);
+      elGame.textContent = p.game;
+      elKicker.textContent = p.kicker;
+      elValue.innerHTML = p.value;
+      elSub.textContent = p.sub;
+      elCode.textContent = p.code;
+
+      /* restart the swap animation */
+      prizeBlock.classList.remove("is-swap");
+      void prizeBlock.offsetWidth;
+      prizeBlock.classList.add("is-swap");
+
+      chips.forEach(function (btn) {
+        btn.setAttribute("aria-pressed", String(btn.getAttribute("data-set") === key));
+      });
+    }
+
+    chips.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        setPrize(btn.getAttribute("data-set"));
+      });
+    });
+
+    /* ---- reveal + pointer tilt -------------------------------------- */
+
+    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var fine = window.matchMedia("(pointer: fine)").matches;
+
+    requestAnimationFrame(function () {
+      card.classList.add("is-in");
+    });
+
+    if (fine && !reduce) {
+      var targetRX = 0, targetRY = 0, curRX = 0, curRY = 0, rafId = 0;
+      var maxTilt = 7;
+
+      function tick() {
+        curRX += (targetRX - curRX) * 0.12;
+        curRY += (targetRY - curRY) * 0.12;
+        card.style.transform =
+          "rotateX(" + curRX.toFixed(2) + "deg) rotateY(" + curRY.toFixed(2) + "deg)";
+        rafId = requestAnimationFrame(tick);
+      }
+
+      var stage = document.getElementById("stageCard");
+
+      stage.addEventListener("pointermove", function (e) {
+        if (e.pointerType !== "mouse") return;
+        var r = card.getBoundingClientRect();
+        var px = (e.clientX - r.left) / r.width - 0.5;
+        var py = (e.clientY - r.top) / r.height - 0.5;
+        targetRY = px * maxTilt * 2;
+        targetRX = -py * maxTilt * 2;
+        if (!rafId) rafId = requestAnimationFrame(tick);
+      });
+
+      stage.addEventListener("pointerleave", function () {
+        targetRX = 0;
+        targetRY = 0;
+      });
+
+      /* tilt overrides the float animation cleanly: pause it while tilting */
+      stage.addEventListener("pointerenter", function () {
+        card.style.animationPlayState = "paused";
+      });
+      stage.addEventListener("pointerleave", function () {
+        card.style.animationPlayState = "running";
+      });
+    }
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,129 @@
+{% extends "panel/base_panel.html" %}
+
+{% block panel_content %}
+<div class="panel-header">
+  <div>
+    <h1 style="font-size: var(--fs-h1); margin: 0; color: var(--forest);">Guest Contacts</h1>
+    <p class="muted" style="margin: 4px 0 0;">
+      Guests who told us who they are on a shop QR page. The CSV is ready to import into the campaign platform.
+    </p>
+  </div>
+  <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+    <a href="{% url 'panel_guests_export' %}" class="btn btn-primary btn-sm">Export CSV</a>
+    <a href="{% url 'panel_guests_export' %}?consented=1" class="btn btn-outline btn-sm">Export consented only</a>
+  </div>
+</div>
+
+<div class="panel-stats">
+  <div class="panel-stat">
+    <span>Contacts</span>
+    <strong>{{ identified_count }}</strong>
+  </div>
+  <div class="panel-stat">
+    <span>Agreed to marketing</span>
+    <strong>{{ consented_count }}</strong>
+  </div>
+  <div class="panel-stat">
+    <span>With a mobile number</span>
+    <strong>{{ with_mobile_count }}</strong>
+  </div>
+</div>
+
+<form method="get" style="display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); flex-wrap: wrap; align-items: flex-end;">
+  <label style="display: flex; flex-direction: column; gap: 4px; min-width: 14rem;">
+    <span class="caption muted">Search</span>
+    <input
+      type="search"
+      name="q"
+      value="{{ search }}"
+      placeholder="Name, mobile or email"
+      style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);"
+    >
+  </label>
+  <label style="display: flex; align-items: center; gap: 6px; padding-bottom: 8px;">
+    <input type="checkbox" name="consented" value="1" {% if consented %}checked{% endif %}>
+    <span>Consented only</span>
+  </label>
+  <label style="display: flex; align-items: center; gap: 6px; padding-bottom: 8px;">
+    <input type="checkbox" name="identified" value="1" {% if identified %}checked{% endif %}>
+    <span>Named guests only</span>
+  </label>
+  <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+</form>
+
+<div class="panel-table-wrap">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>Guest</th>
+        <th>Mobile</th>
+        <th>Email</th>
+        <th>Instagram</th>
+        <th>Marketing</th>
+        <th>First seen</th>
+        <th>Coupons</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for profile in profiles %}
+      <tr>
+        <td>
+          {{ profile.full_name|default:"Not given" }}
+          {% if not profile.is_identified %}
+          <div class="caption muted">anonymous device</div>
+          {% endif %}
+        </td>
+        <td>
+          {{ profile.phone|default:"Not given" }}
+          {% if profile.phone %}
+          <div class="caption">
+            <span class="badge-status badge-inactive">Unverified</span>
+          </div>
+          {% endif %}
+        </td>
+        <td>
+          {{ profile.email|default:"Not given" }}
+          {% if profile.email %}
+          <div class="caption">
+            {% if profile.email_verified %}
+            <span class="badge-status badge-active">Google verified</span>
+            {% else %}
+            <span class="badge-status badge-inactive">Unverified</span>
+            {% endif %}
+          </div>
+          {% endif %}
+        </td>
+        <td>
+          {% if profile.ig_follow_claimed %}
+          <span class="badge-status badge-inactive">Self-declared</span>
+          {% else %}
+          <span class="muted">No</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if profile.consent_marketing %}
+          <span class="badge-status badge-active">Yes</span>
+          {% else %}
+          <span class="badge-status badge-inactive">No</span>
+          {% endif %}
+        </td>
+        <td>
+          {{ profile.created_at|date:"Y-m-d H:i" }}
+          <div class="caption muted">
+            {{ profile.first_brand.name_en|default:"No brand" }}
+            {% if profile.first_outlet %} / {{ profile.first_outlet.official_name }}{% endif %}
+          </div>
+        </td>
+        <td>{{ profile.coupon_count }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="muted" style="text-align: center; padding: var(--sp-4);">
+          No contacts yet. They appear when a guest leaves a name or a number on a shop QR page.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

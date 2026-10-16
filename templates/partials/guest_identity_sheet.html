@@ -1,0 +1,270 @@
+{% load icon_tags %}
+{% comment %}
+Guest identity sheet (models: GuestProfile; flow: plan 2026-10-16 task 2).
+
+One component, four panels, included by the QR landing page and by the
+Instagram fallback page so both behave identically:
+
+  entry  the follow-for-a-gift invitation + "Open Instagram" (the tap-tracked
+         redirect, opened in a new tab so this page survives to hear the
+         answer). "Already follow us?" jumps straight to the form.
+  ask    "Did you follow us?" -- shown when the guest comes back.
+  form   first name, last name, mobile, consent. A plain POST, so it works
+         with JavaScript switched off.
+  done    confirmation after a successful submit.
+
+The gift is decided by MANAGEMENT (client 2026-10-16): following on Instagram
+is its own gift, never a dessert and never a discount, so the copy never
+promises a specific item. The mobile number is what staff match at the counter
+when a guest redeems, so the form says so before the guest submits.
+
+Instagram cannot confirm a follow (Meta exposes no such check), so the Yes
+answer is SELF-DECLARED. The panel labels it that way.
+
+Multi-line notes use the comment-block tag on purpose: a multi-line {# #}
+comment renders as literal page text in this project.
+{% endcomment %}
+<div class="ig-draw" id="ig-draw-popup"{% if not id_open %} hidden{% endif %}
+     data-base="{{ id_base }}" data-state="{{ id_state }}"
+     data-google-url="{% url 'guest_identity_google' id_qr_key %}"
+     data-csrf="{{ csrf_token }}">
+  <div class="ig-draw__backdrop" data-draw-close></div>
+  <div class="ig-draw__sheet" role="dialog" aria-modal="true" aria-labelledby="id-title-{{ id_state }}">
+
+    <section class="ig-draw__panel" data-panel="entry"{% if id_state != "entry" %} hidden{% endif %}>
+      <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
+      <h2 class="ig-draw__title" id="id-title-entry">Follow us and get a gift</h2>
+      <p class="ig-draw__sub">Our team picks a gift for our Instagram followers. Open Instagram, follow us, then come back here.</p>
+      <a class="ig-draw__cta" id="ig-draw-open" href="{% url 'qr_instagram' id_qr_key %}"
+         target="_blank" rel="noopener" data-ig-go>Open Instagram</a>
+      <p class="ig-draw__already">Already follow us?
+        <button type="button" class="ig-draw__link" data-ig-answer="yes">I already follow you</button>
+      </p>
+      <button type="button" class="ig-draw__close" data-draw-close>Maybe later</button>
+    </section>
+
+    <section class="ig-draw__panel" data-panel="ask"{% if id_state != "ask" %} hidden{% endif %}>
+      <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
+      <h2 class="ig-draw__title" id="id-title-ask">Did you follow us?</h2>
+      <p class="ig-draw__sub">Tap yes and we will keep a gift ready for you. Our team decides what the gift is.</p>
+      <div class="ig-draw__actions">
+        <button type="button" class="ig-draw__cta" data-ig-answer="yes">Yes, I followed</button>
+        <button type="button" class="ig-draw__close" data-ig-answer="no">Not yet</button>
+      </div>
+    </section>
+
+    <section class="ig-draw__panel" data-panel="form"{% if id_state != "form" %} hidden{% endif %}>
+      <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
+      <h2 class="ig-draw__title" id="id-title-form">Claim your follower gift</h2>
+      <p class="ig-draw__sub">Add your details so our team can prepare your gift. We only use this to send your gift and offers.</p>
+      {% if id_error_text %}<p class="ig-draw__error" role="alert">{{ id_error_text }}</p>{% endif %}
+      {% if id_google_client_id %}
+      {% comment %}
+      Continue with Google: free, and the fastest way to a real name and a
+      verified email. It NEVER returns a mobile number, so the fields below
+      stay either way. Rendered only when a client id is configured, so dev
+      and the test suite never load Google's script.
+      {% endcomment %}
+      <div class="ig-draw__google">
+        <div id="g_id_onload"
+             data-client_id="{{ id_google_client_id }}"
+             data-callback="pqGoogleCredential"
+             data-auto_prompt="false"
+             data-use_fedcm_for_prompt="true"></div>
+        <div class="g_id_signin"
+             data-type="standard" data-shape="pill" data-theme="outline"
+             data-text="continue_with" data-size="large"
+             data-logo_alignment="center"></div>
+        <p class="ig-draw__error" data-google-error hidden>Google sign-in did not work. Please enter your details below.</p>
+      </div>
+      <p class="ig-draw__or"><span>or enter your details</span></p>
+      <script src="https://accounts.google.com/gsi/client" async defer></script>
+      {% endif %}
+      <form class="ig-draw__form" method="post" action="{{ id_action }}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ id_next }}">
+        <input type="hidden" name="ig_follow" value="{{ id_ig_follow }}" data-ig-flag>
+        <label class="ig-draw__field">
+          <span class="ig-draw__label">First name</span>
+          <input type="text" name="first_name" value="{{ id_first_name }}" autocomplete="given-name" maxlength="80" required>
+        </label>
+        <label class="ig-draw__field">
+          <span class="ig-draw__label">Last name</span>
+          <input type="text" name="last_name" value="{{ id_last_name }}" autocomplete="family-name" maxlength="80">
+        </label>
+        <label class="ig-draw__field">
+          <span class="ig-draw__label">Mobile number</span>
+          <input type="tel" name="phone" value="{{ id_phone }}" inputmode="tel"
+                 autocomplete="tel" maxlength="24" placeholder="{{ id_phone_hint }}" required>
+        </label>
+        <p class="ig-draw__note">Please use your own mobile number. It must match when you redeem your coupon, so make sure it is correct before you submit.</p>
+        <label class="ig-draw__consent">
+          <input type="checkbox" name="consent" value="1" required>
+          <span>I agree to receive my gift and offers on WhatsApp.</span>
+        </label>
+        <button type="submit" class="ig-draw__cta">Submit</button>
+        <button type="button" class="ig-draw__close" data-draw-close>Not now</button>
+      </form>
+    </section>
+
+    <section class="ig-draw__panel" data-panel="done"{% if id_state != "done" %} hidden{% endif %}>
+      <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
+      <h2 class="ig-draw__title" id="id-title-done">{% if id_greet %}Thanks, {{ id_greet }}!{% else %}You are all set!{% endif %}</h2>
+      <p class="ig-draw__sub">Your gift is saved. Our team will reach you on WhatsApp.</p>
+      <button type="button" class="ig-draw__cta" data-draw-close>Great</button>
+    </section>
+
+  </div>
+</div>
+<script>
+  (function () {
+    var sheet = document.getElementById("ig-draw-popup");
+    if (!sheet || sheet.dataset.pqInit) return;
+    sheet.dataset.pqInit = "1";
+
+    var panels = sheet.querySelectorAll("[data-panel]");
+    var dialog = sheet.querySelector(".ig-draw__sheet");
+    var card = document.getElementById("ig-follow-card");
+    var base = sheet.dataset.base || "entry";
+    /* Long enough that the guest actually looked at Instagram. The value is
+       a courtesy guard, not proof: it keeps a stray focus event from firing
+       the question the instant the tab is opened. */
+    var MIN_DWELL_MS = 4000;
+    var wentToInstagram = false;
+    var leftAt = 0;
+    var stopAsking = false;
+
+    function currentState() { return sheet.dataset.state || base; }
+
+    function show(name) {
+      sheet.dataset.state = name;
+      for (var i = 0; i < panels.length; i++) {
+        panels[i].hidden = panels[i].getAttribute("data-panel") !== name;
+      }
+      /* keep the dialog's accessible name pointing at the visible heading */
+      if (dialog) dialog.setAttribute("aria-labelledby", "id-title-" + name);
+    }
+
+    function focusIn(name) {
+      var panel = sheet.querySelector('[data-panel="' + name + '"]');
+      if (!panel) return;
+      /* The form panel opens with two hidden inputs (next, ig_follow), and
+         focusing one of those is a no-op, so start at the first control the
+         guest can actually see. */
+      var el = panel.querySelector('input:not([type="hidden"]), button, a');
+      if (el) el.focus();
+    }
+
+    function openSheet(name) {
+      var target = name || base;
+      sheet.hidden = false;
+      show(target);
+      focusIn(target);
+    }
+
+    function closeSheet() {
+      /* Closing AFTER the question was asked means the guest declined; do
+         not re-open the sheet behind their back on the next focus event. */
+      if (currentState() === "ask" || currentState() === "form") stopAsking = true;
+      sheet.hidden = true;
+      if (card) card.focus();
+    }
+
+    function ask() {
+      if (stopAsking || !wentToInstagram) return;
+      if (Date.now() - leftAt < MIN_DWELL_MS) return;
+      wentToInstagram = false;
+      openSheet("ask");
+    }
+
+    if (card) {
+      card.addEventListener("click", function (e) {
+        e.preventDefault();
+        if (stopAsking) return;
+        openSheet(base);
+      });
+    }
+
+    sheet.addEventListener("click", function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+
+      if (t.closest("[data-draw-close]")) { closeSheet(); return; }
+
+      var go = t.closest("[data-ig-go]");
+      if (go) {
+        /* Deliberately NOT prevented: the tap-tracked redirect must open
+           Instagram in the new tab, and this page stays alive underneath to
+           hear the answer when the guest comes back. */
+        wentToInstagram = true;
+        leftAt = Date.now();
+        return;
+      }
+
+      var answer = t.closest("[data-ig-answer]");
+      if (answer) {
+        var yes = answer.getAttribute("data-ig-answer") === "yes";
+        var flag = sheet.querySelector("[data-ig-flag]");
+        if (flag) flag.value = yes ? "1" : "0";
+        if (yes) { show("form"); focusIn("form"); }
+        else { closeSheet(); }
+      }
+    });
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") ask();
+    });
+    window.addEventListener("focus", ask);
+    window.addEventListener("pageshow", ask);
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !sheet.hidden) closeSheet();
+    });
+
+    /* ---- Continue with Google ------------------------------------------
+       The Google button hands us a signed ID token. It is POSTed to the
+       server, which validates it against Google (see apps/guests/google.py)
+       and answers with the name and email it read. The guest still supplies
+       a mobile number below, because Google never returns one. */
+    var googleUrl = sheet.dataset.googleUrl || "";
+    var csrfToken = sheet.dataset.csrf || "";
+
+    function setField(name, value) {
+      if (!value) return;
+      var field = sheet.querySelector(
+        '[data-panel="form"] [name="' + name + '"]'
+      );
+      if (field) field.value = value;
+    }
+
+    function googleFailed() {
+      var box = sheet.querySelector("[data-google-error]");
+      if (box) box.hidden = false;
+    }
+
+    window.pqGoogleCredential = function (response) {
+      if (!response || !response.credential || !googleUrl) return;
+      var body = new FormData();
+      body.append("credential", response.credential);
+      fetch(googleUrl, {
+        method: "POST",
+        body: body,
+        headers: { "X-CSRFToken": csrfToken },
+        credentials: "same-origin"
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data || !data.ok) { googleFailed(); return; }
+          setField("first_name", data.first_name);
+          setField("last_name", data.last_name);
+          show("form");
+          focusIn("form");
+        })
+        .catch(googleFailed);
+    };
+
+    /* The server may have rendered the sheet already open (a validation
+       error to fix, or the "you are all set" confirmation). */
+    if (!sheet.hidden) focusIn(currentState());
+  })();
+</script>

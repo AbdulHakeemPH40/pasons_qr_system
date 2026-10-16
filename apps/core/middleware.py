@@ -57,6 +57,10 @@ VIEW_CAPABILITIES = {
     "panel_user_edit": "users",
     "panel_analytics": "analytics",
     "panel_changelog": "changelog",
+    "panel_rewards": "rewards",
+    "panel_coupon_redeem": "rewards",
+    "panel_guests": "guests",
+    "panel_guests_export": "guests",
 }
 
 # Kept so a future staff route outside /panel/ can declare its own gate
