@@ -1,0 +1,86 @@
+{% comment %}
+One wallet coupon, drawn as the approved win ticket (design draft 2): the
+same object the guest sees when a game is won, at list size. A quarter
+circle is cut out of every corner, a round notch is scooped out of the left
+and right edge at the tear line, the code sits ABOVE that line and the
+usage stub sits below it.
+
+Included by the landing sheet and by the dedicated profile page, so both
+always show the same ticket and a change lands in one place.
+
+Expects `row` with `row.coupon` (a RewardCoupon) and `row.state`, one of
+issued | redeemed | expired. `forloop.counter0` staggers the reveal and the
+light sweep so a list does not pulse in unison.
+{% endcomment %}
+<article class="guest-coupon guest-coupon--{{ row.state }}{% if row.coupon.reward_type == 'percent' %} guest-coupon--discount{% else %} guest-coupon--dessert{% endif %}"
+         style="--i: {{ forloop.counter0 }}">
+  <div class="guest-coupon__shell">
+    <div class="guest-coupon__ticket">
+      <div class="guest-coupon__brushed" aria-hidden="true"></div>
+      <div class="guest-coupon__sheen" aria-hidden="true"></div>
+
+      <div class="guest-coupon__body">
+        <header class="guest-coupon__top">
+          <span class="guest-coupon__kicker">You won</span>
+          {% if row.state == "issued" %}
+          <span class="guest-coupon__state">Ready</span>
+          {% elif row.state == "redeemed" %}
+          <span class="guest-coupon__state">Used</span>
+          {% else %}
+          <span class="guest-coupon__state">Expired</span>
+          {% endif %}
+        </header>
+
+        {% if row.coupon.reward_type == "percent" %}
+        <p class="guest-coupon__value">{{ row.coupon.percent }}<span class="pct">%</span> <em>off</em></p>
+        <p class="guest-coupon__sub">your whole bill, food and drinks</p>
+        {% else %}
+        <p class="guest-coupon__value"><em>{{ row.coupon.label }}</em></p>
+        <p class="guest-coupon__sub">chef's pick of the day, on the house</p>
+        {% endif %}
+        {% if row.coupon.outlet %}
+        <p class="guest-coupon__branch">at {{ row.coupon.outlet.official_name }}</p>
+        {% endif %}
+
+        <div class="guest-coupon__codewrap">
+          <div>
+            <p class="guest-coupon__codelabel">Your code</p>
+            <p class="guest-coupon__code">{{ row.coupon.code }}</p>
+          </div>
+          <span class="guest-coupon__seal" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3.2l2.3 4.9 5.2.7-3.8 3.7.95 5.3L12 15.3 7.35 17.8l.95-5.3L4.5 8.8l5.2-.7z"></path>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="guest-coupon__perf" aria-hidden="true"></div>
+      <footer class="guest-coupon__stub">
+        <div>
+          {% if row.state == "issued" %}
+          <p class="guest-coupon__stublabel">How to use</p>
+          <p class="guest-coupon__stubcopy">Show this code to our staff before you pay</p>
+          {% elif row.state == "redeemed" %}
+          <p class="guest-coupon__stublabel">Redeemed</p>
+          <p class="guest-coupon__stubcopy">Thanks for dining with us</p>
+          {% else %}
+          <p class="guest-coupon__stublabel">Expired</p>
+          <p class="guest-coupon__stubcopy">This code can no longer be used</p>
+          {% endif %}
+        </div>
+        <div class="guest-coupon__stubaside">
+          {% if row.state == "issued" %}
+          <p class="guest-coupon__stubvalid">Valid until {{ row.coupon.expires_at|date:"j M" }}</p>
+          {% elif row.state == "redeemed" %}
+          <p class="guest-coupon__stubvalid">Used {{ row.coupon.redeemed_at|date:"j M" }}</p>
+          {% else %}
+          <p class="guest-coupon__stubvalid">Ended {{ row.coupon.expires_at|date:"j M" }}</p>
+          {% endif %}
+          <p class="guest-coupon__stubfine">one use only</p>
+        </div>
+      </footer>
+    </div>
+  </div>
+</article>

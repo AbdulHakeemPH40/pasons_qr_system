@@ -495,81 +495,436 @@ body.theme-warm .guest-profile.is-open .guest-profile__sheet {
   line-height: 1.55;
 }
 
-/* Coupon cards sit on the frosted sheet as near-solid passes: two
-   translucent layers stacked would kill the text contrast. */
+/* ------------------------------------------------------------------
+   Wallet coupons: the win ticket, list size.
+
+   The same object the guest is shown when a game is won (design draft 2),
+   drawn small enough for a wallet list. A real ticket cut: a quarter circle
+   bitten out of every corner, a round notch scooped out of the left and
+   right edge at the tear line, the code ABOVE that line, the usage stub
+   below it. Brushed silver with a looping light sweep.
+
+   Two faces, one per prize kind: a dessert ticket glows warm gold while it
+   is still usable, a discount ticket stays plain silver and lets the number
+   be the prize. A spent ticket loses the sweep and its code is struck
+   through, so state reads at a glance without dimming the text a staff
+   member still has to read.
+
+   The cut is a CSS mask, so the outer shadow sits on the shell wrapper and
+   uses filter drop-shadow: that follows the real cut silhouette, where a
+   box-shadow on the ticket would just draw a plain rectangle.
+   ------------------------------------------------------------------ */
 .guest-coupon {
-  display: grid;
-  gap: 9px;
-  padding: 14px 15px 13px;
-  border-radius: 20px;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.78));
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 10px 22px -16px rgba(23, 58, 36, 0.45);
+  --gc-scoop: 17px;  /* the corner bites */
+  --gc-bite: 10px;   /* the side notches at the tear line */
+  --gc-stub: 84px;   /* bottom stub height, also where the tear line sits */
+  --gc-pad: 20px;
+
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
+
+.guest-coupon__shell {
+  perspective: 900px;
+  filter:
+    drop-shadow(0 12px 20px rgba(34, 48, 31, 0.20))
+    drop-shadow(0 2px 3px rgba(34, 48, 31, 0.10));
+}
+
+/* A usable dessert ticket carries the warm glow. */
+.guest-coupon--dessert.guest-coupon--issued .guest-coupon__shell {
+  filter:
+    drop-shadow(0 12px 22px rgba(168, 137, 62, 0.32))
+    drop-shadow(0 2px 3px rgba(34, 48, 31, 0.10));
+}
+
+/* A spent ticket pulls its shadow back and stops competing for attention. */
+.guest-coupon--redeemed .guest-coupon__shell,
+.guest-coupon--expired .guest-coupon__shell,
+.guest-coupon--void .guest-coupon__shell {
+  filter: drop-shadow(0 6px 12px rgba(34, 48, 31, 0.13));
+}
+
+.guest-coupon__ticket {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--ink, #22301F);
+  background:
+    linear-gradient(135deg,
+      #FDFDFE 0%,
+      #E4E8EC 16%,
+      #C6CCD3 34%,
+      #E9EDF1 50%,
+      #AEB5BD 66%,
+      #E4E8EC 84%,
+      #C6CCD3 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.40),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+
+  -webkit-mask-image:
+    radial-gradient(circle var(--gc-scoop) at 0 0,     transparent calc(var(--gc-scoop) - 0.8px), #000 var(--gc-scoop)),
+    radial-gradient(circle var(--gc-scoop) at 100% 0,  transparent calc(var(--gc-scoop) - 0.8px), #000 var(--gc-scoop)),
+    radial-gradient(circle var(--gc-scoop) at 0 100%,  transparent calc(var(--gc-scoop) - 0.8px), #000 var(--gc-scoop)),
+    radial-gradient(circle var(--gc-scoop) at 100% 100%, transparent calc(var(--gc-scoop) - 0.8px), #000 var(--gc-scoop)),
+    radial-gradient(circle var(--gc-bite) at 0 calc(100% - var(--gc-stub)),    transparent calc(var(--gc-bite) - 0.8px), #000 var(--gc-bite)),
+    radial-gradient(circle var(--gc-bite) at 100% calc(100% - var(--gc-stub)), transparent calc(var(--gc-bite) - 0.8px), #000 var(--gc-bite));
+  mask-image:
+    radial-gradient(circle var(--gc-scoop) at 0 0,     transparent calc(var(--gc-scoop) - 0.8px), #000 var(--gc-scoop)),
+    radial-gradient(circle var(--gc-scoop) at 100% 0,  transparent calc(var(--gc-scoop) - 0.8px), #000 var(--gc-scoop)),
+    radial-gradient(circle var(--gc-scoop) at 0 100%,  transparent calc(var(--gc-scoop) - 0.8px), #000 var(--gc-scoop)),
+    radial-gradient(circle var(--gc-scoop) at 100% 100%, transparent calc(var(--gc-scoop) - 0.8px), #000 var(--gc-scoop)),
+    radial-gradient(circle var(--gc-bite) at 0 calc(100% - var(--gc-stub)),    transparent calc(var(--gc-bite) - 0.8px), #000 var(--gc-bite)),
+    radial-gradient(circle var(--gc-bite) at 100% calc(100% - var(--gc-stub)), transparent calc(var(--gc-bite) - 0.8px), #000 var(--gc-bite));
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+
+  animation: gcTicketIn 560ms cubic-bezier(0.2, 0.9, 0.25, 1.1) calc(var(--i, 0) * 90ms) both;
+}
+
+@keyframes gcTicketIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.965);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* brushed metal hairlines */
+.guest-coupon__brushed {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    repeating-linear-gradient(112deg,
+      rgba(255, 255, 255, 0.08) 0 1px,
+      transparent 1px 4px),
+    repeating-linear-gradient(112deg,
+      rgba(34, 48, 31, 0.035) 0 1px,
+      transparent 1px 7px);
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+/* the light sweep: the single moving element, so a list stays calm */
+.guest-coupon__sheen {
+  position: absolute;
+  inset: -40% -60%;
+  z-index: 2;
+  background: linear-gradient(104deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.55) 47%,
+      rgba(255, 255, 255, 0.85) 50%,
+      rgba(255, 255, 255, 0.35) 54%,
+      transparent 62%);
+  transform: translateX(-70%) rotate(0.001deg);
+  mix-blend-mode: screen;
+  opacity: 0.72;
+  pointer-events: none;
+  animation: gcSheen 6.5s ease-in-out calc(var(--i, 0) * 1.35s + 1.1s) infinite;
+}
+
+@keyframes gcSheen {
+  0% {
+    transform: translateX(-70%);
+  }
+
+  42% {
+    transform: translateX(70%);
+  }
+
+  100% {
+    transform: translateX(70%);
+  }
+}
+
+.guest-coupon__body {
+  position: relative;
+  z-index: 3;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px var(--gc-pad) 14px;
+}
+
 .guest-coupon__top {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
-.guest-coupon strong {
-  font-size: 1.06rem;
-  letter-spacing: -0.01em;
+
+.guest-coupon__kicker {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-deep, #A8893E);
 }
-.guest-coupon__code {
-  justify-self: start;
-  padding: 5px 11px;
-  border-radius: 10px;
-  background: rgba(34, 48, 31, 0.05);
-  border: 1px dashed rgba(34, 48, 31, 0.22);
-  font-family: ui-monospace, Menlo, monospace;
-  letter-spacing: 0.12em;
-  font-size: 0.82rem;
-  color: var(--ink, #22301F);
-}
-.guest-coupon__meta {
-  display: grid;
-  gap: 3px;
-  color: var(--link-sub, #6F7D6A);
-  font-size: 0.78rem;
-  line-height: 1.5;
-}
-.guest-coupon__branch {
-  color: var(--ink-muted, #6F7D6A);
-  font-weight: 600;
-}
+
+/* The state chip wears the ticket's own translucent pill, not the old
+   flat rounded badge. */
 .guest-coupon__state {
   flex: none;
-  padding: 3px 10px;
-  border-radius: var(--r-pill, 999px);
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(34, 48, 31, 0.10);
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-size: 0.62rem;
-}
-.guest-coupon--issued .guest-coupon__state {
-  color: #2E5B3E;
-  background: rgba(46, 91, 62, 0.12);
-}
-.guest-coupon--redeemed .guest-coupon__state {
-  color: #7A5E17;
-  background: rgba(168, 137, 62, 0.16);
-}
-.guest-coupon--expired .guest-coupon__state,
-.guest-coupon--void .guest-coupon__state {
-  color: #8a4b3a;
-  background: rgba(138, 75, 58, 0.12);
+  white-space: nowrap;
 }
 
-/* Reduced transparency: near-solid sheet and cards, text stays legible. */
+.guest-coupon--issued .guest-coupon__state {
+  color: var(--wave-green, #2E5B3E);
+  border-color: rgba(46, 91, 62, 0.30);
+}
+
+.guest-coupon--redeemed .guest-coupon__state {
+  color: #7A5E17;
+  border-color: rgba(168, 137, 62, 0.38);
+}
+
+.guest-coupon--expired .guest-coupon__state,
+.guest-coupon--void .guest-coupon__state {
+  color: #8A4B3A;
+  border-color: rgba(138, 75, 58, 0.34);
+}
+
+/* The prize: the number is the hero on a discount ticket. */
+.guest-coupon__value {
+  margin: 0;
+  font-family: var(--font-display, "Fraunces", Georgia, serif);
+  font-weight: 600;
+  font-size: 1.95rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink, #22301F);
+}
+
+.guest-coupon__value em {
+  font-style: italic;
+  font-weight: 500;
+}
+
+.guest-coupon__value .pct {
+  font-size: 0.5em;
+  letter-spacing: -0.01em;
+  vertical-align: 0.62em;
+  margin-left: 0.06em;
+}
+
+.guest-coupon__sub {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  color: rgba(34, 48, 31, 0.68);
+}
+
+.guest-coupon__branch {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: rgba(34, 48, 31, 0.72);
+}
+
+/* The code panel. Solid frosted, so the tear line stays the only dashed
+   element on the ticket. */
+.guest-coupon__codewrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 13px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(168, 137, 62, 0.38);
+}
+
+.guest-coupon__codelabel {
+  margin: 0;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(34, 48, 31, 0.55);
+}
+
+.guest-coupon__code {
+  margin: 1px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.06rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #2A2F36;
+  overflow-wrap: anywhere;
+}
+
+/* A spent code is struck through: instant to read, and the text stays
+   legible for the staff member who has to look at it. */
+.guest-coupon--redeemed .guest-coupon__code,
+.guest-coupon--expired .guest-coupon__code,
+.guest-coupon--void .guest-coupon__code {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  color: rgba(34, 48, 31, 0.55);
+}
+
+.guest-coupon__seal {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(168, 137, 62, 0.50);
+  background:
+    conic-gradient(from 210deg,
+      rgba(255, 255, 255, 0.85),
+      rgba(168, 137, 62, 0.22),
+      rgba(255, 255, 255, 0.90),
+      rgba(168, 137, 62, 0.18),
+      rgba(255, 255, 255, 0.85));
+  color: #7A5E17;
+}
+
+.guest-coupon__seal svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* The dashed tear line, landing exactly on the side notches. */
+.guest-coupon__perf {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--gc-stub) - 1px);
+  height: 2px;
+  z-index: 3;
+  background: repeating-linear-gradient(90deg,
+      rgba(34, 48, 31, 0.34) 0 12px,
+      transparent 12px 21px);
+  pointer-events: none;
+}
+
+/* The stub below the line. Its height MUST equal --gc-stub or the notches
+   drift away from the tear line. */
+.guest-coupon__stub {
+  position: relative;
+  z-index: 3;
+  flex: none;
+  height: var(--gc-stub);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px var(--gc-pad);
+}
+
+.guest-coupon__stublabel {
+  margin: 0 0 3px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(34, 48, 31, 0.50);
+}
+
+.guest-coupon__stubcopy {
+  margin: 0;
+  max-width: 20ch;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: rgba(34, 48, 31, 0.72);
+}
+
+.guest-coupon__stubaside {
+  text-align: right;
+}
+
+.guest-coupon__stubvalid {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: rgba(34, 48, 31, 0.85);
+}
+
+.guest-coupon__stubfine {
+  margin: 1px 0 0;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: rgba(34, 48, 31, 0.50);
+}
+
+/* A list of tickets needs more air than a list of flat cards. */
+.guest-profile__list {
+  gap: 16px;
+}
+
+/* Pointer-only lift. No tilt here: the list scrolls, so following the
+   pointer would fight the finger. */
+@media (hover: hover) and (pointer: fine) {
+  .guest-coupon__shell {
+    transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .guest-coupon:hover .guest-coupon__shell {
+    transform: translateY(-3px);
+  }
+}
+
+/* Reduced motion: no reveal, no sweep. The static sheen keeps the metal. */
+@media (prefers-reduced-motion: reduce) {
+  .guest-coupon__ticket {
+    animation: none;
+  }
+
+  .guest-coupon__sheen {
+    animation: none;
+    opacity: 0.45;
+  }
+
+  .guest-coupon__shell {
+    transition: none;
+  }
+
+  .guest-coupon:hover .guest-coupon__shell {
+    transform: none;
+  }
+}
+
+/* Reduced transparency: near-solid sheet, text stays legible. The ticket
+   itself is already opaque silver and uses no backdrop filter, so it needs
+   no override here. Painting a background on .guest-coupon would fill in the
+   corner bites and turn the cut ticket back into a plain rectangle. */
 @media (prefers-reduced-transparency: reduce) {
   .guest-profile__sheet {
     background: var(--glass-fill-solid, rgba(255, 255, 255, 0.95));
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
-  .guest-coupon { background: var(--card-white, #FFFFFF); }
 }
 
 /* Reduced motion: short opacity cross-fade only. Drag stays live (direct

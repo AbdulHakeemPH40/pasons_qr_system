@@ -267,6 +267,73 @@ class DedicatedGuestProfilePageTests(GuestQrFixtures):
         self.assertContains(response, '<span class="profile-pass__eyebrow">Your Profile</span>')
         self.assertNotContains(response, "Saved Guest Pass")
 
+    def test_the_wallet_coupon_is_the_approved_win_ticket(self):
+        """A coupon must ship as the silver ticket, not a flat rounded card.
+
+        The client approved one reward design (design draft 2): a ticket cut
+        with the code above a tear line and the usage stub below it. This
+        locks the anatomy so a restyle cannot quietly flatten it back.
+        """
+        from datetime import timedelta
+
+        from apps.rewards.models import RewardCoupon, RewardTier, RewardType
+
+        profile = self._saved()
+        RewardCoupon.objects.create(
+            code="KIN-TICKET1",
+            profile=profile,
+            brand=self.brand,
+            outlet=self.outlet,
+            game_slug="chess-master",
+            tier=RewardTier.HIGH,
+            reward_type=RewardType.PERCENT,
+            percent=10,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        html = self.client.get(self.profile_url).content.decode()
+
+        # the ticket anatomy, in the order the eye reads it
+        for marker in (
+            "guest-coupon__shell",
+            "guest-coupon__ticket",
+            "guest-coupon__brushed",
+            "guest-coupon__sheen",
+            "guest-coupon__codewrap",
+            "guest-coupon__perf",
+            "guest-coupon__stub",
+        ):
+            self.assertIn(marker, html, marker)
+
+        # the code sits ABOVE the tear line, the stub below it
+        self.assertLess(html.index("guest-coupon__codewrap"), html.index("guest-coupon__perf"))
+        self.assertLess(html.index("guest-coupon__perf"), html.index("guest-coupon__stub"))
+
+        # a discount ticket makes the number the prize
+        self.assertIn('<span class="pct">%</span>', html)
+        self.assertIn("Your code", html)
+        self.assertIn("How to use", html)
+        self.assertIn("one use only", html)
+        # the discount face, not the dessert words
+        self.assertIn("guest-coupon--discount", html)
+
+    def test_the_wallet_coupon_keeps_the_cut_and_the_sweep(self):
+        """The mask cut and the light sweep live in the stylesheet."""
+        from pathlib import Path
+
+        css = Path(__file__).resolve().parents[2] / "static" / "css" / "theme-warm.css"
+        sheet = css.read_text()
+
+        # the ticket cut: corner bites plus the side notches at the tear line
+        self.assertIn("mask-composite: intersect", sheet)
+        self.assertIn("--gc-scoop", sheet)
+        self.assertIn("--gc-bite", sheet)
+        # the tear line must land on the stub, or the notches drift
+        self.assertIn("bottom: calc(var(--gc-stub) - 1px)", sheet)
+        self.assertIn("height: var(--gc-stub)", sheet)
+        # the light sweep, and its reduced-motion off switch
+        self.assertIn("@keyframes gcSheen", sheet)
+        self.assertIn("@keyframes gcTicketIn", sheet)
+
     def test_name_can_be_changed_multiple_times_without_locking_phone(self):
         profile = self._saved()
         for new_first, new_last in (("Hakeem", "K"), ("Abdul", "Rahman"), ("Zayd", "Ali")):
