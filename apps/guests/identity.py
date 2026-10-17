@@ -53,8 +53,10 @@ def set_guest_cookie(response, guest_id):
         max_age=COOKIE_MAX_AGE,
         httponly=True,
         samesite="Lax",
-        # Secure would stop the cookie working on plain http dev servers.
-        secure=not settings.DEBUG,
+        # Follows the site-wide HTTPS switch, not DEBUG (see settings). A
+        # Secure cookie is dropped without a word over plain http, which
+        # silently turns every visit into a new guest.
+        secure=getattr(settings, "GUEST_COOKIE_SECURE", False),
         path="/",
     )
     return response

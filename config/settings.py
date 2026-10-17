@@ -175,6 +175,15 @@ if DEBUG and TUNNEL_HOST_SUFFIXES:
 SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "0") == "1"
 SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
 CSRF_COOKIE_SECURE = os.environ.get("CSRF_COOKIE_SECURE", "0") == "1"
+
+# The guest identity cookie (apps/guests) follows the session flag. It must
+# NOT follow DEBUG: a Secure cookie is silently dropped by the browser over
+# plain http, and the site is served that way until a domain has a
+# certificate. Deriving it from DEBUG made every live visit a brand new
+# guest, so nobody could keep a coupon. One switch, both cookies.
+GUEST_COOKIE_SECURE = os.environ.get(
+    "GUEST_COOKIE_SECURE", "1" if SESSION_COOKIE_SECURE else "0"
+) == "1"
 SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0") or "0")
 SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 SECURE_HSTS_PRELOAD = False

@@ -494,6 +494,22 @@ class GuestCookieCycleTests(TestCase):
         self.assertEqual(cookie["samesite"], "Lax")
         self.assertEqual(cookie["path"], "/")
 
+    def test_the_cookie_is_not_secure_while_the_site_is_plain_http(self):
+        """A Secure cookie is discarded silently over http.
+
+        The live site runs over http://<ip> with DEBUG off. While the flag
+        followed DEBUG the browser threw every cookie away, so each visit
+        minted a new guest and a coupon could never survive a page load.
+        """
+        with self.settings(GUEST_COOKIE_SECURE=False):
+            response = self._run(self._identity_view)
+        self.assertFalse(response.cookies[COOKIE]["secure"])
+
+    def test_the_cookie_is_secure_once_https_is_on(self):
+        with self.settings(GUEST_COOKIE_SECURE=True):
+            response = self._run(self._identity_view)
+        self.assertTrue(response.cookies[COOKIE]["secure"])
+
 
 class EnsureProfileReuseTests(TestCase):
     def test_ensure_profile_is_idempotent_within_one_request(self):
