@@ -8,7 +8,7 @@
 
 {% block content %}
 {# GAMES_V also guards the vendored iframe src so a game update is not served from cache. Keep in sync with the scripts block below. #}
-{% with GAMES_V="2026-10-16-7" %}
+{% with GAMES_V="2026-10-17-1" %}
 <div class="device-stage">
   <div class="device">
     <div class="device-island" aria-hidden="true"></div>
@@ -75,12 +75,31 @@
             Add your name and mobile number, or use Google, to be able to claim.
           </p>
           <div class="game-nudge__row">
-            <a class="game-cta" href="{{ back }}">Sign in to earn</a>
+            {% if id_sheet %}
+            {% comment %}
+            Opens the identity sheet HERE. This used to be a plain link to the
+            QR page ({{ back }}), so tapping it walked the guest out of the
+            game and they landed on the QR page instead of signing in. The
+            sheet posts to this QR and returns to this exact page.
+            {% endcomment %}
+            <button class="game-cta" type="button" id="game-nudge-signin" data-id-open="form">Sign in to earn</button>
+            {% endif %}
             <button class="game-cta game-cta--ghost" type="button" id="game-nudge-close">Play without rewards</button>
           </div>
         </div>
         {% endif %}
       </div>
+
+      {% comment %}
+      The guest identity sheet, as a direct child of .device-screen so the
+      shared .device-screen > .ig-draw rule pins it to the phone screen.
+      Included whenever a QR is known, not only for an unverified guest: the
+      post-submit confirmation ("Thanks, name") has to be able to render
+      after the guest becomes verified. core/shell.js never touches it, and
+      the sheet's own script opens it only when data-id-open is tapped (or
+      when the server rendered it open for an error/confirmation).
+      {% endcomment %}
+      {% if id_sheet %}{% include "partials/guest_identity_sheet.html" %}{% endif %}
 
       {% comment %}
       Visible open-source credit line removed at the client's request
@@ -117,7 +136,7 @@
 {# Keep this in step with the GAMES_V at the top of this template: the CSS #}
 {# guards the iframe src, this one guards the shell scripts. A mismatch     #}
 {# serves a stale shell.js from cache. test_both_games_versions_match.      #}
-{% with GAMES_V="2026-10-16-7" %}
+{% with GAMES_V="2026-10-17-1" %}
 <script src="{% static 'games/core/storage.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/theme.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/shell.js' %}?v={{ GAMES_V }}"></script>

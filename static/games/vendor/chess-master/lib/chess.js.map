@@ -1,0 +1,1 @@
+{"version":3,"file":"chess.js","sources":[],"names":[],"mappings":"","x_note":"The vendored chess.js build ends with a sourceMappingURL comment but ships no map. This empty, valid map keeps Django's collectstatic post-processing from aborting on the missing reference. Debugging still shows the readable vendored source."}

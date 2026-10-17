@@ -9,6 +9,8 @@ HTML/CSS/JS with a glassmorphism design system (spec 0.1-0.5).
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -55,12 +57,25 @@ except Exception:  # pragma: no cover - autoreload only exists under runserver
     pass
 
 # --- security ------------------------------------------------------------
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY",
-    "django-insecure-dev-only-key-change-in-production",
-)
+# The placeholder below is public: it is written in .env.example and in every
+# checkout. It is safe only while DEBUG is on.
+INSECURE_DEV_SECRET = "django-insecure-dev-only-key-change-in-production"
+
+SECRET_KEY = os.environ.get("SECRET_KEY", INSECURE_DEV_SECRET)
 
 DEBUG = os.environ.get("DEBUG", "1") == "1"
+
+# Fail closed instead of starting a public server on a key anybody can read.
+# Session cookies, the signed guest cookie, password reset tokens and the
+# round tokens are all derived from SECRET_KEY. A deployment that forgets to
+# set a real one must stop at boot, not run with a known value.
+if not DEBUG and (SECRET_KEY == INSECURE_DEV_SECRET or len(SECRET_KEY) < 32):
+    raise ImproperlyConfigured(
+        "SECRET_KEY is missing, too short, or still the development "
+        "placeholder while DEBUG is off. Generate one on the server with "
+        "python3 -c \"import secrets; print(secrets.token_urlsafe(64))\" "
+        "and put it in .env."
+    )
 
 ALLOWED_HOSTS = [
     h for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h
@@ -144,6 +159,30 @@ for _origin in tunnel_trusted_origins(DEBUG, TUNNEL_HOST_SUFFIXES):
 # localhost runs are unaffected.
 if DEBUG and TUNNEL_HOST_SUFFIXES:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# --- production hardening ------------------------------------------------
+# Everything here is off unless the server environment turns it on, so local
+# development over http:// behaves exactly as before. The deployment notes:
+#
+#   SECURE_SSL_REDIRECT=1, SESSION_COOKIE_SECURE=1 and CSRF_COOKIE_SECURE=1
+#   are only correct when the site is served over HTTPS. Turn them on once a
+#   domain answers on https:// (nginx + a certificate). With a bare IP over
+#   plain http:// they stay off, otherwise every request is redirected to a
+#   port that is not listening.
+#
+#   SECURE_HSTS_SECONDS=31536000 pins HTTPS for a year. Only set it after the
+#   HTTPS setup has been verified, because a wrong HSTS value is hard to undo.
+SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "0") == "1"
+SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
+CSRF_COOKIE_SECURE = os.environ.get("CSRF_COOKIE_SECURE", "0") == "1"
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0") or "0")
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_PRELOAD = False
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
 # --- guest identity: Google sign-in --------------------------------------
 # The guest identity sheet renders "Continue with Google" ONLY when a client
@@ -266,6 +305,12 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Media uploads (dish photos, menu PDFs) are written at runtime, so they
+# cannot be collected into STATIC_ROOT. Development serves them through
+# Django. A server with nginx in front serves /media/ itself (SERVE_MEDIA=0);
+# without nginx, set SERVE_MEDIA=1 and Django serves them from the WSGI app.
+SERVE_MEDIA = os.environ.get("SERVE_MEDIA", "1" if DEBUG else "0") == "1"
 
 # Django 4.2+ STORAGES dict — WhiteNoise serves compressed, cache-fingerprinted
 # static files without a separate web server. Swap the static backend for a

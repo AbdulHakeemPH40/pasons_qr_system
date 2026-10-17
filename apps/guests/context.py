@@ -55,8 +55,14 @@ def _take_draft(request):
     return draft if isinstance(draft, dict) else {}
 
 
-def sheet_context(request, qr, next_path, base="entry"):
-    """Return the sheet's template context for this request."""
+def sheet_context(request, qr, next_path, base="entry", mode="identity"):
+    """Return the sheet's template context for this request.
+
+    `base` is the panel a tap opens (entry on the QR page, ask on the
+    Instagram fallback, form on the play page where the guest already knows
+    what they came for). `mode` picks the copy only: "identity" is the
+    follower gift, "game" is signing in to be able to claim a game prize.
+    """
     get = request.GET
     error = (get.get("identity_error") or "").strip()
     joined = get.get("joined") == "1"
@@ -83,6 +89,7 @@ def sheet_context(request, qr, next_path, base="entry"):
         "id_qr_key": qr.redirect_key,
         "id_next": next_path,
         "id_base": base,
+        "id_mode": mode,
         "id_state": open_state,
         "id_open": open_now,
         "id_error_text": ERROR_TEXT.get(error, ""),

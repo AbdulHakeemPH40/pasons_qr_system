@@ -85,6 +85,11 @@ score on the guest's own device).
 ## Unchanged from the Electron app
 
 - `lib/chess.js` (chess.js, BSD-2, Jeff Hlywa) - untouched.
+- `lib/chess.js.map` (added 2026-10-17) - the build ends with a
+  `sourceMappingURL` comment but ships no map, and Django's
+  `collectstatic` aborts the whole manifest when a referenced file is
+  missing. This empty, valid map satisfies the reference. No game code
+  was changed.
 - `lib/stockfish/stockfish.js` + `stockfish.wasm` (Stockfish.js 18, GPLv3,
   nmrugg/stockfish.js) - untouched. The engine loads its WASM from its own
   folder; no external network calls.

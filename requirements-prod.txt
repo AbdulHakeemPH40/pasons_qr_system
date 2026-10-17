@@ -1,0 +1,10 @@
+# Production-only dependencies for the DigitalOcean deployment.
+#
+#   pip install -r requirements-prod.txt
+#
+# requirements.txt stays the local development set (SQLite, runserver).
+# This file adds the WSGI server and the PostgreSQL driver.
+-r requirements.txt
+
+gunicorn==26.2.0
+psycopg[binary]==3.3.6

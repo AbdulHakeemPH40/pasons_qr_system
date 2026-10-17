@@ -38,8 +38,10 @@ from .phone import normalise_phone
 
 # Post-submit destinations we accept. A guest-supplied `next` that is not one
 # of our own paths is an open-redirect hole, so anything else falls back to
-# this QR's landing page.
-_ALLOWED_NEXT_PREFIXES = ("/q/", "/p/")
+# this QR's landing page. /games/ is here because the play page renders the
+# same sheet in place: a guest who signs in mid-game must come back to that
+# game, not be thrown out to the QR page.
+_ALLOWED_NEXT_PREFIXES = ("/q/", "/p/", "/games/")
 
 # Consent checkboxes post a value; these spellings all mean "ticked".
 _TRUE_VALUES = frozenset({"1", "on", "true", "yes"})
@@ -66,7 +68,11 @@ def _safe_next(value, fallback):
 
 def _bounce(url, **params):
     if params:
-        url = f"{url}?{urlencode(params)}"
+        # The play page returns to itself with its own query string
+        # (/games/<slug>/?back=/q/<key>/), so a second '?' would swallow the
+        # flags into the `back` value and drop them. Append, never re-ask.
+        separator = "&" if "?" in url else "?"
+        url = f"{url}{separator}{urlencode(params)}"
     return redirect(url)
 
 

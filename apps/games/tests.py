@@ -258,6 +258,69 @@ class GamesZoneRoutesTests(GamesZoneFixtures):
         verified = self.client.get(url)
         self.assertNotContains(verified, 'id="game-nudge"')
 
+    def test_the_sign_in_control_opens_the_sheet_instead_of_leaving_the_game(self):
+        """"Sign in to earn" used to be a link back to the QR landing page.
+
+        Tapping it walked the guest out of the round and dropped them on the
+        QR page, so there was no way to sign in from a game at all (bug
+        reported 2026-10-17). It must open the shared identity sheet in
+        place, on the form panel, with the form posting back to this page.
+        """
+        play_url = (
+            reverse("games_play", args=["chess-master"])
+            + f"?back=/q/{self.qr.redirect_key}/"
+        )
+        response = self.client.get(play_url)
+
+        self.assertContains(response, 'id="ig-draw-popup"')
+        self.assertContains(response, 'id="game-nudge-signin"')
+        self.assertContains(response, 'data-id-open="form"')
+        self.assertContains(response, 'data-base="form"')
+        # the form returns the guest to this exact page, query string intact
+        self.assertContains(response, f'value="{play_url}"')
+        # game copy, not the Instagram follower-gift story
+        self.assertContains(response, "Sign in to claim your prize")
+        self.assertNotContains(response, "Claim your follower gift")
+        # and it no longer navigates away from the round
+        self.assertNotContains(
+            response, f'<a class="game-cta" href="/q/{self.qr.redirect_key}/">'
+        )
+
+    def test_a_refusal_opens_the_form_instead_of_leaving_the_round(self):
+        """The refusal card is the moment the guest is told they cannot be paid.
+
+        Its "Add your name and mobile" control used to be a plain link to the
+        QR landing page, so the winning moment sent the guest AWAY from the
+        game and the only place the form ever appeared was the Instagram card
+        (reported 2026-10-17). It must open the sheet in place, and it may only
+        do that when the sheet is really on the page, because a play page
+        without a QR has no form action to post to.
+        """
+        shell = (
+            Path(settings.BASE_DIR) / "static" / "games" / "core" / "shell.js"
+        ).read_text(encoding="utf-8")
+
+        # the control only becomes a sheet opener when the sheet exists
+        self.assertIn('document.querySelector(".ig-draw")', shell)
+        self.assertIn('nudge.setAttribute("data-id-open", "form")', shell)
+        # and the no-sheet fallback stays a link, so it never becomes dead
+        self.assertIn("nudge.href = exitHref();", shell)
+        # the link must not be set unconditionally any more
+        self.assertNotIn(
+            'var nudge = document.createElement("a");\n'
+            '        nudge.className = "game-reward__nudge";\n'
+            '        nudge.href = exitHref();',
+            shell,
+        )
+
+    def test_a_play_page_without_a_qr_offers_no_sign_in_it_cannot_complete(self):
+        """No QR means no form action, so the prompt never shows a dead button."""
+        response = self.client.get(reverse("games_play", args=["chess-master"]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="ig-draw-popup"')
+        self.assertNotContains(response, 'id="game-nudge-signin"')
+        self.assertContains(response, 'id="game-nudge-close"')
+
     def test_the_play_page_never_prints_the_winning_recipe(self):
         """A guest must not be able to read how many plays or points pay.
 

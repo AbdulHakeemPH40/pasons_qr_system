@@ -55,8 +55,8 @@ comment renders as literal page text in this project.
 
     <section class="ig-draw__panel" data-panel="form"{% if id_state != "form" %} hidden{% endif %}>
       <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
-      <h2 class="ig-draw__title" id="id-title-form">Claim your follower gift</h2>
-      <p class="ig-draw__sub">Add your details so our team can prepare your gift. We only use this to send your gift and offers.</p>
+      <h2 class="ig-draw__title" id="id-title-form">{% if id_mode == "game" %}Sign in to claim your prize{% else %}Claim your follower gift{% endif %}</h2>
+      <p class="ig-draw__sub">{% if id_mode == "game" %}Add your name and mobile number. This is how we hold a prize you win and how our team matches it when you claim.{% else %}Add your details so our team can prepare your gift. We only use this to send your gift and offers.{% endif %}</p>
       {% if id_error_text %}<p class="ig-draw__error" role="alert">{{ id_error_text }}</p>{% endif %}
       {% if id_google_client_id %}
       {% comment %}
@@ -110,7 +110,7 @@ comment renders as literal page text in this project.
     <section class="ig-draw__panel" data-panel="done"{% if id_state != "done" %} hidden{% endif %}>
       <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
       <h2 class="ig-draw__title" id="id-title-done">{% if id_greet %}Thanks, {{ id_greet }}!{% else %}You are all set!{% endif %}</h2>
-      <p class="ig-draw__sub">Your gift is saved. Our team will reach you on WhatsApp.</p>
+      <p class="ig-draw__sub">{% if id_mode == "game" %}You are signed in. Play on, and a winning round can be claimed.{% else %}Your gift is saved. Our team will reach you on WhatsApp.{% endif %}</p>
       <button type="button" class="ig-draw__cta" data-draw-close>Great</button>
     </section>
 
@@ -125,6 +125,10 @@ comment renders as literal page text in this project.
     var panels = sheet.querySelectorAll("[data-panel]");
     var dialog = sheet.querySelector(".ig-draw__sheet");
     var card = document.getElementById("ig-follow-card");
+    /* The control that opened the sheet, so closing returns focus there. The
+       QR page uses its Instagram card; the play page uses the sign-in
+       button, which would otherwise lose focus to the document body. */
+    var lastTrigger = null;
     var base = sheet.dataset.base || "entry";
     /* Long enough that the guest actually looked at Instagram. The value is
        a courtesy guard, not proof: it keeps a stray focus event from firing
@@ -167,7 +171,8 @@ comment renders as literal page text in this project.
          not re-open the sheet behind their back on the next focus event. */
       if (currentState() === "ask" || currentState() === "form") stopAsking = true;
       sheet.hidden = true;
-      if (card) card.focus();
+      if (lastTrigger && lastTrigger.focus) lastTrigger.focus();
+      else if (card) card.focus();
     }
 
     function ask() {
@@ -184,6 +189,20 @@ comment renders as literal page text in this project.
         openSheet(base);
       });
     }
+
+    /* Any control marked [data-id-open] opens the sheet in place. The play
+       page uses this for "Sign in to earn", which must never navigate away
+       from a round in progress. An explicit tap is intent, so stopAsking
+       (which only suppresses AUTOMATIC re-opens after a decline) is
+       deliberately not consulted here. */
+    document.addEventListener("click", function (e) {
+      var t = e.target;
+      var trigger = t && t.closest ? t.closest("[data-id-open]") : null;
+      if (!trigger) return;
+      e.preventDefault();
+      lastTrigger = trigger;
+      openSheet(trigger.getAttribute("data-id-open") || base);
+    });
 
     sheet.addEventListener("click", function (e) {
       var t = e.target;

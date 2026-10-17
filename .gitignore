@@ -35,6 +35,14 @@ media/menu/pdf/menu_*.pdf
 media/menu/pdf/menu.pdf
 media/menu/specials/*_???????.jpg
 
+# Dish photos uploaded through the panel at runtime. Seeded copies that are
+# already tracked stay tracked; new uploads never enter the repository.
+media/menu/items/dish_*.png
+
+# Local screen recordings and scratch output
+*.mp4
+paired-output.txt
+
 # Local recovery holding (deleted files kept for restore, never shipped)
 .trash/
 

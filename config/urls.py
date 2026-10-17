@@ -11,10 +11,10 @@ Internal (staff) routes:
 """
 
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.views.generic import RedirectView
+from django.views.static import serve
 
 from apps.analytics import views as analytics_views
 from apps.core import views
@@ -123,5 +123,16 @@ urlpatterns = [
 ]
 
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Media files (dish photos, menu PDFs) live outside STATIC_ROOT because they
+# are written at runtime. Development serves them through Django, and so does
+# a deployment without nginx in front (SERVE_MEDIA=1 in settings). With nginx
+# serving /media/ directly this block is skipped, and Django's `static()`
+# helper cannot be used here because it returns nothing once DEBUG is off.
+if settings.DEBUG or getattr(settings, "SERVE_MEDIA", False):
+    urlpatterns += [
+        re_path(
+            r"^media/(?P<path>.*)$",
+            serve,
+            {"document_root": settings.MEDIA_ROOT},
+        ),
+    ]

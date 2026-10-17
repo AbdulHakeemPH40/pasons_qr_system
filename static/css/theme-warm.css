@@ -2898,6 +2898,15 @@ body.theme-warm .ig-draw__backdrop {
 body.theme-warm .ig-draw__sheet {
   position: relative;
   width: min(320px, 100%);
+  /* The name + mobile form is taller than a short phone (measured: 613px of
+     content in a 667px window, submit button at 664px). Without a cap the
+     sheet simply overflowed and the Submit button could not be reached.
+     Cap it to the scrim and let it scroll inside, so the last field and the
+     buttons are always reachable. */
+  max-height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 26px 22px 18px;
   border-radius: 26px;
   background: var(--card-white);
@@ -3237,6 +3246,17 @@ body.theme-warm .page--play .game-reward__hint {
 }
 
 body.theme-warm .page--play .game-reward__nudge {
+  /* Rendered as a <button> when the identity sheet is on the play page, so a
+     refusal opens the form in place instead of leaving the round, and as an
+     <a> when there is no sheet to open. The reset below makes both read as
+     the same quiet underlined link. */
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
   display: inline-block;
   margin-top: 8px;
   font-size: 0.72rem;

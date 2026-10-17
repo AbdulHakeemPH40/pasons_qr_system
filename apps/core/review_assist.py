@@ -35,7 +35,6 @@ lightly tidied — the guest's own words only, never invented sentences.
 import json
 import os
 import re
-from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 TIMEOUT = 15  # seconds per provider call
@@ -194,14 +193,17 @@ def _deepseek(draft, brand_name, outlet_name):
 
 def _gemini(draft, brand_name, outlet_name):
     model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    # The key travels in a header, never in the URL. A URL ends up in
+    # exception messages, proxies and request logs, which is exactly how an
+    # API key leaks; Google accepts the x-goog-api-key header instead.
     url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-           f"{model}:generateContent?" + urlencode({"key": os.environ["GEMINI_API_KEY"]}))
+           f"{model}:generateContent")
     data = _post_json(url, {
         "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
         "contents": [{"role": "user",
                       "parts": [{"text": _user_prompt(draft, brand_name, outlet_name)}]}],
         "generationConfig": {"temperature": 0.7, "maxOutputTokens": 1000},
-    })
+    }, headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]})
     return _parse(data["candidates"][0]["content"]["parts"][0]["text"])
 
 

@@ -28,6 +28,7 @@ from django.urls import reverse
 
 from apps.analytics.models import TapEvent
 from apps.core.models import Brand, Outlet, QrCode
+from apps.guests.context import sheet_context
 from apps.guests.identity import ensure_profile
 from apps.rewards.services import (
     REASON_TEXT,
@@ -71,15 +72,31 @@ def safe_back(value):
     return value
 
 
-def _brand_context(back):
+def _qr_from_back(back):
+    """The QR a game page was opened from, or None.
+
+    The play page needs the ROW, not just its key: the guest identity sheet
+    posts to that QR (so a new profile records where it was born) and comes
+    back to the game afterwards. Resolved once per request, so the theming
+    and the sheet share the same lookup.
+    """
+    if not back.startswith("/q/"):
+        return None
+    key = back[3:].strip("/")
+    if not key:
+        return None
+    return (
+        QrCode.objects.select_related("brand", "outlet")
+        .filter(redirect_key=key)
+        .first()
+    )
+
+
+def _brand_context(back, qr=None):
     """Resolve (brand, outlet) from the sanitised back path for theming."""
     if back.startswith("/q/"):
-        key = back[3:].strip("/")
-        qr = (
-            QrCode.objects.select_related("brand", "outlet")
-            .filter(redirect_key=key)
-            .first()
-        )
+        if qr is None:
+            qr = _qr_from_back(back)
         if qr:
             return qr.brand, qr.outlet
     elif back.startswith("/p/"):
@@ -154,10 +171,9 @@ def games_play(request, slug):
     if game is None or not game.enabled:
         return render(request, "404.html", status=404)
     back = safe_back(request.GET.get("back", ""))
-    brand, outlet = _brand_context(back)
-    qr_key = ""
-    if back.startswith("/q/"):
-        qr_key = back[3:].strip("/")
+    qr = _qr_from_back(back)
+    brand, outlet = _brand_context(back, qr)
+    qr_key = qr.redirect_key if qr is not None else ""
 
     # The play page needs to know where this guest stands before the game
     # starts: the chess ladder locks the levels above their rung, and an
@@ -167,25 +183,44 @@ def games_play(request, slug):
     profile = profile.profile if profile is not None else None
     progress = progress_payload(profile, game.slug)
 
-    return render(
-        request,
-        "games/play.html",
-        {
-            "game": game,
-            "back": back,
-            "brand": brand,
-            "outlet": outlet,
-            "qr_key": qr_key,
-            "theme_payload": _theme_payload(brand),
-            "bridge_payload": game.bridge,
-            # Claimed once when the round ends. See apps/rewards/services.py.
-            "round_token": sign_round_token(game.slug),
-            "place_name": _place_name(brand, outlet),
-            # Ladder / streak state and whether this guest can be paid.
-            "game_progress": progress,
-            "guest_verified": progress.get("verified", False),
-        },
-    )
+    context = {
+        "game": game,
+        "back": back,
+        "brand": brand,
+        "outlet": outlet,
+        "qr_key": qr_key,
+        "theme_payload": _theme_payload(brand),
+        "bridge_payload": game.bridge,
+        # Claimed once when the round ends. See apps/rewards/services.py.
+        "round_token": sign_round_token(game.slug),
+        "place_name": _place_name(brand, outlet),
+        # Ladder / streak state and whether this guest can be paid.
+        "game_progress": progress,
+        "guest_verified": progress.get("verified", False),
+    }
+
+    # The identity sheet, so "Sign in to earn" opens the form HERE instead
+    # of walking the guest back to the QR landing page and losing the game.
+    # `next_path` is this exact page, so a submit returns the guest to the
+    # game with the confirmation panel open. Without a QR there is nothing
+    # to hang the form on, so the sheet is left out and the prompt hides.
+    if qr is not None:
+        context.update(
+            sheet_context(
+                request,
+                qr,
+                next_path=request.get_full_path()[:200],
+                # Straight to the name + mobile form: this guest tapped "Sign
+                # in to earn" during a game, so the Instagram follow story is
+                # the wrong story here. mode="game" swaps that copy only.
+                base="form",
+                mode="game",
+            )
+        )
+    else:
+        context["id_sheet"] = False
+
+    return render(request, "games/play.html", context)
 
 
 def games_event(request):

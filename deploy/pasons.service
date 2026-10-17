@@ -1,0 +1,37 @@
+[Unit]
+Description=Pasons Smart QR platform (Django via gunicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+User=pasons
+Group=pasons
+WorkingDirectory=/srv/pasons/platform
+EnvironmentFile=/srv/pasons/platform/.env
+ExecStart=/srv/pasons/platform/venv/bin/gunicorn config.wsgi:application \
+    --bind 127.0.0.1:8001 \
+    --workers 2 \
+    --threads 4 \
+    --worker-class gthread \
+    --timeout 60 \
+    --max-requests 500 \
+    --max-requests-jitter 50 \
+    --no-control-socket \
+    --access-logfile - \
+    --error-logfile -
+Restart=always
+RestartSec=3
+KillSignal=SIGQUIT
+
+# Contain the service: no privilege escalation, a private /tmp, a read-only
+# system, no access to any home directory, and write access only where the
+# app really writes. gunicorn's control socket would live under $HOME, so it
+# is switched off with --no-control-socket instead of weakening this unit.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/pasons/platform/media /srv/pasons/platform/staticfiles
+
+[Install]
+WantedBy=multi-user.target

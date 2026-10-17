@@ -324,9 +324,29 @@
         box.appendChild(where);
       }
       if (data.verified === false) {
-        var nudge = document.createElement("a");
+        /* A refusal is the one moment the guest is TOLD they cannot be paid,
+           so the form belongs here, not on another page. This used to be a
+           plain link to the QR landing page: tapping it walked the guest out
+           of a finished round and dropped them on the QR page, where only the
+           Instagram card opened the sheet. That is why the sign-in felt
+           Instagram-only (reported 2026-10-17).
+
+           The play page already carries the sheet (.ig-draw), and it sits at
+           z-index 50 over this overlay at z-index 2, so the control opens the
+           form in place and the round stays on screen behind it. A play page
+           loaded without a QR has no sheet and no form action, so there the
+           link comes back rather than a button that cannot finish. */
+        var hasSheet = !!document.querySelector(".ig-draw");
+        var nudge;
+        if (hasSheet) {
+          nudge = document.createElement("button");
+          nudge.type = "button";
+          nudge.setAttribute("data-id-open", "form");
+        } else {
+          nudge = document.createElement("a");
+          nudge.href = exitHref();
+        }
         nudge.className = "game-reward__nudge";
-        nudge.href = exitHref();
         nudge.textContent = "Add your name and mobile to claim rewards";
         box.appendChild(nudge);
       }

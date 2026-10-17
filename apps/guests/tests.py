@@ -14,6 +14,7 @@ Locks the cookie/identity contract:
 import csv
 import io
 from unittest import mock
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth.models import User
 from django.http import HttpResponse
@@ -699,6 +700,38 @@ class IdentitySubmitTests(GuestQrFixtures):
     def test_protocol_relative_next_is_rejected(self):
         response = self._post(next="//evil.example.com")
         self.assertNotIn("evil.example.com", response["Location"])
+
+    def test_a_submit_from_the_play_page_returns_to_the_game(self):
+        """The play page renders the sheet in place (bug fix 2026-10-17).
+
+        Its `next` carries the page's own query string
+        (/games/<slug>/?back=/q/<key>/), so the bounce has to APPEND the
+        flag with '&'. A second '?' would swallow joined=1 into the back
+        value: the guest would land on the game with no confirmation, and
+        Exit would point at a nonsense key.
+        """
+        play_url = (
+            reverse("games_play", args=["chess-master"]) + f"?back={self.landing_url}"
+        )
+        response = self._post(next=play_url)
+
+        self.assertEqual(response.status_code, 302)
+        location = response["Location"]
+        self.assertTrue(location.startswith(play_url), location)
+
+        query = parse_qs(urlparse(location).query)
+        self.assertEqual(query.get("joined"), ["1"])
+        # the game's own parameter survived intact, so Exit still works
+        self.assertEqual(query.get("back"), [self.landing_url])
+
+        self.assertEqual(GuestProfile.objects.count(), 1)
+        self.assertTrue(GuestProfile.objects.get().is_identified)
+
+        # the guest lands back on the game with the confirmation open
+        body = self.client.get(location).content.decode()
+        self.assertIn('data-state="done"', body)
+        self.assertIn("Thanks, Aisha!", body)
+        self.assertIn("You are signed in", body)
 
     def test_second_submit_reuses_the_same_profile(self):
         self._post()
