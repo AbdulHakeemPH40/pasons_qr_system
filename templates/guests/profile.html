@@ -99,7 +99,7 @@
           <span class="profile-card__badge">Instant sync</span>
         </div>
 
-        <form class="profile-form" method="post" action="{% url 'guest_profile_page' qr.redirect_key %}" novalidate>
+        <form id="profile-form" class="profile-form" method="post" action="{% url 'guest_profile_page' qr.redirect_key %}" novalidate>
           {% csrf_token %}
           <div class="profile-form__grid">
             <label class="profile-field">
@@ -146,6 +146,61 @@
             <span class="profile-submit__orb" aria-hidden="true">{% icon "arrow" %}</span>
           </button>
         </form>
+      </section>
+
+      {% comment %}
+      Confirming a new mobile number.
+
+      Turning up with a different number is only a claim. The number is what
+      signs a guest back in and what staff match a coupon against, so it is
+      proved with the same WhatsApp code the sign-in sheet sends before it can
+      be stored. The card opens when the save was refused for that reason, so
+      a name-only edit never meets it.
+
+      The panel talks to guest_otp_send and guest_otp_check, the two endpoints
+      the sheet already uses. One rule, one place to change it.
+      {% endcomment %}
+      <section class="profile-card profile-card--verify" id="profile-verify"
+               aria-labelledby="profile-verify-heading"{% if not show_verify %} hidden{% endif %}>
+        <div class="profile-card__head">
+          <div>
+            <span class="profile-card__kicker">One step left</span>
+            <h3 id="profile-verify-heading" class="profile-card__title">Confirm your new number</h3>
+          </div>
+          <span class="profile-card__badge">{% icon "whatsapp" %} WhatsApp</span>
+        </div>
+
+        <p class="profile-field__note">
+          We send a 6 digit code to <strong data-verify-dest>{{ form_phone }}</strong>.
+          The number is saved only after the code is entered, so nobody can put
+          a number they do not hold on your account.
+        </p>
+
+        <button type="button" class="profile-submit" data-verify-send>
+          <span>Send code</span>
+          <span class="profile-submit__orb" aria-hidden="true">{% icon "arrow" %}</span>
+        </button>
+
+        <div class="profile-verify__code" data-verify-code hidden>
+          <label class="profile-field" for="profile-verify-input">
+            <span class="profile-field__label">6 digit code</span>
+            <input id="profile-verify-input" type="text" inputmode="numeric" pattern="[0-9]*"
+                   maxlength="6" autocomplete="one-time-code" data-verify-input
+                   class="profile-field__input profile-field__input--mono profile-code"
+                   aria-describedby="profile-verify-error">
+          </label>
+          <p class="profile-verify__error" id="profile-verify-error" role="alert" data-verify-error hidden></p>
+          <button type="button" class="profile-submit" data-verify-submit>
+            <span>Verify and save</span>
+            <span class="profile-submit__orb" aria-hidden="true">{% icon "arrow" %}</span>
+          </button>
+          <p class="profile-verify__foot">
+            <span>Didn't get it?</span>
+            <button type="button" class="profile-link" data-verify-resend>Send a new code</button>
+            <span class="profile-verify__timer" data-verify-timer hidden></span>
+          </p>
+          <button type="button" class="profile-link" data-verify-edit>Wrong number? Change it</button>
+        </div>
       </section>
 
       {% comment %}
@@ -202,4 +257,303 @@
     <strong>{{ brand.name_en }}</strong>{% if outlet %} · {{ outlet.official_name }}{% endif %}
   </p>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+  /* Confirm-a-new-number card. It reuses the profile card shell so it reads as
+     the same object as the form above it; only the code well and the quiet
+     link row need rules of their own. */
+  body.theme-warm .page--profile [hidden] { display: none !important; }
+
+  body.theme-warm .page--profile .profile-card--verify {
+    border-color: rgba(168, 137, 62, 0.38);
+    box-shadow: 0 18px 38px -26px rgba(34, 48, 31, 0.5);
+  }
+
+  body.theme-warm .page--profile .profile-card--verify .profile-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  body.theme-warm .page--profile .profile-card--verify .profile-card__badge .icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  body.theme-warm .page--profile .profile-verify__code {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  body.theme-warm .page--profile .profile-code {
+    text-align: center;
+    letter-spacing: 0.42em;
+    text-indent: 0.42em;
+    font-size: 1.1rem;
+    padding-block: 12px;
+  }
+
+  body.theme-warm .page--profile .profile-verify__error {
+    margin: 0;
+    padding: 8px 11px;
+    border-radius: 12px;
+    background: rgba(155, 44, 44, 0.09);
+    border: 1px solid rgba(155, 44, 44, 0.24);
+    color: #8C2A2A;
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+
+  body.theme-warm .page--profile .profile-verify__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 0.74rem;
+    color: var(--link-sub, #6F7D6A);
+  }
+
+  body.theme-warm .page--profile .profile-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--wave-green, #2E5B3E);
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  body.theme-warm .page--profile .profile-link:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  body.theme-warm .page--profile .profile-submit[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Confirm the new mobile number, then save.
+ *
+ * Why this lives on the profile page at all: the number is what signs a guest
+ * back in and what staff match a coupon against, so typing a different one is
+ * a claim, not a fact. The server refuses to store it without a proof this
+ * session verified that exact number, and this block is how the guest gets
+ * that proof. It talks to the same two endpoints as the sign-in sheet, so
+ * there is one code rule in the project and not two.
+ *
+ * Six digits never save by themselves. The guest reads the code and taps.
+ */
+(function () {
+  var card = document.getElementById("profile-verify");
+  var form = document.getElementById("profile-form");
+  if (!card || !form) return;
+
+  var sendButton = card.querySelector("[data-verify-send]");
+  var codeBox = card.querySelector("[data-verify-code]");
+  var codeInput = card.querySelector("[data-verify-input]");
+  var errorBox = card.querySelector("[data-verify-error]");
+  var verifyButton = card.querySelector("[data-verify-submit]");
+  var resendButton = card.querySelector("[data-verify-resend]");
+  var editButton = card.querySelector("[data-verify-edit]");
+  var timerLabel = card.querySelector("[data-verify-timer]");
+  var destLabel = card.querySelector("[data-verify-dest]");
+  var phoneInput = form.querySelector('input[name="phone"]');
+  var csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+
+  var SEND_URL = "{{ otp_send_url|escapejs }}";
+  var CHECK_URL = "{{ otp_check_url|escapejs }}";
+  var csrfToken = csrfInput ? csrfInput.value : "";
+
+  var timer = 0;
+  var busy = false;
+  var sentTo = "";
+
+  function say(text) {
+    if (!errorBox) return;
+    errorBox.textContent = text || "";
+    errorBox.hidden = !text;
+  }
+
+  function pretty(e164) {
+    var m = /^\+(\d{1,3})(\d+)$/.exec(e164 || "");
+    return m ? "+" + m[1] + " " + m[2] : (e164 || "");
+  }
+
+  function startCountdown(seconds) {
+    window.clearInterval(timer);
+    var left = Math.max(0, Math.round(seconds || 0));
+    function paint() {
+      if (left > 0) {
+        if (timerLabel) {
+          timerLabel.hidden = false;
+          timerLabel.textContent = "You can ask again in " + left + "s.";
+        }
+        if (resendButton) resendButton.disabled = true;
+        left -= 1;
+      } else {
+        window.clearInterval(timer);
+        if (timerLabel) { timerLabel.hidden = true; timerLabel.textContent = ""; }
+        if (resendButton) resendButton.disabled = false;
+      }
+    }
+    paint();
+    if (left >= 0) timer = window.setInterval(paint, 1000);
+  }
+
+  function postJson(url, payload) {
+    return fetch(url, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      credentials: "same-origin"
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; });
+    });
+  }
+
+  function payload() {
+    return { country: "", phone: phoneInput ? phoneInput.value : "" };
+  }
+
+  function openCodeRow() {
+    if (codeBox) codeBox.hidden = false;
+    if (codeInput) codeInput.value = "";
+    say("");
+  }
+
+  function send() {
+    if (busy || !phoneInput) return;
+    busy = true;
+    say("");
+    if (sendButton) sendButton.disabled = true;
+    postJson(SEND_URL, payload())
+      .then(function (data) {
+        if (!data || !data.ok) {
+          if (data && data.reason === "cooldown") {
+            /* A code is already on its way to this number. That is not a dead
+               end: open the code field so the guest can type what they got. */
+            sentTo = data.phone || "";
+            if (destLabel && sentTo) destLabel.textContent = pretty(sentTo);
+            openCodeRow();
+            say(data.message);
+            startCountdown(data.retry_after || 60);
+            if (codeInput) codeInput.focus();
+            return;
+          }
+          say((data && data.message) || "We could not send the code. Please try again.");
+          if (data && data.retry_after) startCountdown(data.retry_after);
+          return;
+        }
+        sentTo = data.phone || "";
+        if (destLabel && sentTo) destLabel.textContent = pretty(sentTo);
+        if (sentTo && phoneInput) {
+          /* Pin the field to the number the code went to, so the code cannot
+             be checked against a different one than it was sent to. */
+          phoneInput.value = sentTo;
+          phoneInput.readOnly = true;
+        }
+        openCodeRow();
+        startCountdown(data.resend_after || 60);
+        if (codeInput) codeInput.focus();
+      })
+      .catch(function () {
+        say("We could not reach the server. Please try again.");
+      })
+      .then(function () {
+        busy = false;
+        if (sendButton) sendButton.disabled = false;
+      });
+  }
+
+  function verify() {
+    if (busy) return;
+    var code = (codeInput ? codeInput.value : "").replace(/\D/g, "");
+    if (code.length < 6) {
+      say("Enter the 6 digits from the WhatsApp message.");
+      if (codeInput) codeInput.focus();
+      return;
+    }
+    busy = true;
+    if (verifyButton) {
+      verifyButton.disabled = true;
+      verifyButton.setAttribute("aria-busy", "true");
+    }
+    var body = payload();
+    body.phone = sentTo || body.phone;
+    body.code = code;
+    postJson(CHECK_URL, body)
+      .then(function (data) {
+        if (data && data.ok) {
+          say("");
+          /* The session now holds the proof that this number was read. The
+             page posts again, and this time the server stores the number. */
+          HTMLFormElement.prototype.submit.call(form);
+          return;
+        }
+        var text = (data && data.message) || "That code is not right.";
+        if (data && data.reason === "wrong" && data.attempts_left) {
+          text += " " + data.attempts_left +
+            (data.attempts_left === 1 ? " try left." : " tries left.");
+        }
+        say(text);
+        if (codeInput) { codeInput.value = ""; codeInput.focus(); }
+        if (data && data.retry_after) startCountdown(data.retry_after);
+      })
+      .catch(function () {
+        say("That did not work. Please check your connection and try again.");
+      })
+      .then(function () {
+        busy = false;
+        if (verifyButton) {
+          verifyButton.disabled = false;
+          verifyButton.removeAttribute("aria-busy");
+        }
+      });
+  }
+
+  if (sendButton) sendButton.addEventListener("click", send);
+
+  if (codeInput) {
+    codeInput.addEventListener("input", function () {
+      this.value = this.value.replace(/\D/g, "").slice(0, 6);
+      if (errorBox && !errorBox.hidden) say("");
+    });
+    codeInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); verify(); }
+    });
+  }
+
+  if (verifyButton) verifyButton.addEventListener("click", verify);
+
+  if (resendButton) {
+    resendButton.addEventListener("click", function () {
+      if (!resendButton.disabled) send();
+    });
+  }
+
+  if (editButton) {
+    editButton.addEventListener("click", function () {
+      window.clearInterval(timer);
+      if (resendButton) resendButton.disabled = false;
+      if (timerLabel) { timerLabel.hidden = true; timerLabel.textContent = ""; }
+      if (codeBox) codeBox.hidden = true;
+      sentTo = "";
+      say("");
+      if (phoneInput) {
+        phoneInput.readOnly = false;
+        phoneInput.focus();
+      }
+    });
+  }
+})();
+</script>
 {% endblock %}

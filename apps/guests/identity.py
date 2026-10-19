@@ -247,6 +247,23 @@ def _merge_into(target, source):
     return target
 
 
+def number_belongs_to_another(profile, phone):
+    """True when a DIFFERENT verified account already holds this number.
+
+    Used by the profile page before it will move an account onto a number.
+    One number is one account (the rule `adopt_account` enforces), so a
+    second account cannot take it over quietly. The guest is told, and can
+    sign in with that number deliberately instead.
+    """
+    if profile is None or not phone:
+        return False
+    return (
+        GuestProfile.objects.filter(phone=phone, phone_verified=True)
+        .exclude(pk=profile.pk)
+        .exists()
+    )
+
+
 def adopt_account(request, phone):
     """Point this browser at the account that already owns `phone`.
 

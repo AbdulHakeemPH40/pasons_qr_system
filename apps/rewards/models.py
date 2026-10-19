@@ -144,6 +144,32 @@ class RewardCoupon(TimeStampedModel):
     reward_type = models.CharField(max_length=12, choices=RewardType.choices)
     percent = models.PositiveSmallIntegerField(default=0)
 
+    # --- the allowance key, so the database can enforce the rule ----------
+    #
+    # The engine reads before it writes, and two claims arriving in the same
+    # instant can both pass that read. These two columns plus the constraint
+    # below make "one dessert and one discount per mobile number per calendar
+    # month" true at the storage layer, not only in application code.
+    #
+    # `phone_key` is a SNAPSHOT of the number the guest held when they won,
+    # so a later number change cannot rewrite who was paid. Nullable on
+    # purpose: an old row, or a guest with no number, must not collide with
+    # another NULL (NULLs are distinct in a unique index).
+    phone_key = models.CharField(
+        max_length=24,
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="E.164 of the winning guest at issue time; the allowance key",
+    )
+    allowance_period = models.CharField(
+        max_length=7,
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="YYYY-MM of the win; the allowance window",
+    )
+
     status = models.CharField(
         max_length=12, choices=Status.choices, default=Status.ISSUED, db_index=True
     )
@@ -165,6 +191,16 @@ class RewardCoupon(TimeStampedModel):
         indexes = [
             models.Index(fields=["profile", "-issued_at"]),
             models.Index(fields=["brand", "status"]),
+        ]
+        constraints = [
+            # One dessert and one discount per mobile number per calendar
+            # month. Voided rows are excluded, so cancelling a coupon (the
+            # panel's way of undoing a mistake) frees the allowance again.
+            models.UniqueConstraint(
+                fields=["phone_key", "reward_type", "allowance_period"],
+                condition=~models.Q(status="void"),
+                name="one_prize_per_kind_per_phone_per_month",
+            ),
         ]
 
     def __str__(self):
@@ -196,6 +232,17 @@ def coupon_label(reward_type, percent):
     if reward_type == RewardType.PERCENT:
         return f"{int(percent or 0)}% off"
     return "Free dessert"
+
+
+def allowance_period(when):
+    """The window the allowance is keyed on, e.g. "2026-10".
+
+    Local time, not UTC: the rule is a CALENDAR month the guest lives in, and
+    a win at 23:30 on the 31st belongs to that month, not to the next one.
+    `issued_at` keeps the exact moment, this keeps the window, so the
+    database can enforce the rule with an index instead of a read.
+    """
+    return timezone.localtime(when).strftime("%Y-%m")
 
 
 class RoundResult(models.TextChoices):

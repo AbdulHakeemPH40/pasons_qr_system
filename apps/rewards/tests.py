@@ -156,8 +156,17 @@ class EffectiveRulesTests(TestCase):
         self.assertEqual(rules[0].reward_type, RewardType.DESSERT)
         self.assertEqual(rules[0].percent, 0)
 
-    def test_the_pure_play_game_has_no_rules_at_all(self):
-        self.assertEqual(effective_rules("2048"), [])
+    def test_the_tile_game_pays_only_at_its_own_tile(self):
+        """2048 used to be pure play. The client changed that on 2026-10-17.
+
+        Reaching the 2048 tile pays a dessert, and the fifth real reach pays
+        the discount, so both tiers exist with the tile itself as the line.
+        This test used to assert that 2048 had no rules at all, which stopped
+        being true when the earning mode moved from "none" to "reaches".
+        """
+        rules = {r.tier: r for r in effective_rules("2048")}
+        self.assertEqual(rules[RewardTier.GOOD].min_score, 2048)
+        self.assertEqual(rules[RewardTier.HIGH].min_score, 2048)
 
     def test_a_game_with_no_configured_reward_pays_nothing(self):
         self.assertEqual(effective_rules("no-such-game"), [])
@@ -384,7 +393,10 @@ class ThresholdTests(ProfileRewardFixtures):
 
     def test_the_progress_does_not_say_what_the_line_is(self):
         outcome = self.flap(3)
-        self.assertEqual(outcome.progress.get("mode"), "threshold")
+        # The engine's internal mode name never reaches the page source, so
+        # a guest reading it cannot tell one earning rule from another. Only
+        # the ladder names itself, because the guest has to see the climb.
+        self.assertEqual(outcome.progress.get("mode"), "")
         self.assertNotIn("min_score", outcome.progress)
         self.assertNotIn("prize", outcome.progress)
 
@@ -676,7 +688,9 @@ class MemoryMatchStreakTests(ProfileRewardFixtures):
 
     def test_the_progress_counts_up_so_the_guest_can_see_it(self):
         outcome = self.play()
-        self.assertEqual(outcome.progress["mode"], "streak")
+        # The count is the guest's own history, so it is shown. The mode name
+        # and the target are the engine's internals and stay off the page.
+        self.assertEqual(outcome.progress.get("mode"), "")
         self.assertEqual(outcome.progress["rounds_done"], 1)
         self.assertNotIn("rounds_needed", outcome.progress)
         self.assertNotIn("rounds_left", outcome.progress)
@@ -738,6 +752,21 @@ class FarmingLimitsTests(ProfileRewardFixtures):
             level=level,
             result="win",
             **CHESS_EFFORT,
+        )
+
+    def _move_to_last_month(self, **filters):
+        """Back-date coupons the way time would: every field that says when.
+
+        `issued_at` is the moment and `allowance_period` is the window, and
+        the unique index reads the window. Moving only the moment would
+        describe a row production can never write, so a test that pretends a
+        prize was won last month has to move both.
+        """
+        from .models import allowance_period
+
+        moment = timezone.now() - timedelta(days=40)
+        RewardCoupon.objects.filter(**filters).update(
+            issued_at=moment, allowance_period=allowance_period(moment)
         )
 
     def test_a_second_reward_inside_the_cooldown_is_refused(self):
@@ -806,9 +835,7 @@ class FarmingLimitsTests(ProfileRewardFixtures):
         dessert = self.issue_dessert()
         discount = self.issue_chess_win()
         self.assertTrue(dessert.issued and discount.issued)
-        RewardCoupon.objects.filter(profile=self.profile).update(
-            issued_at=timezone.now() - timedelta(days=40)
-        )
+        self._move_to_last_month(profile=self.profile)
         self.assertTrue(self.issue_dessert().issued)
         self.assertTrue(self.issue_chess_win().issued)
         self.assertEqual(RewardCoupon.objects.count(), 4)
@@ -1324,17 +1351,106 @@ class PanelRewardTests(ProfileRewardFixtures):
         self.assertEqual(theirs.status, RewardCoupon.Status.ISSUED)
 
     def test_a_branch_manager_redeems_a_coupon_from_their_own_branch(self):
-        from apps.core.panel_permissions import apply_role_to_user
-
         coupon = self._coupon()
-        manager = User.objects.create_user("branch-redeem", password="pw-br-12345")
-        apply_role_to_user(manager, "outlet_manager", None, [self.outlet])
+        manager = self._branch_manager("branch-redeem")
         self.client.force_login(manager)
 
         self.client.post(reverse("panel_coupon_redeem", args=[coupon.pk]), follow=True)
         coupon.refresh_from_db()
         self.assertEqual(coupon.status, RewardCoupon.Status.REDEEMED)
         self.assertEqual(coupon.redeemed_by, manager)
+
+    # --- the till rule: redeem within the BRAND, browse within the BRANCH ---
+
+    def _sibling_outlet(self):
+        from apps.core.models import Outlet
+
+        return Outlet.objects.create(
+            code="KINGCHEF-RW-ALQUOZ",
+            slug="rewards-al-quoz",
+            official_name="King Chef - Al Quoz",
+            brand=self.brand,
+            opening_hours=_hours_open_all_day(),
+            active=True,
+        )
+
+    def _branch_manager(self, username, outlets=None):
+        from apps.core.panel_permissions import apply_role_to_user
+
+        user = User.objects.create_user(username, password="pw-br-12345")
+        apply_role_to_user(user, "outlet_manager", None, outlets or [self.outlet])
+        return user
+
+    def test_a_branch_manager_redeems_a_coupon_won_at_a_sibling_branch(self):
+        """The guest ate at Al Quoz, then walked into International City.
+
+        A group is one restaurant to the customer. The code is real, the guest
+        is standing at the till, and where it was won is already recorded on
+        the coupon. Refusing it here is a complaint, not fraud prevention, so
+        redemption follows the BRAND while the list stays branch-scoped.
+        """
+        al_quoz = self._sibling_outlet()
+        coupon = self._coupon(code="KIN-SIBLNG", outlet=al_quoz)
+        manager = self._branch_manager("branch-sibling")
+        self.client.force_login(manager)
+
+        response = self.client.post(
+            reverse("panel_coupon_redeem", args=[coupon.pk]), follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.status, RewardCoupon.Status.REDEEMED)
+        self.assertEqual(coupon.redeemed_by, manager)
+        # staff are told where it was won, so the audit trail stays honest
+        self.assertContains(response, "Al Quoz")
+
+    def test_the_coupon_list_still_shows_only_the_managers_own_branch(self):
+        """Redeeming is brand-wide. Browsing is not.
+
+        A branch manager must not be able to sit and read the wins of the
+        branch across town. The coupon becomes reachable only when a guest
+        hands over the code and the manager opens it by id.
+        """
+        al_quoz = self._sibling_outlet()
+        sibling = self._coupon(code="KIN-SIBLNG", outlet=al_quoz)
+        self.client.force_login(self._branch_manager("branch-list"))
+
+        response = self.client.get(reverse("panel_rewards"), {"status": "all"})
+        self.assertNotContains(response, sibling.code)
+
+    def test_a_brand_page_coupon_is_redeemable_at_any_branch_of_that_brand(self):
+        """A win on the brand page carries no branch, so any branch honours it."""
+        coupon = self._coupon(code="KIN-BRAND1", outlet=None)
+        self.client.force_login(self._branch_manager("branch-brandpage"))
+
+        self.client.post(
+            reverse("panel_coupon_redeem", args=[coupon.pk]), follow=True
+        )
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.status, RewardCoupon.Status.REDEEMED)
+
+    def test_redeeming_never_crosses_a_brand(self):
+        """Two different brands stay two different businesses."""
+        from apps.core.models import Outlet
+
+        other_brand = Brand.objects.create(
+            name_en="Paramount Rewards", code="PARA-RW", status="active"
+        )
+        other_outlet = Outlet.objects.create(
+            code="PARA-RW-1",
+            slug="para-rewards-branch",
+            official_name="Paramount - Qusais",
+            brand=other_brand,
+            opening_hours=_hours_open_all_day(),
+            active=True,
+        )
+        theirs = self._coupon(code="PAR-THEIR1", brand=other_brand, outlet=other_outlet)
+        self.client.force_login(self._branch_manager("branch-cross"))
+
+        refused = self.client.post(reverse("panel_coupon_redeem", args=[theirs.pk]))
+        self.assertEqual(refused.status_code, 404)
+        theirs.refresh_from_db()
+        self.assertEqual(theirs.status, RewardCoupon.Status.ISSUED)
 
     def test_staff_find_a_guest_by_the_mobile_they_typed(self):
         coupon = self._coupon(code="KIN-MOBILE")
@@ -1473,3 +1589,126 @@ class PanelRewardTests(ProfileRewardFixtures):
         self.assertEqual(entry.user, self.head_office)
         self.assertEqual(entry.brand, self.brand)
         self.assertIn(coupon.code, entry.object_repr)
+
+
+class MonthlyAllowanceConstraintTests(ProfileRewardFixtures):
+    """The allowance has to survive two claims arriving at the same instant.
+
+    `evaluate_round` reads, then writes. Two claims can both read "no dessert
+    this month" before either writes one, and both would issue. The read is a
+    courtesy to the guest, because it produces a clean refusal message. The
+    index is what makes the rule true: a unique key on
+    (phone, kind, month) means the second INSERT loses at the database, which
+    is the usual idempotency-key pattern (CWE-362, race condition).
+    """
+
+    def _coupon(self, code="KIN-AAAAAA", **overrides):
+        from .models import allowance_period
+
+        now = timezone.now()
+        data = {
+            "code": code,
+            "profile": self.profile,
+            "brand": self.brand,
+            "outlet": self.outlet,
+            "game_slug": "chess-master",
+            "tier": RewardTier.GOOD,
+            "score": CHESS_WIN_L3,
+            "reward_type": RewardType.DESSERT,
+            "expires_at": now + timedelta(days=14),
+            "phone_key": self.profile.phone,
+            "allowance_period": allowance_period(now),
+        }
+        data.update(overrides)
+        return RewardCoupon.objects.create(**data)
+
+    def test_the_database_refuses_a_second_dessert_for_the_same_phone_in_a_month(self):
+        from django.db import IntegrityError, transaction
+
+        self._coupon("KIN-FIRST1")
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                self._coupon("KIN-SECOND")
+
+    def test_a_discount_and_a_dessert_are_separate_allowances(self):
+        self._coupon("KIN-DESERT")
+        self._coupon("KIN-TENOFF", reward_type=RewardType.PERCENT, percent=10)
+        self.assertEqual(RewardCoupon.objects.count(), 2)
+
+    def test_a_voided_coupon_frees_the_allowance(self):
+        first = self._coupon("KIN-VOID01")
+        RewardCoupon.objects.filter(pk=first.pk).update(
+            status=RewardCoupon.Status.VOID
+        )
+        self._coupon("KIN-AFTER1")
+        self.assertEqual(RewardCoupon.objects.count(), 2)
+
+    def test_the_next_month_opens_a_new_allowance(self):
+        from .models import allowance_period
+
+        self._coupon("KIN-OCT001")
+        self._coupon(
+            "KIN-NEXT01",
+            allowance_period=allowance_period(timezone.now() + timedelta(days=40)),
+        )
+        self.assertEqual(RewardCoupon.objects.count(), 2)
+
+    def test_guests_without_a_number_do_not_collide(self):
+        """NULL is not a value: two numberless rows must not block each other."""
+        self._coupon("KIN-NONUM1", profile=self.unverified, phone_key=None)
+        self._coupon("KIN-NONUM2", profile=self.unverified, phone_key=None)
+        self.assertEqual(RewardCoupon.objects.count(), 2)
+
+    def test_the_engine_stamps_the_allowance_key_on_every_coupon(self):
+        from .models import allowance_period
+
+        self.climb(3)
+        outcome = evaluate_round(
+            self.profile,
+            "chess-master",
+            CHESS_WIN_L3,
+            self.brand,
+            self.outlet,
+            level=3,
+            result="win",
+            **CHESS_EFFORT,
+        )
+        self.assertTrue(outcome.issued)
+        self.assertEqual(outcome.coupon.phone_key, self.profile.phone)
+        self.assertEqual(
+            outcome.coupon.allowance_period, allowance_period(timezone.now())
+        )
+
+    def test_a_claim_that_slips_past_the_read_is_stopped_by_the_index(self):
+        """The backstop: force the read to miss, and the index still refuses."""
+        from unittest import mock
+
+        self.climb(3)
+        first = evaluate_round(
+            self.profile,
+            "chess-master",
+            CHESS_WIN_L3,
+            self.brand,
+            self.outlet,
+            level=3,
+            result="win",
+            **CHESS_EFFORT,
+        )
+        self.assertTrue(first.issued)
+
+        with mock.patch(
+            "apps.rewards.services._took_this_kind_this_month", return_value=False
+        ):
+            second = evaluate_round(
+                self.profile,
+                "chess-master",
+                CHESS_WIN_L3,
+                self.brand,
+                self.outlet,
+                level=3,
+                result="win",
+                **CHESS_EFFORT,
+            )
+        self.assertFalse(second.issued)
+        self.assertEqual(second.reason, Reason.COOLDOWN)
+        self.assertEqual(RewardCoupon.objects.count(), 1)

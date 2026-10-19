@@ -136,9 +136,10 @@ class GuestProfile(TimeStampedModel):
         never needs it: a guest who is not verified plays every game at every
         level with no restriction, they simply do not earn anything.
 
-        The mobile number is not OTP-checked (client decision, no OTP), so
-        "verified" here means "told us a name and a number we can message",
-        not "proved the number is theirs". The panel labels it that way.
+        Since 2026-10-19 the number IS checked: every write goes through a
+        WhatsApp code (apps.guests.otp), so "verified" here means the guest
+        proved the number, not merely typed it. `phone_verified` records that
+        proof for the number column on its own.
         """
         if self.google_sub or self.email_verified:
             return True
@@ -147,9 +148,12 @@ class GuestProfile(TimeStampedModel):
     def can_change_phone(self, now=None):
         """A guest may change their mobile number at most once per calendar month.
 
-        First-time phone capture (when `phone` is blank) or keeping the same
-        number is always allowed; only replacing an existing number with a
-        different one spends the monthly allowance.
+        The lock starts at the FIRST number captured, not at the first
+        replacement. Every write of a number stamps `phone_changed_at` (see
+        apps.guests.views), so one account cannot hold two different numbers
+        in the same month by capturing one and then changing it, and the
+        sign-in sheet cannot be used to get around the profile page. Keeping
+        the same number never spends the allowance.
         """
         if not self.phone or not self.phone_changed_at:
             return True

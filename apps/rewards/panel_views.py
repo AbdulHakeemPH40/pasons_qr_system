@@ -31,10 +31,14 @@ from .models import RewardCoupon, RewardType
 
 
 def scoped_coupons(user):
-    """Coupons this user may see, newest first.
+    """Coupons this user may SEE, newest first.
 
     A brand-wide win has no outlet, so the fallback matches it on brand. The
     two halves are OR'd rather than nested so the SQL stays a single query.
+
+    This is the BROWSING scope, and it stays deliberately narrow: a branch
+    manager reads only the wins of their own branches. Redeeming is a
+    different question, answered by `redeemable_coupons` below.
     """
     coupons = RewardCoupon.objects.select_related(
         "brand", "outlet", "profile", "redeemed_by"
@@ -44,6 +48,31 @@ def scoped_coupons(user):
     return coupons.filter(
         Q(outlet__in=scoped_outlets(user))
         | Q(outlet__isnull=True, brand__in=scoped_brands(user))
+    )
+
+
+def redeemable_coupons(user):
+    """Coupons this user may HONOUR: anywhere inside a brand they manage.
+
+    The till rule is not the browsing rule, and the two were the same thing
+    until a guest who won a dessert at Al Quoz walked into International City
+    and was refused. A group is one restaurant to the customer: the code is
+    real, the guest is standing there, and the coupon already records which
+    branch gave it. So redemption follows the BRAND.
+
+    This widens redemption only. `scoped_coupons` still decides what appears
+    in the list and what the mobile lookup returns, so a branch manager
+    cannot browse the wins of a branch across town. Reaching a coupon here
+    means a guest handed over a real code and staff opened it by id.
+    """
+    coupons = RewardCoupon.objects.select_related(
+        "brand", "outlet", "profile", "redeemed_by"
+    )
+    if is_head_office(user):
+        return coupons
+    brands = scoped_brands(user)
+    return coupons.filter(
+        Q(brand__in=brands) | Q(outlet__brand__in=brands)
     )
 
 
@@ -149,8 +178,13 @@ def panel_rewards(request):
 @login_required
 @require_POST
 def panel_coupon_redeem(request, pk):
-    """Hand the reward over, once. A second attempt is refused, not overridden."""
-    coupon = get_object_or_404(scoped_coupons(request.user), pk=pk)
+    """Hand the reward over, once. A second attempt is refused, not overridden.
+
+    Scoped by BRAND, not by branch: see `redeemable_coupons`. The success
+    message names the branch that issued the win when it is not the one being
+    redeemed at, so staff can see why a code they do not recognise is valid.
+    """
+    coupon = get_object_or_404(redeemable_coupons(request.user), pk=pk)
 
     if not coupon.is_usable:
         # Say which state blocked it, so staff can tell "already used" from
@@ -179,5 +213,15 @@ def panel_coupon_redeem(request, pk):
         outlet=coupon.outlet,
         details={"code": coupon.code, "reward": coupon.label},
     )
-    messages.success(request, f"{coupon.code} redeemed. Hand over {coupon.label}.")
+    # Say where it was won when that is a different branch. Staff honouring a
+    # code they have never seen need to know it is real and where it came
+    # from, and the ChangeLog already records both.
+    won_at = (
+        f" Won at {coupon.outlet.official_name}."
+        if coupon.outlet is not None
+        else ""
+    )
+    messages.success(
+        request, f"{coupon.code} redeemed. Hand over {coupon.label}.{won_at}"
+    )
     return redirect("panel_rewards")

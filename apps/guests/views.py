@@ -211,6 +211,18 @@ def otp_send(request, key):
     return _otp_json(outcome, status=status, resend_after=outcome.retry_after)
 
 
+def _is_number_change(request):
+    """True when this code is proving a number the guest is MOVING TO.
+
+    The profile page appends `?purpose=change` to the check URL it hands its
+    JavaScript. Anything else, including the sign-in sheet, means "sign in".
+    Nothing is trusted from the client beyond that one switch, and a guest who
+    sets it themselves only loses the automatic account hand-back.
+    """
+    value = (request.GET.get("purpose") or request.POST.get("purpose") or "").strip()
+    return value.lower() == "change"
+
+
 @require_POST
 def otp_check(request, key):
     """Check a typed code and remember the verified number for this session."""
@@ -229,10 +241,19 @@ def otp_check(request, key):
             .first()
         )
         otp.remember(request, phone, row.pk if row else None)
-        # The code just proved this number is theirs, which is the whole of
-        # what "sign in" means here. If a verified account already owns the
-        # number, this browser gets that account back (coupons, ladder and
-        # all) instead of starting an empty second one.
+        # A code proves the NUMBER. Whether that also means "sign this browser
+        # in to the account that holds it" depends on why the code was asked
+        # for, and the two reasons are not interchangeable:
+        #
+        #   signing in (the sheet)       -> adopt. The number IS the account,
+        #       so proving it hands this browser that account back.
+        #   changing a number (profile)  -> do not adopt. The guest is already
+        #       signed in and asked to move THEIR account onto this number.
+        #       Adopting here would silently swap them into whoever already
+        #       holds it, leaving their own wallet behind under a number they
+        #       no longer use. A "Save changes" button must never do that.
+        if _is_number_change(request):
+            return _otp_json(outcome, returning=False)
         account = identity.adopt_account(request, phone)
         return _otp_json(outcome, returning=account is not None)
 
@@ -277,6 +298,18 @@ def identity_submit(request, key):
     consent = (request.POST.get("consent") or "").lower() in _TRUE_VALUES
     ig_follow = request.POST.get("ig_follow") == "1"
 
+    # A guest already signed in on this device who types a DIFFERENT number is
+    # moving their account, which is the same act the profile page rate limits.
+    # Checked before the proof is consumed, so a refusal does not burn the code.
+    handle = getattr(request, "guest", None)
+    current_profile = handle.profile if handle is not None else None
+    replacing_number = bool(
+        current_profile is not None
+        and current_profile.phone
+        and phone
+        and phone != current_profile.phone
+    )
+
     error = ""
     if not first_name:
         error = "missing_name"
@@ -284,6 +317,10 @@ def identity_submit(request, key):
         error = "bad_phone"
     elif not consent:
         error = "no_consent"
+    elif replacing_number and not current_profile.can_change_phone():
+        # The profile page promises one number write a month. If this form
+        # skipped the check, it would be the way around that promise.
+        error = "phone_monthly_limit"
     elif not otp.consume(request, phone):
         # The number was never proved in this browser, or the proof is for a
         # different number than the one being submitted. Either way the value
@@ -308,8 +345,14 @@ def identity_submit(request, key):
 
     profile.first_name = first_name
     profile.last_name = last_name
+    phone_is_changing = profile.phone != phone
     profile.phone = phone
     fields = ["first_name", "last_name", "phone", "updated_at"]
+    if phone_is_changing:
+        # Every write of a number starts the monthly lock, on every surface.
+        # Two forms with two different rules would mean one rule.
+        profile.phone_changed_at = now
+        fields.append("phone_changed_at")
 
     # The proof was consumed above, so this number is now proved for this
     # profile. That is the only place phone_verified is ever set.
@@ -392,6 +435,14 @@ PROFILE_ERROR_TEXT = {
     "missing_name": "Please enter your first name.",
     "bad_phone": "That mobile number does not look right. Try 050 123 4567.",
     "phone_monthly_limit": "You can only change your mobile number once per month.",
+    "phone_taken": (
+        "That mobile number already has an account. Sign in with it instead "
+        "of adding it here."
+    ),
+    "phone_unverified": (
+        "Confirm your new number first. Type the 6 digit code we send on "
+        "WhatsApp, then save again."
+    ),
 }
 
 
@@ -447,24 +498,51 @@ def guest_profile_page(request, key):
             elif phone_is_changing and not profile.can_change_phone(now=now):
                 error_code = "phone_monthly_limit"
                 form_phone = profile.phone
+            elif phone_is_changing and identity.number_belongs_to_another(
+                profile, normalised_phone
+            ):
+                # One number is one account. Moving this account onto a number
+                # another verified account already holds would either merge two
+                # people's wallets or, if the check endpoint had adopted it, swap
+                # this guest into theirs and leave their own behind. Refuse, and
+                # say what to do instead. Checked BEFORE the proof is consumed,
+                # so a refusal never burns the code the guest just received.
+                error_code = "phone_taken"
+                form_phone = normalised_phone
+            elif phone_is_changing and not otp.consume(request, normalised_phone):
+                # A new number is a claim until the guest proves they hold it.
+                # This is the same rule the sign-in sheet enforces: without it
+                # anybody could type a stranger's number onto their own profile
+                # and the WhatsApp messages meant for that stranger would be
+                # walked into. The proof is the one `guest_otp_check` stored in
+                # the session, keyed on the exact number being saved.
+                #
+                # The typed value is kept in the field so the confirmation
+                # panel can send its code to the number the guest actually
+                # typed, without asking them to type it a second time.
+                error_code = "phone_unverified"
+                form_phone = normalised_phone
             else:
                 profile.first_name = first_name
                 profile.last_name = last_name
                 fields = ["first_name", "last_name", "updated_at"]
                 if phone_is_changing:
-                    was_blank = not profile.phone
                     profile.phone = normalised_phone
                     fields.append("phone")
-                    # A number edited later on the profile page has not been
-                    # proved, so the tick must go with the old number. Without
-                    # this reset a guest could verify once and then swap in
-                    # any number while still counting as verified.
-                    if profile.phone_verified:
-                        profile.phone_verified = False
+                    # The proof was consumed above, so this number is proved
+                    # for this profile. That is the only place the tick is set,
+                    # and it is set here too: swapping a number used to clear
+                    # the tick, which meant a guest could verify once and then
+                    # save any number as "verified" a moment later.
+                    if not profile.phone_verified:
+                        profile.phone_verified = True
                         fields.append("phone_verified")
-                    if not was_blank:
-                        profile.phone_changed_at = now
-                        fields.append("phone_changed_at")
+                    # A first capture is still a write, so it starts the
+                    # monthly lock. Without this the guest could put two
+                    # different numbers on one account in the same month
+                    # (capture, then change) while the page promised one.
+                    profile.phone_changed_at = now
+                    fields.append("phone_changed_at")
                 profile.save(update_fields=fields)
                 params = {"saved": "1"}
                 if phone_is_changing:
@@ -495,6 +573,17 @@ def guest_profile_page(request, key):
         "phone_updated": phone_updated,
         "error_code": error_code,
         "error_text": PROFILE_ERROR_TEXT.get(error_code, ""),
+        # A refused phone change opens the confirmation card, which talks to
+        # the same two endpoints the sign-in sheet uses. One rule, one pair of
+        # URLs, so the profile page cannot drift away from the sheet.
+        #
+        # The check URL carries `?purpose=change` because this page is moving
+        # an account, not signing one in. See otp_check.
+        "show_verify": error_code == "phone_unverified",
+        "otp_send_url": reverse("guest_otp_send", args=[qr.redirect_key]),
+        "otp_check_url": (
+            reverse("guest_otp_check", args=[qr.redirect_key]) + "?purpose=change"
+        ),
     }
     return render(request, "guests/profile.html", context)
 

@@ -48,6 +48,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from django.core import signing
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.games.registry import get_game
@@ -61,6 +62,7 @@ from .models import (
     RewardTier,
     RewardType,
     RoundResult,
+    allowance_period,
     coupon_label,
 )
 
@@ -321,6 +323,10 @@ def _issue(profile, game_slug, rule, score, brand, outlet, now):
         reward_type=rule.reward_type,
         percent=rule.percent,
         expires_at=now + timedelta(days=rule.valid_days),
+        # The allowance key. The unique index on these three columns is what
+        # actually stops a second dessert in the same month; see _pay.
+        phone_key=(profile.phone or None),
+        allowance_period=allowance_period(now),
     )
 
 
@@ -689,7 +695,30 @@ def _pay(profile, game_slug, rule, score, brand, outlet, now, refuse):
     if _over_brand_cap(brand, now):
         return refuse(Reason.CAP)
 
-    coupon = _issue(profile, game_slug, rule, score, brand, outlet, now)
+    try:
+        # Nested atomic block: an IntegrityError marks the surrounding
+        # transaction unusable, so it has to be caught outside a savepoint
+        # this function owns.
+        with transaction.atomic():
+            coupon = _issue(profile, game_slug, rule, score, brand, outlet, now)
+    except IntegrityError:
+        # Two indexes can raise here: the allowance key (another claim for
+        # this number and month won the race between the read and the write)
+        # or the code's own unique column (a collision `_new_code` did not
+        # see). Ask the KEY which one was rejected. This is deliberately not
+        # `_took_this_kind_this_month`: that asks "has this PERSON taken one
+        # this month" and ranges over every profile sharing the number, while
+        # the index only knows the (phone, kind, month) key on one row.
+        key_taken = bool(profile.phone) and (
+            RewardCoupon.objects.filter(
+                phone_key=profile.phone,
+                reward_type=rule.reward_type,
+                allowance_period=allowance_period(now),
+            )
+            .exclude(status=RewardCoupon.Status.VOID)
+            .exists()
+        )
+        return refuse(Reason.COOLDOWN if key_taken else Reason.CAP)
     if coupon is None:
         return refuse(Reason.CAP)
     return ClaimOutcome(

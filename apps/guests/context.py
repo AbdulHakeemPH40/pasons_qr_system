@@ -40,6 +40,7 @@ ERROR_TEXT = {
     "bad_phone": "That mobile number does not look right. Try 050 123 4567.",
     "no_consent": "Please tick the box so we can send your offer.",
     "phone_unverified": "Please verify your mobile number with the code we send on WhatsApp.",
+    "phone_monthly_limit": "You can only change your mobile number once per month.",
     "otp_send_failed": "We could not send the code. Please try again.",
 }
 

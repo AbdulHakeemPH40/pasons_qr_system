@@ -126,11 +126,15 @@ class GuestQrFixtures(TestCase):
         )
         return response, response.json()
 
-    def verify_phone(self, phone="050 123 4567", country="971"):
+    def verify_phone(self, phone="050 123 4567", country="971", purpose=""):
         """Send and check a code, leaving the session holding a proof.
 
         A guest who already proved this number on this device is skipped by
         the server (no second message), so that answer is a success too.
+
+        `purpose="change"` asks the check endpoint NOT to sign this browser in
+        to whichever account already holds the number. The profile page uses
+        that, because changing a number is not the same act as signing in.
         """
         _response, sent = self.send_code(phone=phone, country=country)
         self.assertTrue(sent.get("ok"), sent)
@@ -138,8 +142,11 @@ class GuestQrFixtures(TestCase):
             return sent
         code = sent.get("debug_code")
         self.assertTrue(code, "debug delivery must return the code in tests")
+        url = reverse("guest_otp_check", args=[self.qr.redirect_key])
+        if purpose:
+            url += f"?purpose={purpose}"
         response = self.client.post(
-            reverse("guest_otp_check", args=[self.qr.redirect_key]),
+            url,
             data={"country": country, "phone": phone, "code": code},
             content_type="application/json",
         )
@@ -280,11 +287,12 @@ class DedicatedGuestProfilePageTests(GuestQrFixtures):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], self.landing_url)
 
-    def test_changing_the_number_later_drops_the_verified_tick(self):
-        """A number edited on the profile page was never proved.
+    def test_a_new_number_is_refused_until_the_guest_proves_it(self):
+        """Typing a different number is a claim, not a fact.
 
-        Without this reset a guest could verify once, then swap in any number
-        and still count as verified, which is the hole the OTP step closes.
+        The number signs a guest in and is what staff match a coupon against,
+        so saving one without a proof would let anybody put a stranger's
+        number on their own account and walk into messages meant for them.
         """
         profile = self._saved(phone_verified=True)
         response = self.client.post(
@@ -295,10 +303,210 @@ class DedicatedGuestProfilePageTests(GuestQrFixtures):
                 "phone": "050 111 2233",
             },
         )
+        # Rendered, not redirected: the guest stays on the page holding the
+        # number they typed, with the confirmation card open.
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Confirm your new number first")
+        self.assertContains(response, "Confirm your new number")
+        self.assertContains(response, "data-verify-send")
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.phone, "+971564669930")
+        self.assertTrue(profile.phone_verified)
+        # No code was asked for, so the panel records nothing.
+        self.assertEqual(PhoneOTP.objects.count(), 0)
+
+    def test_the_confirmation_card_stays_shut_until_it_is_needed(self):
+        self._saved()
+        response = self.client.get(self.profile_url)
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        marker = 'id="profile-verify"'
+        self.assertIn(marker, html)
+        start = html.index(marker)
+        self.assertIn(" hidden>", html[start:start + 200])
+
+    def test_changing_to_a_proved_number_saves_it_and_keeps_the_tick(self):
+        profile = self._saved()
+        proved = self.verify_phone(phone="050 222 3344")
+        self.assertTrue(proved.get("ok"), proved)
+
+        response = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Hakeem",
+                "phone": "050 222 3344",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("phone_updated=1", response["Location"])
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.phone, "+971502223344")
+        self.assertTrue(profile.phone_verified)
+        self.assertIsNotNone(profile.phone_changed_at)
+
+    def test_a_code_proved_for_one_number_cannot_save_another(self):
+        profile = self._saved()
+        self.verify_phone(phone="050 222 3344")
+
+        response = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Hakeem",
+                "phone": "050 999 8877",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Confirm your new number first")
+        profile.refresh_from_db()
+        self.assertEqual(profile.phone, "+971564669930")
+
+    # --- changing a number is not the same act as signing in ---------------
+
+    def test_a_number_another_account_holds_is_refused_not_silently_taken(self):
+        """The old number must not be swapped for somebody else's account.
+
+        `guest_otp_check` signs the browser in to whichever account already
+        holds a proved number, because that is what signing in means. Doing
+        it from a "save my details" button is not: the guest would press Save
+        and silently land in a different wallet, with their own one left
+        behind under a number they no longer use. So the change flow refuses
+        and says so, and nothing is moved.
+        """
+        mine = self._saved(phone_verified=True)
+        other = GuestProfile.objects.create(
+            guest_id="number-already-taken",
+            first_name="Nadia",
+            last_name="Faris",
+            phone="+971502223344",
+            phone_verified=True,
+        )
+
+        self.verify_phone(phone="050 222 3344", purpose="change")
+        response = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Hakeem",
+                "phone": "050 222 3344",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "already has an account")
+
+        mine.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(mine.phone, "+971564669930")
+        self.assertEqual(other.phone, "+971502223344")
+        self.assertEqual(GuestProfile.objects.count(), 2)
+
+    def test_proving_a_number_for_a_change_does_not_switch_the_account(self):
+        """The confirm card on the profile page must leave the guest where they are."""
+        self._saved(phone_verified=True)
+        GuestProfile.objects.create(
+            guest_id="another-holder",
+            first_name="Nadia",
+            last_name="Faris",
+            phone="+971502223344",
+            phone_verified=True,
+        )
+
+        self.verify_phone(phone="050 222 3344", purpose="change")
+        response = self.client.get(self.profile_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "+971564669930")
+
+    def test_the_monthly_lock_starts_at_the_first_number_the_guest_gives(self):
+        """A first capture is a write, so it starts the month.
+
+        Without this a guest could put two different numbers on one account
+        in the same month, capture then change, while the page promised one.
+        """
+        profile = self._saved(phone="", phone_verified=False)
+        self.verify_phone(phone="050 222 3344")
+
+        response = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Hakeem",
+                "phone": "050 222 3344",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         profile.refresh_from_db()
-        self.assertEqual(profile.phone, "+971501112233")
-        self.assertFalse(profile.phone_verified)
+        self.assertEqual(profile.phone, "+971502223344")
+        self.assertIsNotNone(profile.phone_changed_at)
+        self.assertFalse(profile.can_change_phone())
+
+    def test_a_name_only_edit_never_asks_for_a_code(self):
+        profile = self._saved(phone_verified=True)
+        response = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdulrahman",
+                "last_name": "Hakeem",
+                "phone": "+971564669930",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        profile.refresh_from_db()
+        self.assertEqual(profile.first_name, "Abdulrahman")
+        self.assertEqual(PhoneOTP.objects.count(), 0)
+
+    def test_a_refused_save_does_not_spend_the_proof(self):
+        """A missing name must not cost the guest a second WhatsApp message.
+
+        The name check runs before the proof is consumed, so the code they
+        already typed is still good for the corrected submit.
+        """
+        profile = self._saved()
+        self.verify_phone(phone="050 222 3344")
+
+        blank = self.client.post(
+            self.profile_url,
+            {"first_name": "", "last_name": "Hakeem", "phone": "050 222 3344"},
+        )
+        self.assertEqual(blank.status_code, 200)
+        self.assertContains(blank, "Please enter your first name.")
+
+        retry = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Hakeem",
+                "phone": "050 222 3344",
+            },
+        )
+        self.assertEqual(retry.status_code, 302)
+        profile.refresh_from_db()
+        self.assertEqual(profile.phone, "+971502223344")
+
+    def test_the_card_points_at_the_same_endpoints_the_sheet_uses(self):
+        """One code rule, one pair of URLs.
+
+        The card calls the same two endpoints as the sign-in sheet. The URLs
+        are emitted through `escapejs` for the JS string, which writes a
+        hyphen as `\\u002D`, so the assertion is built the same way.
+
+        The check URL carries `?purpose=change`, which tells that endpoint not
+        to sign this browser in to another account already holding the
+        number. The ENDPOINT is still the sheet's endpoint, so the match is on
+        the path, and the one parameter is pinned separately.
+        """
+        from django.utils.html import escapejs
+
+        self._saved()
+        html = self.client.get(self.profile_url).content.decode()
+        for name in ("guest_otp_send", "guest_otp_check"):
+            url = escapejs(reverse(name, args=[self.qr.redirect_key]))
+            self.assertIn('"%s' % url, html, name)
+        self.assertIn(
+            escapejs("?purpose=change"), html, "the change flow must declare itself"
+        )
 
     def test_renders_dedicated_profile_page_with_guest_details_and_coupons(self):
         from datetime import timedelta
@@ -412,7 +620,9 @@ class DedicatedGuestProfilePageTests(GuestQrFixtures):
 
     def test_mobile_number_can_be_updated_once_per_calendar_month_only(self):
         profile = self._saved()
-        # First mobile change in the current month succeeds:
+        # First mobile change in the current month succeeds once the new
+        # number is proved:
+        self.verify_phone(phone="050 222 3344")
         resp1 = self.client.post(
             self.profile_url,
             {
@@ -466,6 +676,7 @@ class DedicatedGuestProfilePageTests(GuestQrFixtures):
             phone_changed_at=timezone.make_aware(datetime(2026, 9, 15, 12, 0)),
         )
         self.assertTrue(profile.can_change_phone())
+        self.verify_phone(phone="050 777 6655")
         resp = self.client.post(
             self.profile_url,
             {
@@ -943,6 +1154,35 @@ class IdentitySubmitTests(GuestQrFixtures):
         self.assertEqual(profile.first_outlet, self.outlet)
         # the identity cookie rides out on the redirect
         self.assertIn(COOKIE, response.cookies)
+
+    def test_the_sheet_cannot_bypass_the_monthly_number_lock(self):
+        """The profile page promises one number write a month. So does this form.
+
+        Without the check the sign-in sheet would be the way around the
+        promise the profile page makes, and a guest could put two different
+        numbers on one account in the same month by picking the other form.
+        """
+        profile = GuestProfile.objects.create(
+            guest_id="sheet-locked-guest",
+            first_name="Aisha",
+            last_name="Rahman",
+            phone="+971500000001",
+            phone_verified=True,
+            phone_changed_at=timezone.now(),
+        )
+        self.client.cookies[COOKIE] = identity.sign_guest_id(profile.guest_id)
+
+        response = self._post(phone="050 222 3344")
+        self.assertIn("identity_error=phone_monthly_limit", response["Location"])
+        profile.refresh_from_db()
+        self.assertEqual(profile.phone, "+971500000001")
+
+    def test_the_sheet_starts_the_month_on_the_first_number_it_saves(self):
+        """A capture here is a write, so it starts the lock like any other."""
+        self._post()
+        profile = GuestProfile.objects.get()
+        self.assertIsNotNone(profile.phone_changed_at)
+        self.assertFalse(profile.can_change_phone())
 
     def test_phone_never_appears_in_the_redirect_url(self):
         """A mobile number in a query string would leak into history and
