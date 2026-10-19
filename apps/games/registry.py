@@ -22,6 +22,11 @@ Because of that model every entry carries:
                                the total into #currentscore)
             over  kinds: class   -> element carries class cls
                            visible-> any match has a layout box
+            defer -> true when the game ships a real end screen of its own
+                     and the board behind it is worth studying. The shell
+                     then keeps its own result sheet CLOSED and waits in a
+                     small dock at the bottom edge; the guest opens the sheet
+                     when they are done reviewing (chess-master).
 
 Games pages carry no offer copy and no personal data. Best scores live on
 the guest's own device. The landing card promises a gift and leaves the
@@ -205,6 +210,16 @@ GAMES = (
             "level": {"kind": "text", "sel": "#chess--level"},
             "result": {"kind": "text", "sel": "#chess--result"},
             "over": {"kind": "visible", "sel": "#gameover-modal"},
+            # DEFERRED RESULT (client 2026-10-19). Chess ships a real end
+            # screen of its own: who won, by what, and a "Review Board"
+            # button. The board behind it is the thing the guest wants to
+            # look at after a loss. So the shell does NOT throw its dark
+            # result sheet over the game the instant the game ends: it keeps
+            # the sheet closed behind a small dock at the bottom edge, and
+            # the guest opens it once they are done reviewing. "Game over"
+            # arriving before the guest could even see the final position
+            # was the complaint.
+            "defer": True,
             # Rung locking, applied by the shell into the setup modal. The
             # guest-facing level is `levelAttr` minus `levelOffset`
             # (data-diff 3-6 is shown as Level 1-4, see CHANGES.md), and any

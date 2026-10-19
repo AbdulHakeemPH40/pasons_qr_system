@@ -7,6 +7,7 @@ HTML/CSS/JS with a glassmorphism design system (spec 0.1-0.5).
 """
 
 import os
+import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -200,6 +201,33 @@ CSRF_COOKIE_SAMESITE = "Lax"
 # server-side against Google) and is kept for a future code-exchange flow.
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
+
+# --- guest identity: WhatsApp OTP -----------------------------------------
+# The guest sheet verifies a mobile number by sending a 6 digit code through
+# Meta's WhatsApp Cloud API, using the APPROVED authentication template
+# `pasons_otp` (see Docs/WHATSAPP_OTP_SETUP.md).
+#
+# Two switches matter:
+#
+#   WHATSAPP_OTP_DEBUG  when on, NO network call happens: the code is logged
+#                       and returned to the browser. Forced on while the test
+#                       suite runs so a test can never send a real message
+#                       and bill the client.
+#   (no token)          delivery reports `not_configured` and the sheet falls
+#                       back to the same debug behaviour for development.
+WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "").strip()
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "").strip()
+WHATSAPP_WABA_ID = os.environ.get("WHATSAPP_WABA_ID", "").strip()
+WHATSAPP_API_VERSION = os.environ.get("WHATSAPP_API_VERSION", "v25.0").strip()
+WHATSAPP_OTP_TEMPLATE = os.environ.get("WHATSAPP_OTP_TEMPLATE", "pasons_otp").strip()
+WHATSAPP_OTP_LANGUAGE = os.environ.get("WHATSAPP_OTP_LANGUAGE", "en").strip()
+WHATSAPP_TIMEOUT_SECONDS = int(os.environ.get("WHATSAPP_TIMEOUT_SECONDS", "10") or "10")
+
+# `manage.py test` must never talk to Meta. sys.argv is inspected once here
+# rather than in the views, so the belt cannot be forgotten by a new test.
+WHATSAPP_OTP_DEBUG = (
+    os.environ.get("WHATSAPP_OTP_DEBUG", "0") == "1" or "test" in sys.argv
+)
 
 # --- applications --------------------------------------------------------
 INSTALLED_APPS = [

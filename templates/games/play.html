@@ -8,30 +8,39 @@
 
 {% block content %}
 {# GAMES_V also guards the vendored iframe src so a game update is not served from cache. Keep in sync with the scripts block below. #}
-{% with GAMES_V="2026-10-17-1" %}
+{% with GAMES_V="2026-10-19-3" %}
 <div class="device-stage">
   <div class="device">
     <div class="device-island" aria-hidden="true"></div>
     <div class="device-screen">
 
-      <header class="sheet-head">
-        <a href="{{ back }}" class="sheet-back" aria-label="Exit game">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-        </a>
-        <div>
-          <h1 class="sheet-title">{{ game.name }}</h1>
-          <span class="sheet-meta">{{ game.howto }}</span>
-        </div>
-        <span class="sheet-side">
-          <button class="game-pause" id="game-restart" type="button" aria-label="Restart game">
-            {% icon "restart" %}
-          </button>
-        </span>
-      </header>
+      {% comment %}
+      Title and status are ONE glass bar, not two stacked panels. Two adjacent
+      backdrop-filter surfaces were the play page's flicker risk on iOS: the
+      blur of each had to be recomputed whenever the other repainted. One
+      surface, one composited layer, and the hairline between the rows is a
+      border on the inner strip instead of a second material.
+      {% endcomment %}
+      <div class="game-bar">
+        <header class="sheet-head">
+          <a href="{{ back }}" class="sheet-back" aria-label="Exit game">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+          </a>
+          <div>
+            <h1 class="sheet-title">{{ game.name }}</h1>
+            <span class="sheet-meta">{{ game.howto }}</span>
+          </div>
+          <span class="sheet-side">
+            <button class="game-pause" id="game-restart" type="button" aria-label="Restart game">
+              {% icon "restart" %}
+            </button>
+          </span>
+        </header>
 
-      <div class="game-hud" aria-live="off">
-        <span class="game-hud__score" id="game-score" aria-label="Score">0</span>
-        <span class="game-hud__best" id="game-best" aria-label="Best score on this phone">Best —</span>
+        <div class="game-hud" aria-live="off">
+          <span class="game-hud__score" id="game-score" aria-label="Score">0</span>
+          <span class="game-hud__best" id="game-best" aria-label="Best score on this phone">Best —</span>
+        </div>
       </div>
 
       {# Where this guest stands. core/shell.js fills it from #games-progress: #}
@@ -60,31 +69,38 @@
         {# plays any game at any level with no restriction), it only says what #}
         {# signing in is worth. Dismissed by core/shell.js.                    #}
         <div class="game-nudge" id="game-nudge" role="note">
-          <p class="game-nudge__eyebrow">Play free. No sign-in needed.</p>
-          <p class="game-nudge__title">
-            {% if game_progress.mode == "ladder" or game_progress.mode == "reaches" %}
-              Win a discount or a free dessert
-            {% elif game_progress.mode == "none" %}
-              Play for fun
-            {% else %}
-              Win a free dessert
-            {% endif %}
-          </p>
-          <p class="game-nudge__body">
-            A good game can win a prize. Play it out, then see.
-            Add your name and mobile number, or use Google, to be able to claim.
-          </p>
-          <div class="game-nudge__row">
-            {% if id_sheet %}
-            {% comment %}
-            Opens the identity sheet HERE. This used to be a plain link to the
-            QR page ({{ back }}), so tapping it walked the guest out of the
-            game and they landed on the QR page instead of signing in. The
-            sheet posts to this QR and returns to this exact page.
-            {% endcomment %}
-            <button class="game-cta" type="button" id="game-nudge-signin" data-id-open="form">Sign in to earn</button>
-            {% endif %}
-            <button class="game-cta game-cta--ghost" type="button" id="game-nudge-close">Play without rewards</button>
+          {# The copy sits on a glass card instead of hanging in a dark wall. #}
+          {# No backdrop-filter on the card: the game is still running at 60  #}
+          {# frames under it, and a blur over a live canvas is recomputed on   #}
+          {# every one of those frames. The smoked gradient and the specular   #}
+          {# edge read as glass without costing a frame.                       #}
+          <div class="game-nudge__card">
+            <p class="game-nudge__eyebrow">Play free. No sign-in needed.</p>
+            <p class="game-nudge__title">
+              {% if game_progress.mode == "ladder" or game_progress.mode == "reaches" %}
+                Win a discount or a free dessert
+              {% elif game_progress.mode == "none" %}
+                Play for fun
+              {% else %}
+                Win a free dessert
+              {% endif %}
+            </p>
+            <p class="game-nudge__body">
+              A good game can win a prize. Play it out, then see.
+              Add your name and mobile number, or use Google, to be able to claim.
+            </p>
+            <div class="game-nudge__row">
+              {% if id_sheet %}
+              {% comment %}
+              Opens the identity sheet HERE. This used to be a plain link to the
+              QR page ({{ back }}), so tapping it walked the guest out of the
+              game and they landed on the QR page instead of signing in. The
+              sheet posts to this QR and returns to this exact page.
+              {% endcomment %}
+              <button class="game-cta" type="button" id="game-nudge-signin" data-id-open="form">Sign in to earn</button>
+              {% endif %}
+              <button class="game-cta game-cta--ghost" type="button" id="game-nudge-close">Play without rewards</button>
+            </div>
           </div>
         </div>
         {% endif %}
@@ -136,7 +152,7 @@
 {# Keep this in step with the GAMES_V at the top of this template: the CSS #}
 {# guards the iframe src, this one guards the shell scripts. A mismatch     #}
 {# serves a stale shell.js from cache. test_both_games_versions_match.      #}
-{% with GAMES_V="2026-10-17-1" %}
+{% with GAMES_V="2026-10-19-3" %}
 <script src="{% static 'games/core/storage.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/theme.js' %}?v={{ GAMES_V }}"></script>
 <script src="{% static 'games/core/shell.js' %}?v={{ GAMES_V }}"></script>

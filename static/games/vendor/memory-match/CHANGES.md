@@ -211,3 +211,36 @@ stays fully playable); `prefers-reduced-transparency` swaps every glass
 surface for a near-solid fill with no backdrop blur. The display face is
 the platform's Fraunces (served from `/static/fonts/`, same-origin — no
 external requests).
+
+## 2026-10-19 - board lock while a missed pair is showing
+
+Client report: a card that was shown, then tapped, went back to face down,
+and tapping it again did nothing, so the board looked stuck.
+
+Reproduced in a browser on the 3x4 and the 7x4 board. `MemoryGame.play()`
+conceals both cards the moment a pair misses, while `nonMatchingCardTime`
+(1000ms) keeps them visible. A tap inside that window was read against the
+already concealed model: it flipped a card the guest could still see, and
+`classList.toggle('clicked')` removed the face instead of adding it. The
+pending timeout then cleared `.clicked` again while the model still held
+the card as revealed and selected. From then on the card was face down on
+screen, "already facing up" to the model, and every tap on it was ignored.
+
+- `js/BrowserInterface.js`:
+  - new `boardLocked`: the board refuses flips while a missed pair is still
+    on screen. That is what a memory game does, and it also removes the
+    chance to re-pick a pair the guest was just shown.
+  - `paintCard(index, isFaceUp)` replaces the blind
+    `this.classList.toggle('clicked')`. Faces are painted from
+    `card.isRevealed`, so a stale class can no longer be toggled off.
+  - the miss timeout is stamped with `turnId` and returns early if a new
+    board was dealt, so starting a new game inside the window can no longer
+    strip the face off a card of the new board.
+  - `handleSettingsSubmission` bumps `turnId` and releases the lock.
+  - the leftover `console.log(status)` on every tap is gone.
+- `index.html` - the three `?v=` cache keys move to `2026-10-19-3`, matched
+  to `GAMES_V` in `templates/games/play.html`.
+
+Scoring, timing, the points and timer display and the end-game modal are
+unchanged. `apps/games/tests.py` locks the lock, the model-driven paint, the
+turn stamp and the cache key.

@@ -20,15 +20,16 @@ Rules that matter:
   * The cookie is SIGNED (apps.guests.identity). A guessable id would let
     one guest read another guest's coupons, so the raw value never leaves
     the server trusted.
-  * The mobile number is stored UNVERIFIED (client decision 2026-10-16: no
-    OTP). The panel labels it that way. phone_verified exists so a later
-    WhatsApp OTP can flip it without a schema change.
+  * The mobile number is checked by a WhatsApp one time code before it is
+    stored as verified (2026-10-19). The digits themselves never sit in the
+    database: PhoneOTP keeps a salted hash, a 5 minute expiry and an attempt
+    counter, matching the lifetime the guest is told on their phone.
   * One mobile number may appear on more than one profile (same person, new
     phone or cleared cookies), so the number is indexed, not unique, and
     exports dedupe by number.
 """
 
-from datetime import date
+from datetime import date, timedelta
 
 from django.db import models
 from django.utils import timezone
@@ -68,7 +69,7 @@ class GuestProfile(TimeStampedModel):
     )
     phone_verified = models.BooleanField(
         default=False,
-        help_text="False today (no OTP step); ready for a later WhatsApp code",
+        help_text="True only after the guest entered the code sent to this number",
     )
     phone_changed_at = models.DateTimeField(
         null=True,
@@ -169,4 +170,93 @@ class GuestProfile(TimeStampedModel):
         if local_now.month == 12:
             return date(local_now.year + 1, 1, 1)
         return date(local_now.year, local_now.month + 1, 1)
+
+
+class PhoneOTP(TimeStampedModel):
+    """One WhatsApp one time code sent to one mobile number.
+
+    Why a table and not just a column on the profile: the code has to survive
+    a page reload, it has a lifetime, it can be guessed five times before it
+    dies, and every send is rate limited. Those are four pieces of state, and
+    the profile is the wrong place for any of them.
+
+    The digits are NEVER stored. `code_hash` is a salted Django password hash
+    (PBKDF2), compared in constant time. A copy of this table is worth
+    nothing: six digits behind a slow hash, plus a five minute window.
+
+    `consumed_at` is the single-use marker. A resend marks the older rows
+    consumed, so only the newest code can ever be accepted. That is what stops
+    a guest from keeping an old working code after asking for a new one.
+    """
+
+    class Purpose(models.TextChoices):
+        VERIFY = "verify", "Verify a mobile number"
+
+    phone = models.CharField(
+        max_length=24,
+        db_index=True,
+        help_text="E.164, the number the code was sent to",
+    )
+    purpose = models.CharField(
+        max_length=16,
+        choices=Purpose.choices,
+        default=Purpose.VERIFY,
+    )
+    code_hash = models.CharField(
+        max_length=128,
+        help_text="Salted hash of the 6 digits; the code itself is never stored",
+    )
+    expires_at = models.DateTimeField(db_index=True)
+    attempts = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Wrong guesses so far; the code dies at the limit",
+    )
+    consumed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Set when the code was used, replaced by a resend, or refused",
+    )
+    delivered = models.BooleanField(
+        default=False,
+        help_text="True when WhatsApp accepted the message",
+    )
+    delivery_error = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Short reason from the delivery attempt, never the token",
+    )
+    sent_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Phone verification code"
+        verbose_name_plural = "Phone verification codes"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["phone", "-created_at"]),
+            models.Index(fields=["phone", "consumed_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.phone} issued {self.created_at:%Y-%m-%d %H:%M}"
+
+    @property
+    def is_spent(self):
+        return self.consumed_at is not None
+
+    def is_expired(self, now=None):
+        return self.expires_at <= (now or timezone.now())
+
+    def attempts_left(self, limit):
+        return max(0, limit - self.attempts)
+
+    def spend(self, now=None):
+        """Mark the code unusable, without a full save."""
+        self.consumed_at = now or timezone.now()
+        self.save(update_fields=["consumed_at", "updated_at"])
+
+    @classmethod
+    def ttl(cls):
+        """The lifetime the guest is told on their phone. Keep the two equal."""
+        return timedelta(minutes=5)
+
 

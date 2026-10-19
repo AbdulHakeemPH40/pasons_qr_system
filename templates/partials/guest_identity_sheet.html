@@ -1,17 +1,26 @@
-{% load icon_tags %}
+{% load static icon_tags %}
 {% comment %}
 Guest identity sheet (models: GuestProfile; flow: plan 2026-10-16 task 2).
 
-One component, four panels, included by the QR landing page and by the
+One component, five panels, included by the QR landing page and by the
 Instagram fallback page so both behave identically:
 
   entry  the follow-for-a-gift invitation + "Open Instagram" (the tap-tracked
          redirect, opened in a new tab so this page survives to hear the
          answer). "Already follow us?" jumps straight to the form.
   ask    "Did you follow us?" -- shown when the guest comes back.
-  form   first name, last name, mobile, consent. A plain POST, so it works
-         with JavaScript switched off.
+  form   first name, last name, country calling code + mobile, consent.
+  code   the six digits WhatsApp sent to that number, with a resend
+         countdown and an "edit the number" way back.
   done    confirmation after a successful submit.
+
+The mobile number is PROVED before the form is accepted (2026-10-19). The
+submit only succeeds when this session holds a fresh proof for exactly that
+number, so the field cannot be used to claim someone else's phone. See
+apps/guests/otp.py for the lifetime, attempt and rate limits.
+
+The form is a plain POST, so without JavaScript the page still loads and the
+server answers with a clear message instead of storing an unproved number.
 
 The gift is decided by MANAGEMENT (client 2026-10-16): following on Instagram
 is its own gift, never a dessert and never a discount, so the copy never
@@ -27,9 +36,20 @@ comment renders as literal page text in this project.
 <div class="ig-draw" id="ig-draw-popup"{% if not id_open %} hidden{% endif %}
      data-base="{{ id_base }}" data-state="{{ id_state }}"
      data-google-url="{% url 'guest_identity_google' id_qr_key %}"
+     data-send-url="{{ id_otp_send_url }}"
+     data-check-url="{{ id_otp_check_url }}"
      data-csrf="{{ csrf_token }}">
   <div class="ig-draw__backdrop" data-draw-close></div>
   <div class="ig-draw__sheet" role="dialog" aria-modal="true" aria-labelledby="id-title-{{ id_state }}">
+    {% comment %}
+    The glass is its own layer and the content scrolls in a sibling above it.
+    A backdrop-filter on a SCROLLING element re-blurs the entire backdrop on
+    every frame of the scroll, which on iOS reads as flicker and jank. This
+    layer never moves, never scrolls and never animates, so the browser
+    composites the blur once and only the content above it repaints.
+    {% endcomment %}
+    <span class="ig-draw__glass" aria-hidden="true"></span>
+    <div class="ig-draw__scroll">
 
     <section class="ig-draw__panel" data-panel="entry"{% if id_state != "entry" %} hidden{% endif %}>
       <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
@@ -56,7 +76,7 @@ comment renders as literal page text in this project.
     <section class="ig-draw__panel" data-panel="form"{% if id_state != "form" %} hidden{% endif %}>
       <span class="ig-draw__icon" aria-hidden="true">{% icon "gift" %}</span>
       <h2 class="ig-draw__title" id="id-title-form">{% if id_mode == "game" %}Sign in to claim your prize{% else %}Claim your follower gift{% endif %}</h2>
-      <p class="ig-draw__sub">{% if id_mode == "game" %}Add your name and mobile number. This is how we hold a prize you win and how our team matches it when you claim.{% else %}Add your details so our team can prepare your gift. We only use this to send your gift and offers.{% endif %}</p>
+      <p class="ig-draw__sub">{% if id_mode == "game" %}Add your name and mobile number. Your number is how we match a prize when you claim.{% else %}Add your details so our team can prepare your gift. We only use this to send your gift and offers.{% endif %}</p>
       {% if id_error_text %}<p class="ig-draw__error" role="alert">{{ id_error_text }}</p>{% endif %}
       {% if id_google_client_id %}
       {% comment %}
@@ -80,7 +100,8 @@ comment renders as literal page text in this project.
       <p class="ig-draw__or"><span>or enter your details</span></p>
       <script src="https://accounts.google.com/gsi/client" async defer></script>
       {% endif %}
-      <form class="ig-draw__form" method="post" action="{{ id_action }}">
+      <form class="ig-draw__form" method="post" action="{{ id_action }}"
+            data-otp-form data-otp-error-box>
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ id_next }}">
         <input type="hidden" name="ig_follow" value="{{ id_ig_follow }}" data-ig-flag>
@@ -92,19 +113,63 @@ comment renders as literal page text in this project.
           <span class="ig-draw__label">Last name</span>
           <input type="text" name="last_name" value="{{ id_last_name }}" autocomplete="family-name" maxlength="80">
         </label>
-        <label class="ig-draw__field">
-          <span class="ig-draw__label">Mobile number</span>
-          <input type="tel" name="phone" value="{{ id_phone }}" inputmode="tel"
-                 autocomplete="tel" maxlength="24" placeholder="{{ id_phone_hint }}" required>
-        </label>
-        <p class="ig-draw__note">Please use your own mobile number. It must match when you redeem your coupon, so make sure it is correct before you submit.</p>
+        <div class="ig-draw__field">
+          <span class="ig-draw__label" id="ig-phone-label">Mobile number on WhatsApp</span>
+          {% comment %}
+          One control, not two boxes. The dial chip and the number live inside
+          the same well, the way a phone's own dialler shows them, so the
+          guest reads "+971 56 ..." as one number instead of two fields.
+
+          What posts is still the DIAL CODE, carried by the hidden input, so
+          the picker changes what the digits mean and never their shape. The
+          well is a div, not a <label>, on purpose: a label wrapping a button
+          would fire the button as soon as the label text was tapped.
+          {% endcomment %}
+          <span class="ig-draw__phone">
+            <input type="hidden" name="country" value="{{ id_country }}" data-otp-country>
+            <button type="button" class="ig-draw__dial" data-picker-open
+                    aria-haspopup="dialog" aria-expanded="false"
+                    aria-label="Country calling code, plus {{ id_country }}">
+              <img class="ig-draw__dial-flag" width="24" height="17" alt=""
+                   decoding="async" data-dial-flag src="{% static id_country_flag %}">
+              <span class="ig-draw__dial-code" data-dial-code>+{{ id_country }}</span>
+              <span class="ig-draw__dial-caret" aria-hidden="true">{% icon "chevron" %}</span>
+            </button>
+            <input type="tel" name="phone" value="{{ id_phone }}" inputmode="tel"
+                   autocomplete="tel-national" maxlength="24" placeholder="{{ id_phone_hint }}"
+                   aria-labelledby="ig-phone-label" required data-otp-phone>
+          </span>
+        </div>
+        <p class="ig-draw__note">We send a 6 digit code on WhatsApp to check this number is yours. Use your own number: it must match when you claim.</p>
         <label class="ig-draw__consent">
           <input type="checkbox" name="consent" value="1" required>
           <span>I agree to receive my gift and offers on WhatsApp.</span>
         </label>
-        <button type="submit" class="ig-draw__cta">Submit</button>
+        <p class="ig-draw__error" role="alert" data-otp-error hidden></p>
+        <button type="submit" class="ig-draw__cta">Continue</button>
         <button type="button" class="ig-draw__close" data-draw-close>Not now</button>
+        <noscript><p class="ig-draw__note">This form needs JavaScript to send your code. Please enable it and reload the page.</p></noscript>
       </form>
+    </section>
+
+    <section class="ig-draw__panel" data-panel="code"{% if id_state != "code" %} hidden{% endif %}>
+      <span class="ig-draw__icon" aria-hidden="true">{% icon "whatsapp" %}</span>
+      <h2 class="ig-draw__title" id="id-title-code">Enter your code</h2>
+      <p class="ig-draw__sub">We sent a 6 digit code on WhatsApp to <strong data-otp-dest>your number</strong>. It expires in 5 minutes.</p>
+      <label class="ig-draw__field">
+        <span class="ig-draw__label">6 digit code</span>
+        <input class="ig-draw__code" type="text" inputmode="numeric" pattern="[0-9]*"
+               maxlength="6" autocomplete="one-time-code" data-otp-input
+               aria-describedby="ig-otp-code-error">
+      </label>
+      <p class="ig-draw__error" id="ig-otp-code-error" role="alert" data-otp-code-error hidden></p>
+      <button type="button" class="ig-draw__cta" data-otp-verify>Verify and continue</button>
+      <p class="ig-draw__resend">
+        <span>Didn't get it?</span>
+        <button type="button" class="ig-draw__link" data-otp-resend>Send a new code</button>
+        <span class="ig-draw__timer" data-otp-timer hidden></span>
+      </p>
+      <button type="button" class="ig-draw__link ig-draw__edit" data-otp-edit>Wrong number? Edit the number</button>
     </section>
 
     <section class="ig-draw__panel" data-panel="done"{% if id_state != "done" %} hidden{% endif %}>
@@ -114,7 +179,61 @@ comment renders as literal page text in this project.
       <button type="button" class="ig-draw__cta" data-draw-close>Great</button>
     </section>
 
+    </div>{# /.ig-draw__scroll #}
+  </div>{# /.ig-draw__sheet #}
+
+  {% comment %}
+  Country calling code picker.
+
+  Client direction 2026-10-19: no country names in the sheet. Each row is a
+  flag and a dial code, and a search box finds a country by what guests
+  actually type ("uae", "india", "91", "dubai"). The English name stays in the
+  markup twice over, in data-search so search works and in aria-label so a
+  screen reader can name the row, but it is never printed on screen.
+
+  It lives OUTSIDE .ig-draw__sheet so it is not clipped by the sheet's scroll
+  box, and inside .ig-draw so it inherits the same phone-screen pinning as the
+  sheet on both a real phone and the desktop mock.
+  {% endcomment %}
+  <div class="ig-picker" id="ig-country-picker" hidden>
+    <div class="ig-picker__backdrop" data-picker-close></div>
+    <div class="ig-picker__panel" role="dialog" aria-modal="true" aria-label="Country calling code">
+      <span class="ig-picker__glass" aria-hidden="true"></span>
+      <div class="ig-picker__head">
+        <span class="ig-picker__search">
+          <span class="ig-picker__search-icon" aria-hidden="true">{% icon "search" %}</span>
+          <input class="ig-picker__input" type="search" inputmode="search"
+                 autocomplete="off" autocorrect="off" spellcheck="false"
+                 placeholder="Search, e.g. UAE or 91"
+                 aria-label="Search country by name, code or dial code"
+                 data-picker-search>
+        </span>
+        <button type="button" class="ig-picker__close" data-picker-close aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <ul class="ig-picker__list" role="listbox" aria-label="Countries"
+          data-picker-list>
+        {% for c in id_countries %}
+        <li class="ig-picker__item" data-picker-item>
+          <button type="button" class="ig-picker__row" role="option"
+                  data-picker-row data-dial="{{ c.dial }}" data-search="{{ c.search }}"
+                  aria-label="{{ c.label }}"
+                  aria-selected="{% if c.dial == id_country %}true{% else %}false{% endif %}">
+            <img class="ig-picker__flag" src="{% static c.flag %}" alt=""
+                 width="26" height="18" loading="lazy" decoding="async">
+            <span class="ig-picker__dial">+{{ c.dial }}</span>
+            <span class="ig-picker__tick" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </span>
+          </button>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="ig-picker__empty" data-picker-empty hidden>No country with that code.</p>
+    </div>
   </div>
+
 </div>
 <script>
   (function () {
@@ -130,6 +249,7 @@ comment renders as literal page text in this project.
        button, which would otherwise lose focus to the document body. */
     var lastTrigger = null;
     var base = sheet.dataset.base || "entry";
+    var csrfToken = sheet.dataset.csrf || "";
     /* Long enough that the guest actually looked at Instagram. The value is
        a courtesy guard, not proof: it keeps a stray focus event from firing
        the question the instant the tab is opened. */
@@ -169,7 +289,8 @@ comment renders as literal page text in this project.
     function closeSheet() {
       /* Closing AFTER the question was asked means the guest declined; do
          not re-open the sheet behind their back on the next focus event. */
-      if (currentState() === "ask" || currentState() === "form") stopAsking = true;
+      if (currentState() === "ask" || currentState() === "form" || currentState() === "code") stopAsking = true;
+      closePicker(false);
       sheet.hidden = true;
       if (lastTrigger && lastTrigger.focus) lastTrigger.focus();
       else if (card) card.focus();
@@ -230,6 +351,340 @@ comment renders as literal page text in this project.
       }
     });
 
+    /* ---- WhatsApp one time code ----------------------------------------
+       The mobile field is only a claim until the guest types the six digits
+       WhatsApp delivered to it. The server is the judge of those digits
+       (apps/guests/otp.py): it owns the 5 minute life, the five attempts,
+       the 60 second resend gap and the daily limits. This block only drives
+       the panels, the countdown and the small print.
+
+       The form never posts straight away: a submit first asks for a code,
+       and only a verified code lets the native submit happen. Server side,
+       a submit whose number was not verified in this session is refused, so
+       turning JavaScript off cannot skip the step. */
+    var form = sheet.querySelector("[data-otp-form]");
+    var sendUrl = sheet.dataset.sendUrl || "";
+    var checkUrl = sheet.dataset.checkUrl || "";
+    var phoneInput = form ? form.querySelector("[data-otp-phone]") : null;
+    var countryInput = form ? form.querySelector("[data-otp-country]") : null;
+    var formError = form ? form.querySelector("[data-otp-error]") : null;
+    var codeInput = sheet.querySelector("[data-otp-input]");
+    var codeError = sheet.querySelector("[data-otp-code-error]");
+    var destLabel = sheet.querySelector("[data-otp-dest]");
+    var resendButton = sheet.querySelector("[data-otp-resend]");
+    var timerLabel = sheet.querySelector("[data-otp-timer]");
+    var verifyButton = sheet.querySelector("[data-otp-verify]");
+    var editButton = sheet.querySelector("[data-otp-edit]");
+    var otpTimer = 0;
+    var otpBusy = false;
+
+    function say(box, text) {
+      if (!box) return;
+      box.textContent = text || "";
+      box.hidden = !text;
+    }
+
+    function prettyPhone(e164) {
+      /* Split on the dial code the guest actually chose, not on a guess. A
+         regex that grabs one to three digits turns +919876543210 into
+         "+919 876543210", which reads as a nine digit country code. */
+      var dial = countryInput ? countryInput.value : "";
+      if (dial && e164 && e164.indexOf("+" + dial) === 0 && e164.length > dial.length + 1) {
+        return "+" + dial + " " + e164.slice(dial.length + 1);
+      }
+      var m = /^\+(\d{1,3})(\d+)$/.exec(e164 || "");
+      return m ? "+" + m[1] + " " + m[2] : (e164 || "");
+    }
+
+    function startCountdown(seconds) {
+      window.clearInterval(otpTimer);
+      var left = Math.max(0, Math.round(seconds || 0));
+      function paint() {
+        if (left > 0) {
+          if (timerLabel) {
+            timerLabel.hidden = false;
+            timerLabel.textContent = "You can ask again in " + left + "s.";
+          }
+          if (resendButton) resendButton.disabled = true;
+          left -= 1;
+        } else {
+          window.clearInterval(otpTimer);
+          if (timerLabel) { timerLabel.hidden = true; timerLabel.textContent = ""; }
+          if (resendButton) resendButton.disabled = false;
+        }
+      }
+      paint();
+      if (left >= 0) otpTimer = window.setInterval(paint, 1000);
+    }
+
+    function postJson(url, data) {
+      return fetch(url, {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+        credentials: "same-origin"
+      }).then(function (response) {
+        return response.json().catch(function () { return {}; });
+      });
+    }
+
+    function phonePayload() {
+      return {
+        country: countryInput ? countryInput.value : "",
+        phone: phoneInput ? phoneInput.value : ""
+      };
+    }
+
+    function sendCode() {
+      if (otpBusy || !sendUrl) return;
+      otpBusy = true;
+      say(formError, "");
+      var payload = phonePayload();
+      postJson(sendUrl, payload)
+        .then(function (data) {
+          if (!data || !data.ok) {
+            /* A cooldown is not a dead end: a code is already on its way to
+               this number. Send the guest to the code field with the wait,
+               instead of leaving them on the form with nothing to type. */
+            if (data && data.reason === "cooldown") {
+              if (destLabel) destLabel.textContent = prettyPhone(data.phone);
+              if (codeInput) codeInput.value = "";
+              say(codeError, data.message);
+              show("code");
+              if (codeInput) codeInput.focus();
+              startCountdown(data.retry_after || 60);
+              return;
+            }
+            say(formError, (data && data.message) || "We could not send the code. Please try again.");
+            if (data && data.retry_after) startCountdown(data.retry_after);
+            return;
+          }
+          if (data.already_verified) {
+            /* This device already proved this number. There is nothing to
+               type, so go straight through instead of showing an empty code
+               field for a message that was never sent. */
+            HTMLFormElement.prototype.submit.call(form);
+            return;
+          }
+          if (destLabel) destLabel.textContent = prettyPhone(data.phone);
+          say(codeError, "");
+          if (codeInput) codeInput.value = "";
+          show("code");
+          if (codeInput) codeInput.focus();
+          startCountdown(data.resend_after || 60);
+        })
+        .catch(function () {
+          say(formError, "We could not reach the server. Please try again.");
+        })
+        .then(function () { otpBusy = false; });
+    }
+
+    function verifyCode() {
+      if (otpBusy || !checkUrl || !form) return;
+      var code = (codeInput ? codeInput.value : "").replace(/\D/g, "");
+      if (code.length < 6) {
+        say(codeError, "Enter the 6 digits from the WhatsApp message.");
+        return;
+      }
+      otpBusy = true;
+      if (verifyButton) verifyButton.disabled = true;
+      var payload = phonePayload();
+      payload.code = code;
+      postJson(checkUrl, payload)
+        .then(function (data) {
+          if (data && data.ok) {
+            say(codeError, "");
+            /* Native submit, so the handler above cannot ask for another
+               code. The session now holds the proof this number was read. */
+            HTMLFormElement.prototype.submit.call(form);
+            return;
+          }
+          var text = (data && data.message) || "That code is not right.";
+          if (data && data.reason === "wrong" && data.attempts_left) {
+            text += " " + data.attempts_left +
+              (data.attempts_left === 1 ? " try left." : " tries left.");
+          }
+          say(codeError, text);
+          if (codeInput) { codeInput.value = ""; codeInput.focus(); }
+          if (data && data.retry_after) startCountdown(data.retry_after);
+        })
+        .catch(function () {
+          say(codeError, "That did not work. Please check your connection and try again.");
+        })
+        .then(function () {
+          otpBusy = false;
+          if (verifyButton) verifyButton.disabled = false;
+        });
+    }
+
+    if (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (!form.reportValidity()) return;
+        sendCode();
+      });
+    }
+
+    if (codeInput) {
+      codeInput.addEventListener("input", function () {
+        this.value = this.value.replace(/\D/g, "").slice(0, 6);
+        if (this.value.length === 6) verifyCode();
+      });
+      codeInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); verifyCode(); }
+      });
+    }
+
+    if (verifyButton) verifyButton.addEventListener("click", verifyCode);
+
+    if (resendButton) {
+      resendButton.addEventListener("click", function () {
+        if (!resendButton.disabled) sendCode();
+      });
+    }
+
+    if (editButton) {
+      editButton.addEventListener("click", function () {
+        window.clearInterval(otpTimer);
+        if (resendButton) resendButton.disabled = false;
+        if (timerLabel) { timerLabel.hidden = true; timerLabel.textContent = ""; }
+        say(codeError, "");
+        show("form");
+        if (phoneInput) { phoneInput.focus(); phoneInput.select(); }
+      });
+    }
+
+    /* ---- country calling code picker -----------------------------------
+       A flag and a dial code per row, no country names on screen, and a
+       search box that matches what guests actually type: "uae", "india",
+       "91", "dubai". The chosen dial code goes into the hidden `country`
+       field, so replacing the native select changed nothing about what the
+       form posts.
+
+       Why it is not a native select any more: on a desktop it opened the
+       operating system's own list, which spilled outside the card and could
+       not be searched; on a phone it opened a wheel with no flags at all. */
+    var picker = document.getElementById("ig-country-picker");
+    var pickerTrigger = sheet.querySelector("[data-picker-open]");
+    var pickerSearch = picker ? picker.querySelector("[data-picker-search]") : null;
+    var pickerList = picker ? picker.querySelector("[data-picker-list]") : null;
+    var pickerEmpty = picker ? picker.querySelector("[data-picker-empty]") : null;
+    var dialCodeLabel = sheet.querySelector("[data-dial-code]");
+    var dialFlag = sheet.querySelector("[data-dial-flag]");
+    var pickerRows = picker ? [].slice.call(picker.querySelectorAll("[data-picker-row]")) : [];
+    var pickerItems = picker ? [].slice.call(picker.querySelectorAll("[data-picker-item]")) : [];
+    var rowsShown = pickerRows.slice();
+    /* The placeholder the server rendered is the UAE example. Keep it, so the
+       hint can be restored when the guest picks the UAE again. */
+    var phoneHint = phoneInput ? phoneInput.getAttribute("placeholder") || "" : "";
+
+    function filterRows() {
+      var q = pickerSearch ? pickerSearch.value.trim().toLowerCase() : "";
+      rowsShown = [];
+      for (var i = 0; i < pickerRows.length; i++) {
+        var hay = pickerRows[i].getAttribute("data-search") || "";
+        var hit = !q || hay.indexOf(q) !== -1;
+        if (pickerItems[i]) pickerItems[i].hidden = !hit;
+        if (hit) rowsShown.push(pickerRows[i]);
+      }
+      if (pickerEmpty) pickerEmpty.hidden = rowsShown.length !== 0;
+    }
+
+    function closePicker(restoreFocus) {
+      if (!picker || picker.hidden) return;
+      picker.hidden = true;
+      if (pickerTrigger) {
+        pickerTrigger.setAttribute("aria-expanded", "false");
+        if (restoreFocus) pickerTrigger.focus();
+      }
+    }
+
+    function openPicker() {
+      if (!picker || !picker.hidden) return;
+      picker.hidden = false;
+      if (pickerTrigger) pickerTrigger.setAttribute("aria-expanded", "true");
+      if (pickerSearch) pickerSearch.value = "";
+      filterRows();
+      /* Bring the current choice into view without moving the page: the list
+         scrolls on its own, so the offset is measured against the list. */
+      var chosen = null;
+      for (var i = 0; i < pickerRows.length; i++) {
+        if (pickerRows[i].getAttribute("aria-selected") === "true") { chosen = pickerRows[i]; break; }
+      }
+      if (chosen && pickerList) {
+        pickerList.scrollTop = Math.max(
+          0,
+          chosen.offsetTop - pickerList.clientHeight / 2 + chosen.offsetHeight / 2
+        );
+      }
+      if (pickerSearch) pickerSearch.focus();
+      else if (chosen) chosen.focus();
+    }
+
+    function chooseCountry(row) {
+      var dial = row.getAttribute("data-dial");
+      if (!dial) return;
+      if (countryInput) countryInput.value = dial;
+      if (dialCodeLabel) dialCodeLabel.textContent = "+" + dial;
+      var flag = row.querySelector("img");
+      if (dialFlag && flag) dialFlag.src = flag.getAttribute("src");
+      if (pickerTrigger) {
+        pickerTrigger.setAttribute("aria-label", "Country calling code, plus " + dial);
+      }
+      for (var i = 0; i < pickerRows.length; i++) {
+        pickerRows[i].setAttribute("aria-selected", pickerRows[i] === row ? "true" : "false");
+      }
+      /* The hint written on the field is a UAE example. It goes away rather
+         than claiming a British or Indian number looks like 050 123 4567. */
+      if (phoneInput) phoneInput.placeholder = dial === "971" ? phoneHint : "";
+      closePicker(false);
+      if (phoneInput) phoneInput.focus();
+    }
+
+    if (pickerTrigger) pickerTrigger.addEventListener("click", openPicker);
+
+    if (picker) {
+      /* One delegated handler: a row picks, the scrim or the close button
+         dismisses. */
+      picker.addEventListener("click", function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        var row = t.closest("[data-picker-row]");
+        if (row) { chooseCountry(row); return; }
+        if (t.closest("[data-picker-close]")) closePicker(true);
+      });
+
+      /* Arrow keys walk the visible rows from the search box, so a guest can
+         choose without reaching for the list. Escape closes only the picker,
+         never the whole sheet. */
+      picker.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          closePicker(true);
+          return;
+        }
+        if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+        if (!rowsShown.length) return;
+        var idx = rowsShown.indexOf(document.activeElement);
+        var step = e.key === "ArrowDown" ? 1 : -1;
+        var next = idx === -1
+          ? (step === 1 ? 0 : rowsShown.length - 1)
+          : Math.min(rowsShown.length - 1, Math.max(0, idx + step));
+        e.preventDefault();
+        rowsShown[next].focus();
+      });
+
+      if (pickerSearch) {
+        pickerSearch.addEventListener("input", filterRows);
+        pickerSearch.addEventListener("keydown", function (e) {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          if (rowsShown.length) chooseCountry(rowsShown[0]);
+        });
+      }
+    }
+
     document.addEventListener("visibilitychange", function () {
       if (document.visibilityState === "visible") ask();
     });
@@ -237,7 +692,11 @@ comment renders as literal page text in this project.
     window.addEventListener("pageshow", ask);
 
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && !sheet.hidden) closeSheet();
+      if (e.key !== "Escape" || sheet.hidden) return;
+      /* Escape closes one layer, not both: the picker sits on top of the
+         sheet, so it is the thing the guest means. */
+      if (picker && !picker.hidden) { closePicker(true); return; }
+      closeSheet();
     });
 
     /* ---- Continue with Google ------------------------------------------
@@ -246,7 +705,6 @@ comment renders as literal page text in this project.
        and answers with the name and email it read. The guest still supplies
        a mobile number below, because Google never returns one. */
     var googleUrl = sheet.dataset.googleUrl || "";
-    var csrfToken = sheet.dataset.csrf || "";
 
     function setField(name, value) {
       if (!value) return;

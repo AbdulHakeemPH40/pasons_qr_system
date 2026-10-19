@@ -32,11 +32,15 @@ from django.utils import timezone
 
 from apps.rewards.models import RewardCoupon
 
+from .phone import DEFAULT_COUNTRY_CODE, picker_countries
+
 # Error codes the submit view bounces back with, mapped to guest-facing copy.
 ERROR_TEXT = {
     "missing_name": "Please tell us your first name.",
     "bad_phone": "That mobile number does not look right. Try 050 123 4567.",
     "no_consent": "Please tick the box so we can send your offer.",
+    "phone_unverified": "Please verify your mobile number with the code we send on WhatsApp.",
+    "otp_send_failed": "We could not send the code. Please try again.",
 }
 
 # Where a half-typed form is parked between the failed POST and the re-render.
@@ -83,6 +87,16 @@ def sheet_context(request, qr, next_path, base="entry", mode="identity"):
     if handle is not None:
         profile = handle.profile
 
+    # WhatsApp one time code: the picker rows, and which row is showing. A
+    # draft that carries a dial code no longer in the list (an old session, a
+    # hand-edited POST) falls back to the UAE instead of rendering a flag that
+    # does not exist.
+    countries = picker_countries()
+    selected = draft.get("country") or DEFAULT_COUNTRY_CODE
+    if selected not in {row["dial"] for row in countries}:
+        selected = DEFAULT_COUNTRY_CODE
+    selected_flag = next(row["flag"] for row in countries if row["dial"] == selected)
+
     return {
         "id_sheet": True,
         "id_action": reverse("guest_identity_submit", args=[qr.redirect_key]),
@@ -103,6 +117,14 @@ def sheet_context(request, qr, next_path, base="entry", mode="identity"):
         "id_last_name": draft.get("last_name", ""),
         "id_phone": draft.get("phone", ""),
         "id_greet": (profile.first_name if (joined and profile) else ""),
+        # WhatsApp one time code. The picker carries the dial code so the
+        # guest never has to guess how to write their own number. Each row is
+        # a flag and a dial code: no country names are printed in the sheet.
+        "id_countries": countries,
+        "id_country": selected,
+        "id_country_flag": selected_flag,
+        "id_otp_send_url": reverse("guest_otp_send", args=[qr.redirect_key]),
+        "id_otp_check_url": reverse("guest_otp_check", args=[qr.redirect_key]),
     }
 
 

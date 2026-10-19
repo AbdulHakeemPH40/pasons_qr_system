@@ -116,7 +116,7 @@ REASON_TEXT = {
     Reason.NO_PROFILE: "No guest profile on this device.",
     Reason.TOKEN: "That round could not be confirmed. Play again.",
     Reason.BRAND_OFF: "Rewards are switched off at this restaurant.",
-    Reason.EFFORT: "Play the round out. A finished game counts, not a tap.",
+    Reason.EFFORT: "That round was too short to count for a reward. Play a longer one.",
     Reason.LOCKED: "Win the level you are on to unlock the next one.",
     Reason.NOT_A_WIN: "Only a win climbs the levels. Try again.",
     Reason.RUNG_FREE: "Level {level} does not pay a reward. Keep climbing.",

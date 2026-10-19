@@ -50,6 +50,17 @@
       submit: function (s, v) { return v; }
     };
 
+    /* Some games end on a screen of their own that is worth more than our
+       result sheet: chess-master names the winner, says how the game ended
+       and offers a Review Board button, and the board behind it is exactly
+       what a guest wants to study after a loss. For those games (`bridge.
+       defer`) the shell builds its result but keeps it CLOSED, and waits in
+       a small dock at the bottom edge of the card instead. The guest opens
+       the sheet with one tap, when they are ready (client 2026-10-19:
+       "no need immediate banner, allow review first"). */
+    var defer = bridge.defer === true;
+    var dock = null;
+
     var best = storage.get(slug);
     var score = 0;
     var over = false;
@@ -421,31 +432,64 @@
     }
 
     /* ---- game over ---- */
-    function finish() {
-      if (over) return;
-      over = true;
-      /* Final score: re-read the authoritative display before submitting.
-         score.overSel points at the game-over counter for games that erase
-         their on-field display (flappy-burger empties #bigscore and moves
-         the total to #currentscore); otherwise the normal score selector
-         still holds the final render (2048, memory-match). Fall back to the
-         last polled reading when both hold nothing. */
-      var cfg = bridge.score || {};
-      var finalScore = readScoreFrom(cfg.overSel || cfg.sel);
-      if (finalScore === null) finalScore = score;
-      score = Math.max(0, finalScore | 0);
-      scoreEl.textContent = String(score);
-      markPlayed();
-      best = storage.submit(slug, score);
-      paintBest();
-      /* One request carries both the finished signal and the reward claim. */
-      var claim = claimRound(score);
 
+    /* The dock: a finished result waiting for the guest, on games whose own
+       end screen deserves the screen first. Bottom edge of the card, out of
+       the way of the board, one tap away from the full result. */
+    function removeDock() {
+      if (dock && dock.parentNode) dock.parentNode.removeChild(dock);
+      dock = null;
+    }
+
+    function setDock(main, go, won) {
+      if (!dock) return;
+      var label = dock.querySelector(".game-dock__main");
+      var action = dock.querySelector(".game-dock__go");
+      if (label) label.textContent = main;
+      if (action) action.textContent = go;
+      dock.dataset.state = won ? "won" : "done";
+      dock.setAttribute("aria-label", main + ", " + go);
+    }
+
+    function showDock() {
+      removeDock();
+      dock = document.createElement("button");
+      dock.type = "button";
+      dock.className = "game-dock";
+      dock.dataset.state = "done";
+      var main = document.createElement("span");
+      main.className = "game-dock__main";
+      var go = document.createElement("span");
+      go.className = "game-dock__go";
+      dock.appendChild(main);
+      dock.appendChild(go);
+      dock.addEventListener("click", openResult);
+      host.appendChild(dock);
+      setDock(score + (score === 1 ? " point" : " points"), "See result");
+    }
+
+    function openResult() {
+      if (!over) return;
+      removeDock();
       overlay.dataset.state = "over";
+      overlay.scrollTop = 0;
+    }
+
+    /* Builds the result sheet into the (hidden) overlay and returns its
+       reward slot, so the caller decides WHEN the guest sees it. */
+    function buildResult() {
       overlay.innerHTML = "";
+      /* How the round ended, when the game publishes it (chess-master does:
+         win / draw / loss). A loss and a win must not read the same: "Game
+         over" over a lost game told the guest nothing about what happened. */
+      var outcome = readBridgeText("result");
+      var heading = "Game over";
+      if (outcome === "win") heading = "You won";
+      else if (outcome === "draw") heading = "Draw";
+      else if (outcome === "loss") heading = "You lost";
       var t = document.createElement("p");
       t.className = "game-overlay__title";
-      t.textContent = "Game over";
+      t.textContent = heading;
       var s = document.createElement("p");
       s.className = "game-overlay__score";
       s.textContent = String(score);
@@ -479,20 +523,84 @@
       prizeBox.className = "game-reward";
       prizeBox.hidden = true;
       overlay.appendChild(prizeBox);
+      return prizeBox;
+    }
+
+    function finish() {
+      if (over) return;
+      over = true;
+      /* Final score: re-read the authoritative display before submitting.
+         score.overSel points at the game-over counter for games that erase
+         their on-field display (flappy-burger empties #bigscore and moves
+         the total to #currentscore); otherwise the normal score selector
+         still holds the final render (2048, memory-match). Fall back to the
+         last polled reading when both hold nothing. */
+      var cfg = bridge.score || {};
+      var finalScore = readScoreFrom(cfg.overSel || cfg.sel);
+      if (finalScore === null) finalScore = score;
+      score = Math.max(0, finalScore | 0);
+      scoreEl.textContent = String(score);
+      markPlayed();
+      best = storage.submit(slug, score);
+      paintBest();
+      /* One request carries both the finished signal and the reward claim. */
+      var claim = claimRound(score);
+      var prizeBox = buildResult();
+
+      if (defer) {
+        /* Leave the sheet closed: the game's own end screen owns this
+           moment, and the board behind it stays readable. */
+        showDock();
+      } else {
+        overlay.dataset.state = "over";
+      }
+
       if (claim) {
         claim
           .then(function (data) {
             if (!data) return;
             /* A win shows the coupon. Anything else shows why not, and where
                the guest now stands on the climb. */
-            if (data.reward) renderReward(prizeBox, data);
-            else renderProgress(prizeBox, data);
+            if (data.reward) {
+              renderReward(prizeBox, data);
+              /* On a deferred game the dock is the only thing on screen, so
+                 the win has to reach it. A prize waiting behind a tap the
+                 guest does not know about is a prize they never see. */
+              if (defer) {
+                setDock(
+                  "You won " + (data.reward.label || "a prize"),
+                  "Open ticket",
+                  true
+                );
+              }
+            } else {
+              renderProgress(prizeBox, data);
+            }
             if (data.progress) paintLadder(data.progress);
           })
           .catch(function () {
             /* a reward must never break the game-over screen */
           });
       }
+    }
+
+    /* A deferred result never blocks the game, so the guest can start another
+       round from the game's OWN end screen (chess: "New Game"). That path
+       never touches this shell, so the finished round has to be recognised
+       as over: the game-over UI is gone AND the result marker the game
+       publishes is cleared again. "Review Board" only hides the modal and
+       keeps the marker, which is exactly how the two are told apart. Without
+       this the second round could never end. */
+    function resetRound() {
+      over = false;
+      played = false;
+      score = 0;
+      scoreEl.textContent = "0";
+      startedAt = 0;
+      actions = 0;
+      overlay.dataset.state = "hidden";
+      overlay.innerHTML = "";
+      removeDock();
     }
 
     /* ---- restart: reload the vendored page for a clean round ---- */
@@ -519,6 +627,7 @@
       actions = 0;
       overlay.dataset.state = "hidden";
       overlay.innerHTML = "";
+      removeDock();
 
       /* Capture the absolute game URL now: after we navigate to about:blank
          the frame's own src/base is blank and a relative URL would not
@@ -753,7 +862,7 @@
     window.setInterval(function () {
       attachDoc();
       fitFrame();
-      if (!doc || over || reloading) return;
+      if (!doc || reloading) return;
       /* A document that is still parsing lies about visibility: a modal
          marked .hidden is not display:none until its stylesheet applies
          (the class alone does nothing), so the "visible" game-over reader
@@ -761,6 +870,13 @@
          "Game over 0" during every Play again reload. Only trust the DOM
          once the document is no longer loading. */
       if (doc.readyState === "loading") return;
+      if (over) {
+        /* A finished round on a deferred game can be followed by another one
+           started from the game's own end screen, which this shell never
+           sees. Watch for that here, or the second round could never end. */
+        if (defer && !readBridgeText("result")) resetRound();
+        return;
+      }
       var s = readScore();
       if (s !== null) setScore(s);
       if (isOver()) finish();

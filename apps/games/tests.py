@@ -640,6 +640,61 @@ class GamesEventBeaconTests(GamesZoneFixtures):
         self.assertIn("Hard &mdash; 2:45", page)
         self.assertIn("Don't do it! &mdash; 3:45", page)
 
+    def test_memory_match_locks_the_board_while_a_missed_pair_is_still_up(self):
+        """Regression (2026-10-19): tapping a card still showing from a
+        missed pair hid the food and left the board stuck.
+
+        The model conceals both cards the moment a pair misses, while the
+        screen holds them up for a second. A tap inside that window was read
+        against the concealed model: the flip was accepted, the `.clicked`
+        class was toggled OFF on a card the guest could still see, and the
+        pending timeout then stripped the face off the card that had become
+        the new turn's first pick. That card sat face down while the model
+        still held it as selected, so every later tap answered "already
+        facing up" and the board felt dead.
+
+        The fix: lock the board for the window, paint faces from the model
+        instead of toggling, and stamp the pending timeout so a new deal
+        leaves it behind.
+        """
+        from .registry import get_game
+
+        script = (
+            Path(settings.BASE_DIR)
+            / "static"
+            / "games"
+            / "vendor"
+            / "memory-match"
+            / "js"
+            / "BrowserInterface.js"
+        ).read_text(encoding="utf-8")
+
+        # The board refuses flips while the missed pair is on screen ...
+        self.assertIn("if ($.isGameOver || boardLocked)", script)
+        self.assertIn("boardLocked = true;", script)
+        self.assertIn("boardLocked = false;", script)
+        # ... faces follow the model, never a blind one-argument toggle ...
+        self.assertIn("paintCard(index, $.cards[index].isRevealed)", script)
+        self.assertNotIn("this.classList.toggle('clicked')", script)
+        # ... and a deal inside the window strands the old timer.
+        self.assertIn("var stamp = turnId;", script)
+        self.assertIn("if (stamp !== turnId)", script)
+        self.assertIn("turnId++;", script)
+
+        # The vendored page must load the fixed script under the same cache
+        # key the play page uses, or a returning guest keeps the old one.
+        play = (
+            Path(settings.BASE_DIR) / "templates" / "games" / "play.html"
+        ).read_text(encoding="utf-8")
+        version = re.search(r'GAMES_V="([^"]+)"', play).group(1)
+        page = (
+            Path(settings.BASE_DIR)
+            / "static"
+            / get_game("memory-match").embed.replace("/", os.sep)
+        ).read_text(encoding="utf-8")
+        self.assertIn(f"BrowserInterface.js?v={version}", page)
+        self.assertIn(f"MemoryGame.js?v={version}", page)
+
 
 class ChessMasterTests(GamesZoneFixtures):
     """Chess Master (2026-10-14): the Electron app ported to the Games Zone.
@@ -685,6 +740,63 @@ class ChessMasterTests(GamesZoneFixtures):
         # Result bonus scales with the engine level (tough game: levels 3-6).
         self.assertIn("200 * level", score_js)
         self.assertIn("50 * level", score_js)
+
+    def test_a_finished_game_hands_the_board_back_before_the_result_sheet(self):
+        """Client 2026-10-19: no immediate banner, allow the review first.
+
+        Chess ends on a screen of its own (who won, how, and Review Board
+        over the final position). The shell used to throw its dark result
+        sheet over that the instant the game ended, which hid the only thing
+        worth looking at and read the same whether the guest won or lost.
+        Now the sheet is built but stays CLOSED, a dock waits on the bottom
+        edge, and the guest opens the sheet when they are ready. A new round
+        can also start from the game's own end screen, which the shell never
+        sees, so it has to notice that and reset the round.
+        """
+        from .registry import get_game
+
+        # Only a game with a real end screen of its own opts in.
+        self.assertIs(get_game("chess-master").bridge.get("defer"), True)
+        for slug in ("2048", "flappy-burger", "memory-match"):
+            self.assertFalse(get_game(slug).bridge.get("defer"))
+
+        shell = (
+            Path(settings.BASE_DIR) / "static" / "games" / "core" / "shell.js"
+        ).read_text(encoding="utf-8")
+
+        # the flag is read, and it decides whether the sheet opens at once
+        self.assertIn("var defer = bridge.defer === true;", shell)
+        self.assertIn("if (defer) {", shell)
+        self.assertIn("showDock();", shell)
+        self.assertIn('dock.className = "game-dock";', shell)
+        # the sheet content is built first, then opened by the guest's tap
+        self.assertIn("function buildResult()", shell)
+        self.assertIn("function openResult()", shell)
+        self.assertIn('overlay.dataset.state = "over";', shell)
+        # a round started from the game's own end screen is recognised
+        self.assertIn('if (defer && !readBridgeText("result")) resetRound();', shell)
+        # a loss and a win must not read the same
+        self.assertIn('heading = "You lost";', shell)
+
+        css = (
+            Path(settings.BASE_DIR) / "static" / "css" / "theme-warm.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("body.theme-warm .page--play .game-dock {", css)
+        self.assertIn(
+            'body.theme-warm .page--play .game-dock[data-state="won"]', css
+        )
+        self.assertIn(
+            "body.theme-warm .page--play .game-dock { animation: none; }", css
+        )
+
+        # Review Board has to be a real control, not a label
+        _, page_path = self._vendor()
+        page = page_path.read_text(encoding="utf-8")
+        self.assertIn('id="btn-close-modal"', page)
+        self.assertIn("Review Board", page)
+        app_js = (page_path.parent / "js" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("btn-close-modal", app_js)
+        self.assertIn("hideGameOver()", app_js)
 
     def test_stockfish_only_no_friend_or_llm_modes(self):
         """Client brief: only vs Stockfish. The Electron app's friend and

@@ -18,6 +18,7 @@ __pycache__/
 # Virtualenv
 venv/
 .venv/
+Docs/
 
 # Local runserver output
 server.log
@@ -38,6 +39,11 @@ media/menu/specials/*_???????.jpg
 # Dish photos uploaded through the panel at runtime. Seeded copies that are
 # already tracked stay tracked; new uploads never enter the repository.
 media/menu/items/dish_*.png
+
+# Menu PDFs uploaded through the panel at runtime. Django renames them with an
+# `own` prefix and a random suffix, so every manager upload would otherwise
+# appear in `git status` forever.
+media/menu/pdf/own*.pdf
 
 # Local screen recordings and scratch output
 *.mp4

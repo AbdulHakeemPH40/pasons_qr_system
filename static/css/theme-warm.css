@@ -2693,6 +2693,78 @@ body.theme-warm .page--play .game-hud__best {
   color: rgba(42, 59, 46, 0.65);
 }
 
+/* ---- play page: ONE glass bar for the title and the status ------------
+   The two rows used to be two separate backdrop-filter surfaces stacked
+   flush. Each blur is its own compositor layer, and two adjacent ones
+   repaint against each other whenever either changes (the score ticks on
+   every point), which is the shimmer this page had on iOS. One surface, one
+   layer, and a hairline border between the rows instead of a second
+   material.
+   ---------------------------------------------------------------------- */
+body.theme-warm .page--play .game-bar {
+  position: relative;
+  isolation: isolate;
+  margin: max(8px, env(safe-area-inset-top)) 8px 0;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: 0 10px 24px -16px rgba(18, 32, 22, 0.5);
+}
+
+body.theme-warm .page--play .game-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.74) 0%,
+    rgba(250, 252, 248, 0.68) 100%
+  );
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  transform: translateZ(0);
+}
+
+body.theme-warm .page--play .game-bar > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* the rows give up their own material inside the bar */
+body.theme-warm .page--play .game-bar .sheet-head {
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+body.theme-warm .page--play .game-bar .game-hud {
+  margin: 0;
+  padding: 4px 14px 7px;
+  border-radius: 0;
+  border-top: 1px solid rgba(34, 48, 31, 0.07);
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* the pause circle sits on the bar now, so it needs no blur of its own */
+body.theme-warm .page--play .game-bar .game-pause {
+  background: rgba(34, 48, 31, 0.06);
+  border-color: rgba(255, 255, 255, 0.65);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
 body.theme-warm .page--play .game-host {
   position: relative;
   flex: 1;
@@ -2786,17 +2858,94 @@ body.theme-warm .page--play .game-overlay__row {
   gap: 10px;
 }
 
+/* ---- play page: the result dock (deferred games) ----
+   Chess Master ends on a screen of its own: who won, how, and a Review Board
+   button over the final position. Throwing the dark result sheet over that
+   the instant the game ends hides the only thing worth seeing, so the shell
+   waits here instead, on the bottom edge of the card, out of the board's
+   way. One tap opens the full result. Gold when a prize is waiting, because
+   a win the guest cannot see is a win they never claim. */
+body.theme-warm .page--play .game-dock {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 20px);
+  padding: 9px 12px 9px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(20, 34, 25, 0.94);
+  color: #f7f2e6;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: left;
+  cursor: pointer;
+  transform: translate(-50%, 0);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 14px 26px -14px rgba(0, 0, 0, 0.8);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  backdrop-filter: blur(8px) saturate(140%);
+  animation: gameDockIn 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+body.theme-warm .page--play .game-dock:active {
+  transform: translate(-50%, 0) scale(0.985);
+}
+
+body.theme-warm .page--play .game-dock__main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.theme-warm .page--play .game-dock__go {
+  flex: none;
+  color: #f6d879;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+body.theme-warm .page--play .game-dock[data-state="won"] {
+  border-color: rgba(246, 216, 121, 0.68);
+  background: rgba(38, 58, 32, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 0 1px rgba(246, 216, 121, 0.18),
+    0 16px 30px -14px rgba(0, 0, 0, 0.85);
+}
+
+body.theme-warm .page--play .game-dock[data-state="won"] .game-dock__main {
+  color: #f9e6a8;
+}
+
+@keyframes gameDockIn {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 body.theme-warm .page--play .game-cta {
   padding: 12px 26px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, #3e7a4e, #2e5b3e);
+  /* the brand colour, lit across the top left. It used to be a hardcoded
+     green, which read as someone else's button on a maroon branded outlet
+     (King Chef). --forest is the brand's deep tone on every page, and white
+     already sits on it in the wave art, so contrast is safe. */
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.16)),
+    var(--forest);
   color: #ffffff;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
     0 10px 20px -10px rgba(0, 0, 0, 0.5);
   cursor: pointer;
   transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -2844,6 +2993,8 @@ body.theme-warm .page--play .game-pause svg {
   body.theme-warm .page--play .game-cta:active,
   body.theme-warm .page--play .game-pause:active { transform: none; }
   body.theme-warm .page--play .game-overlay { transition: none; }
+  body.theme-warm .page--play .game-dock { animation: none; }
+  body.theme-warm .page--play .game-dock:active { transform: translate(-50%, 0); }
 }
 
 /* ---- reduced transparency: solidify the games materials ---- */
@@ -2861,6 +3012,12 @@ body.theme-warm .page--play .game-pause svg {
     backdrop-filter: none;
     background: rgba(24, 40, 29, 0.92);
   }
+  body.theme-warm .page--play .game-dock {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: #1b2a1f;
+  }
+  body.theme-warm .page--play .game-dock[data-state="won"] { background: #263a20; }
 }
 
 /* --------------------------------------------------------------------------
@@ -2886,65 +3043,147 @@ body.theme-warm .device-screen > .ig-draw {
    attribute's UA display: none — restore it explicitly */
 body.theme-warm .device-screen > .ig-draw[hidden] { display: none; }
 
+/* The scrim is what makes the sheet the first thing read. Client report
+   2026-10-19: over the games the page behind showed THROUGH the sign-in card
+   and the two sets of words collided. Two changes answer it:
+     1. this scrim is deep enough to push the page back, and
+     2. the sheet itself is now an opaque warm cream surface (below).
+   No backdrop-filter here on purpose. A blur on this layer is re-sampled on
+   every frame of a live game canvas running under it, which is the same
+   flicker the play page already removed elsewhere. A flat dim does the same
+   job for the eye and costs nothing per frame. */
 body.theme-warm .ig-draw__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(24, 40, 29, 0.55);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-  backdrop-filter: blur(10px) saturate(140%);
+  background:
+    radial-gradient(120% 90% at 50% 8%, rgba(20, 34, 25, 0.58), rgba(12, 21, 15, 0.78) 70%, rgba(9, 16, 11, 0.86) 100%);
   animation: ig-draw-fade 180ms ease;
 }
 
+/* ---- the sheet: a thick warm material, built as two layers -------------
+   Layer 1 .ig-draw__glass  the surface: warm cream, a lit top rim, a soft
+                            sheen. It NEVER moves, scrolls or animates.
+   Layer 2 .ig-draw__scroll the content, on its own scrolling surface.
+
+   Why the surface is opaque and not see-through (client 2026-10-19): this
+   card opens on top of the chess board, the score bar and the game's own
+   setup panel. Thin glass let all of that read through the form, so the
+   guest saw two sets of words in the same place. iOS calls this a thick
+   material: you feel the page behind in the SCRIM, never through the card.
+   Keeping the page behind the scrim also keeps the "you are still in the
+   game" context, which is what the glass was for in the first place.
+
+   Splitting the two layers is still the anti flicker measure. A
+   backdrop-filter on the scrolling element re-blurs the whole page behind
+   it on every frame of a scroll, which on iOS reads as shimmer, worst on
+   the tall form panel.
+   ------------------------------------------------------------------------ */
 body.theme-warm .ig-draw__sheet {
   position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
   width: min(320px, 100%);
-  /* The name + mobile form is taller than a short phone (measured: 613px of
-     content in a 667px window, submit button at 664px). Without a cap the
-     sheet simply overflowed and the Submit button could not be reached.
-     Cap it to the scrim and let it scroll inside, so the last field and the
-     buttons are always reachable. */
   max-height: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  padding: 26px 22px 18px;
-  border-radius: 26px;
-  background: var(--card-white);
-  border: 1px solid rgba(34, 48, 31, 0.055);
-  box-shadow:
-    0 2px 4px rgba(31, 55, 38, 0.05),
-    0 18px 44px rgba(31, 55, 38, 0.12);
+  overflow: hidden;
+  border-radius: 28px;
   text-align: center;
-  animation: ig-draw-rise 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow:
+    0 2px 6px rgba(18, 32, 22, 0.1),
+    0 30px 70px -20px rgba(10, 20, 14, 0.64);
+  animation: ig-sheet-in 160ms ease-out both;
+}
+
+body.theme-warm .ig-draw__glass {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  /* opaque base first: no single pixel of the page behind can ever reach the
+     copy, whatever the contrast of what is open underneath */
+  background-color: #fbf7ec;
+  background-image: linear-gradient(
+    180deg,
+    #fffefa 0%,
+    #fdfaf2 42%,
+    #f7f0e0 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 -1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 0 0 1px rgba(168, 137, 62, 0.06);
+}
+
+/* The specular sheen. A single soft light from the top left plus a whisper of
+   gold from the bottom right is what makes a flat translucent panel read as a
+   curved material rather than a white box. */
+body.theme-warm .ig-draw__glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(120% 58% at 20% 0%, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(94% 44% at 94% 104%, rgba(194, 162, 75, 0.1), rgba(255, 255, 255, 0) 74%);
+}
+
+body.theme-warm .ig-draw__scroll {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* the bar itself is hidden: on a 320px card the operating system's scroll
+     track drew a pale line down the right edge of the form and read as a
+     broken border. The content still scrolls, and the copy is short enough
+     that the end of it is visible without a hint. */
+  scrollbar-width: none;
+  padding: 20px 20px 16px;
+  border-radius: inherit;
+  animation: ig-body-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+body.theme-warm .ig-draw__scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 body.theme-warm .ig-draw__icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 12px;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 10px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--tint-cream);
+  background: linear-gradient(180deg, #fdf8ec, var(--tint-cream));
   color: var(--gold-deep);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 0 0 1px rgba(168, 137, 62, 0.16);
 }
 
-body.theme-warm .ig-draw__icon svg { width: 26px; height: 26px; }
+body.theme-warm .ig-draw__icon svg { width: 23px; height: 23px; }
 
 body.theme-warm .ig-draw__title {
   font-family: "Fraunces", Georgia, serif;
-  font-size: 1.45rem;
-  line-height: 1.15;
+  font-size: 1.34rem;
+  line-height: 1.18;
   letter-spacing: -0.02em;
   color: var(--ink);
+  text-wrap: balance;
 }
 
 body.theme-warm .ig-draw__sub {
-  margin: 8px auto 0;
-  max-width: 30ch;
-  font-size: 0.8125rem;
+  margin: 7px auto 0;
+  max-width: 31ch;
+  font-size: 0.8rem;
   line-height: 1.5;
   color: var(--link-sub);
+  text-wrap: pretty;
 }
 
 body.theme-warm .ig-draw__cta {
@@ -2952,14 +3191,18 @@ body.theme-warm .ig-draw__cta {
   margin-top: 16px;
   padding: 12px 26px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #3e7a4e, #2e5b3e);
+  /* the outlet's own colour, not a fixed green: this card opens on four
+     different brands and the button has to belong to the one it is on */
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.16)),
+    var(--forest);
   color: #ffffff;
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-decoration: none;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
     0 10px 20px -10px rgba(0, 0, 0, 0.5);
   transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -2984,6 +3227,24 @@ body.theme-warm .ig-draw__close {
 
 @keyframes ig-draw-rise {
   from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The sheet fades, the content slides on top of it. Nothing that carries a
+   backdrop-filter is ever transformed mid-animation: that is the other half
+   of the no flicker rule. */
+@keyframes ig-sheet-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ig-body-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ig-picker-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
   to { opacity: 1; transform: none; }
 }
 
@@ -3017,10 +3278,23 @@ body.theme-warm .ig-draw__close {
    ask / form / done panels inside that sheet, so the component keeps one
    visual language instead of growing a second one.
    -------------------------------------------------------------------------- */
-/* long forms must stay reachable on a short phone screen */
+/* long forms must stay reachable on a short phone screen. The sheet itself
+   no longer scrolls: .ig-draw__scroll inside it does, so the blurred glass
+   layer underneath stays still while the form moves. */
 body.theme-warm .ig-draw__sheet {
-  max-height: 92vh;
-  overflow-y: auto;
+  max-height: min(92vh, 92%);
+}
+
+/* Short phone (375x667 and the like). The form is taller than the card once
+   the decorative icon is counted, so "Continue" fell below the fold, and
+   with the scrollbar hidden there was nothing to say "scroll". Compact mode
+   is the fix: the card takes more of the screen, the margins tighten, and
+   the icon steps aside so the primary action is visible without scrolling. */
+@media (max-height: 720px) {
+  body.theme-warm .device-screen > .ig-draw { padding: 14px; }
+  body.theme-warm .ig-draw__sheet { max-height: 98%; }
+  body.theme-warm .ig-draw__scroll { padding-top: 16px; }
+  body.theme-warm .ig-draw__icon { display: none; }
 }
 
 body.theme-warm .ig-draw__panel[hidden] { display: none; }
@@ -3066,11 +3340,11 @@ body.theme-warm .ig-draw__error {
 }
 
 body.theme-warm .ig-draw__form {
-  margin-top: 14px;
+  margin-top: 12px;
   text-align: left;
 }
 
-body.theme-warm .ig-draw__field { display: block; margin-top: 10px; }
+body.theme-warm .ig-draw__field { display: block; margin-top: 9px; }
 
 body.theme-warm .ig-draw__label {
   display: block;
@@ -3099,39 +3373,197 @@ body.theme-warm .ig-draw__field input:focus-visible {
   border-color: transparent;
 }
 
+/* ---- country code + mobile ---------------------------------------------
+   ONE control, not two boxes. The dial chip and the number share a single
+   well, the way a phone's own dialler shows them, so the guest reads
+   "+971 56 466 9930" as one number. The divider is the chip's own tinted
+   background, so there is no hairline to get wrong at any width.
+   ------------------------------------------------------------------------ */
+body.theme-warm .ig-draw__phone {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid rgba(34, 48, 31, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 2px rgba(34, 48, 31, 0.05);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+body.theme-warm .ig-draw__phone:focus-within {
+  border-color: rgba(168, 137, 62, 0.55);
+  box-shadow:
+    0 0 0 3px rgba(168, 137, 62, 0.14),
+    inset 0 1px 2px rgba(34, 48, 31, 0.04);
+}
+
+/* the dial chip: flag + code + caret, and nothing else */
+body.theme-warm .ig-draw__dial {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 8px 9px 8px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(34, 48, 31, 0.055);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+body.theme-warm .ig-draw__dial:active {
+  transform: scale(0.96);
+  background: rgba(34, 48, 31, 0.1);
+}
+
+body.theme-warm .ig-draw__dial:focus-visible {
+  outline: 2px solid var(--gold-deep);
+  outline-offset: 1px;
+}
+
+body.theme-warm .ig-draw__dial-flag {
+  width: 22px;
+  height: 15px;
+  border-radius: 3px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(34, 48, 31, 0.12);
+}
+
+body.theme-warm .ig-draw__dial-caret {
+  display: grid;
+  color: rgba(34, 48, 31, 0.42);
+}
+
+body.theme-warm .ig-draw__dial-caret svg {
+  width: 11px;
+  height: 11px;
+  transform: rotate(90deg);
+}
+
+/* The number itself has no chrome of its own: the well is the field. 16px
+   (1rem) is deliberate, not styling: anything smaller makes iOS Safari zoom
+   the whole page the moment the field takes focus. */
+body.theme-warm .ig-draw__field .ig-draw__phone input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 1rem;
+}
+
+body.theme-warm .ig-draw__field .ig-draw__phone input:focus-visible {
+  outline: none;
+}
+
+body.theme-warm .ig-draw__field input {
+  font-size: 1rem;
+}
+
+/* ---- the six digit code ------------------------------------------------
+   One field, widely spaced digits, styled like a code rather than a text
+   input. `autocomplete="one-time-code"` lets iOS and Android offer the code
+   straight from the WhatsApp notification, which is how most guests will
+   fill it. */
+body.theme-warm .ig-draw__code {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid rgba(34, 48, 31, 0.14);
+  border-radius: 14px;
+  background: var(--card-white);
+  color: var(--ink);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.55em;
+  text-align: center;
+  text-indent: 0.55em;
+}
+
+body.theme-warm .ig-draw__code:focus-visible {
+  outline: 2px solid var(--gold-deep);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+/* Resend, and the wait before it is allowed. The countdown is the honest
+   part: the server enforces 60 seconds, so the button says when, instead of
+   failing silently when the guest taps too early. */
+body.theme-warm .ig-draw__resend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  justify-content: center;
+  margin: 14px 0 0;
+  font-size: 0.78rem;
+  color: var(--link-sub);
+}
+
+body.theme-warm .ig-draw__timer {
+  color: var(--gold-deep);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+body.theme-warm .ig-draw__resend .ig-draw__link[disabled] {
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: none;
+}
+
+body.theme-warm .ig-draw__edit {
+  display: block;
+  margin: 10px auto 0;
+  font-size: 0.78rem;
+}
+
 /* The mobile number is the handle staff match at the counter when a guest
    redeems, so the warning sits right under the field, where the guest types.
    It has to read as a note, not as an error: warm gold, never the red box. */
 body.theme-warm .ig-draw__note {
-  margin: 8px 0 0;
-  padding: 9px 12px;
+  margin: 9px 0 0;
+  padding: 8px 10px;
   border-radius: 12px;
-  background: rgba(168, 137, 62, 0.14);
-  border: 1px solid rgba(168, 137, 62, 0.3);
-  color: #6B5320;
-  font-size: 0.75rem;
-  font-weight: 600;
+  /* a quiet aside, not a warning banner: it explains why the number has to be
+     right, so it must be read, not obeyed. The tint and the hairline carry
+     it; the weight stays light so it does not compete with Continue. */
+  background: rgba(168, 137, 62, 0.09);
+  border: 1px solid rgba(168, 137, 62, 0.2);
+  color: #77602a;
+  font-size: 0.735rem;
+  font-weight: 500;
   line-height: 1.45;
 }
 
 body.theme-warm .ig-draw__consent {
   display: flex;
-  gap: 8px;
+  gap: 9px;
   align-items: flex-start;
-  margin-top: 12px;
-  font-size: 0.75rem;
+  margin-top: 10px;
+  font-size: 0.735rem;
   line-height: 1.45;
   color: var(--link-sub);
 }
 
 body.theme-warm .ig-draw__consent input {
   flex: none;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--forest);
 }
 
-body.theme-warm .ig-draw__form .ig-draw__cta { margin-top: 14px; }
+body.theme-warm .ig-draw__form .ig-draw__cta { margin-top: 12px; }
 
 /* Instagram fallback page: the one link back to the shop window */
 body.theme-warm .id-back {
@@ -3173,10 +3605,275 @@ body.theme-warm .ig-draw__or::after {
   background: rgba(34, 48, 31, 0.12);
 }
 
+/* ---- country calling code picker --------------------------------------
+   Client direction 2026-10-19: no country names in the sheet. Every row is a
+   flag and a dial code, and a search box finds a country by what guests
+   actually type ("uae", "india", "91", "dubai").
+
+   This replaces a native <select>. On a desktop that rendered the operating
+   system's own list, which spilled outside the card, carried a scrollbar the
+   theme could not touch, and could not be searched; on a phone it opened a
+   wheel with no flags at all.
+
+   Same two layer construction as the sheet: a still glass surface, and the
+   scrolling list on top of it.
+   ------------------------------------------------------------------------ */
+body.theme-warm .ig-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 60; /* above the sheet (50): this is the top layer */
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+body.theme-warm .ig-picker[hidden] { display: none; }
+
+body.theme-warm .ig-picker__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(18, 30, 22, 0.34);
+  -webkit-backdrop-filter: blur(7px) saturate(130%);
+  backdrop-filter: blur(7px) saturate(130%);
+  animation: ig-draw-fade 160ms ease;
+}
+
+body.theme-warm .ig-picker__panel {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: min(320px, 100%);
+  max-height: min(430px, 82%);
+  overflow: hidden;
+  border-radius: 26px;
+  box-shadow: 0 22px 54px -20px rgba(18, 32, 22, 0.55);
+  animation: ig-picker-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+body.theme-warm .ig-picker__glass {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  /* same thick warm material as the sheet, so the picker reads as the sheet's
+     own child rather than a different kind of surface */
+  background-color: #fbf7ec;
+  background-image: linear-gradient(180deg, #fffefa, #f8f2e4);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 0 0 1px rgba(168, 137, 62, 0.06);
+}
+
+body.theme-warm .ig-picker__head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 10px 10px 14px;
+  border-bottom: 1px solid rgba(34, 48, 31, 0.07);
+}
+
+body.theme-warm .ig-picker__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+body.theme-warm .ig-picker__search-icon {
+  position: absolute;
+  left: 11px;
+  display: grid;
+  color: rgba(34, 48, 31, 0.38);
+  pointer-events: none;
+}
+
+body.theme-warm .ig-picker__search-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+body.theme-warm .ig-picker__input {
+  width: 100%;
+  padding: 10px 12px 10px 33px;
+  border: 1px solid rgba(34, 48, 31, 0.12);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+body.theme-warm .ig-picker__input::placeholder { color: rgba(34, 48, 31, 0.4); }
+
+body.theme-warm .ig-picker__input:focus-visible {
+  outline: 2px solid var(--gold-deep);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+/* iOS paints its own cancel glyph inside type=search, which fights the close
+   button sitting right next to it. */
+body.theme-warm .ig-picker__input::-webkit-search-cancel-button,
+body.theme-warm .ig-picker__input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+body.theme-warm .ig-picker__close {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(34, 48, 31, 0.06);
+  color: rgba(34, 48, 31, 0.66);
+  cursor: pointer;
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-warm .ig-picker__close:active { transform: scale(0.9); }
+
+body.theme-warm .ig-picker__close svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+body.theme-warm .ig-picker__list {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.theme-warm .ig-picker__item[hidden] { display: none; }
+
+body.theme-warm .ig-picker__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+body.theme-warm .ig-picker__row:active { background: rgba(34, 48, 31, 0.07); }
+
+body.theme-warm .ig-picker__row:focus-visible {
+  outline: 2px solid var(--gold-deep);
+  outline-offset: -2px;
+}
+
+body.theme-warm .ig-picker__row[aria-selected="true"] {
+  background: rgba(168, 137, 62, 0.13);
+}
+
+body.theme-warm .ig-picker__flag {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(34, 48, 31, 0.1);
+}
+
+body.theme-warm .ig-picker__dial {
+  flex: 1 1 auto;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+body.theme-warm .ig-picker__tick {
+  display: grid;
+  width: 16px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+body.theme-warm .ig-picker__tick svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--gold-deep);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.theme-warm .ig-picker__row[aria-selected="true"] .ig-picker__tick { opacity: 1; }
+
+body.theme-warm .ig-picker__empty {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 20px 18px 26px;
+  text-align: center;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--link-sub);
+}
+
+body.theme-warm .ig-picker__empty[hidden] { display: none; }
+
 /* no press scaling when the guest asked for reduced motion */
 @media (prefers-reduced-motion: reduce) {
   body.theme-warm button.ig-draw__cta { transition: none; }
   body.theme-warm button.ig-draw__cta:active { transform: none; }
+  body.theme-warm .ig-picker__panel,
+  body.theme-warm .ig-picker__backdrop,
+  body.theme-warm .ig-draw__sheet,
+  body.theme-warm .ig-draw__scroll { animation: none; }
+  body.theme-warm .ig-draw__dial:active,
+  body.theme-warm .ig-picker__close:active { transform: none; }
+  body.theme-warm .ig-draw__dial,
+  body.theme-warm .ig-picker__row,
+  body.theme-warm .ig-picker__tick,
+  body.theme-warm .ig-draw__phone { transition: none; }
+}
+
+/* reduced transparency: the glass becomes a solid warm card. A guest who
+   asked for this gets the layout, not the material. */
+@media (prefers-reduced-transparency: reduce) {
+  body.theme-warm .ig-draw__glass,
+  body.theme-warm .ig-picker__glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: #fdfbf6;
+  }
+  body.theme-warm .ig-picker__backdrop {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(18, 30, 22, 0.62);
+  }
+  body.theme-warm .ig-picker__input { background: #ffffff; }
 }
 
 /* --------------------------------------------------------------------------
@@ -3261,7 +3958,7 @@ body.theme-warm .page--play .game-reward__nudge {
   margin-top: 8px;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #2e5b3e;
+  color: var(--forest);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -3278,7 +3975,7 @@ body.theme-warm .page--play .game-ladder {
   background: rgba(217, 168, 60, 0.12);
   font-size: 0.72rem;
   line-height: 1.45;
-  color: #2e5b3e;
+  color: var(--forest);
   text-align: center;
 }
 
@@ -3297,13 +3994,40 @@ body.theme-warm .page--play .game-nudge {
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 8px;
-  padding: 22px;
+  padding: 20px;
   text-align: center;
   color: #f7f2e6;
-  background: rgba(24, 40, 29, 0.88);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  backdrop-filter: blur(12px) saturate(140%);
+  /* A veil that thickens toward the bottom, not a flat 88% wall: the game
+     stays legible behind the copy, so the page reads as "about to start"
+     instead of "blocked". Deliberately no backdrop-filter here, because the
+     game keeps running at 60 frames underneath and a blur over a live canvas
+     is recomputed on every one of them. */
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(24, 40, 29, 0.26), rgba(16, 26, 19, 0.72) 62%, rgba(12, 20, 15, 0.9) 100%);
+}
+
+/* The copy on its own card, in the SAME warm material as the sign-in sheet.
+   Client 2026-10-19: it used to be smoked glass at 16% and the chess setup
+   panel behind it ("Play vs Stockfish", LEVEL, PLAY AS) read straight
+   through, so the two sets of words collided. It is now opaque cream, which
+   also makes the invitation and the form that follows it look like one
+   thing: tap the cream card, the cream sheet opens. */
+body.theme-warm .page--play .game-nudge__card {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 296px;
+  padding: 20px 18px 16px;
+  border-radius: 26px;
+  background-color: #fbf7ec;
+  background-image: linear-gradient(180deg, #fffefa 0%, #fdfaf2 46%, #f7f0e0 100%);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 0 0 1px rgba(168, 137, 62, 0.08),
+    0 26px 52px -24px rgba(0, 0, 0, 0.78);
+  animation: ig-body-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 body.theme-warm .page--play .game-nudge__eyebrow {
@@ -3311,22 +4035,37 @@ body.theme-warm .page--play .game-nudge__eyebrow {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(247, 242, 230, 0.72);
+  color: var(--gold-deep);
 }
 
 body.theme-warm .page--play .game-nudge__title {
   font-family: "Fraunces", Georgia, serif;
-  font-size: 1.34rem;
-  line-height: 1.15;
+  font-size: 1.3rem;
+  line-height: 1.18;
   letter-spacing: -0.02em;
-  color: #f7f2e6;
+  color: var(--ink);
+  text-wrap: balance;
 }
 
 body.theme-warm .page--play .game-nudge__body {
   max-width: 30ch;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  color: rgba(247, 242, 230, 0.88);
+  font-size: 0.79rem;
+  line-height: 1.5;
+  color: var(--link-sub);
+  text-wrap: pretty;
+}
+
+/* the quiet choice stays quiet, but it has to be legible on cream, so it is
+   ink on a tint of the card rather than white on a dark wash */
+body.theme-warm .page--play .game-nudge__card .game-cta--ghost {
+  background: rgba(34, 48, 31, 0.055);
+  border: 1px solid rgba(34, 48, 31, 0.14);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+body.theme-warm .page--play .game-nudge__card .game-cta--ghost:active {
+  background: rgba(34, 48, 31, 0.1);
 }
 
 body.theme-warm .page--play .game-nudge__row {
@@ -3334,7 +4073,7 @@ body.theme-warm .page--play .game-nudge__row {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {

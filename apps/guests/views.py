@@ -16,10 +16,13 @@ born (first_brand / first_outlet):
 Instagram cannot confirm a follow (Meta exposes no such check), so the Yes
 answer is stored as SELF-DECLARED and the panel labels it that way.
 
-The mobile number is stored UNVERIFIED (client decision 2026-10-16: no OTP).
-Only its shape is checked, in apps.guests.phone.
+The mobile number is proved before it is trusted: the sheet sends a six
+digit code on WhatsApp (apps.guests.otp) and this view refuses a submit whose
+number was not verified in this browser. That is the only defence that stops
+one person from entering another person's number, so it is not optional.
 """
 
+import json
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -31,10 +34,10 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 
 from apps.core.models import QrCode
 
-from . import identity
+from . import identity, otp
 from .context import DRAFT_KEY, PHONE_HINT, guest_wallet, sheet_context
 from .google import profile_fields_from_claims, verify_id_token
-from .phone import normalise_phone
+from .phone import normalise_phone, normalise_with_country
 
 # Post-submit destinations we accept. A guest-supplied `next` that is not one
 # of our own paths is an open-redirect hole, so anything else falls back to
@@ -76,14 +79,154 @@ def _bounce(url, **params):
     return redirect(url)
 
 
-def _park_draft(request, first_name, last_name, phone, ig_follow):
+def _park_draft(request, first_name, last_name, phone, ig_follow, country=""):
     """Keep a failed submit's input server-side, for the next render only."""
     request.session[DRAFT_KEY] = {
         "first_name": first_name,
         "last_name": last_name,
         "phone": phone,
         "ig_follow": ig_follow,
+        "country": country,
     }
+
+
+# --------------------------------------------------------------------------
+# WhatsApp one time code (apps.guests.otp)
+# --------------------------------------------------------------------------
+
+# Guest-facing wording for every reason the OTP service can answer with. The
+# service speaks in codes; English lives here so the two can never drift.
+OTP_TEXT = {
+    otp.Reason.BAD_PHONE: "That mobile number does not look right.",
+    otp.Reason.COOLDOWN: "Please wait a moment before asking for another code.",
+    otp.Reason.HOURLY_LIMIT: "You have asked for a few codes already. Try again in a little while.",
+    otp.Reason.DAILY_LIMIT: "Too many codes today. Please try again tomorrow.",
+    otp.Reason.IP_LIMIT: "Too many requests from this connection. Please try again later.",
+    otp.Reason.SEND_FAILED: "We could not send the code. Check the number and try again.",
+    otp.Reason.NO_CODE: "Ask for a code first.",
+    otp.Reason.EXPIRED: "That code has expired. Send a new one.",
+    otp.Reason.WRONG: "That code is not right.",
+    otp.Reason.LOCKED: "Too many tries. Send a new code.",
+}
+
+
+def _payload(request):
+    """POST body as a dict, from JSON or from a normal form."""
+    if (request.content_type or "").startswith("application/json"):
+        try:
+            data = json.loads(request.body.decode("utf-8") or "{}")
+        except (ValueError, UnicodeDecodeError):
+            return {}
+        return data if isinstance(data, dict) else {}
+    return request.POST
+
+
+def _posted_phone(data):
+    """E.164 from the picker plus the national part, or "" when unusable."""
+    country = str(data.get("country") or "").strip()[:8]
+    typed = str(data.get("phone") or "").strip()[:40]
+    if country:
+        return normalise_with_country(country, typed)
+    return normalise_phone(typed)
+
+
+def _client_ip(request):
+    """Best-effort caller address for the per-IP send limit.
+
+    Behind the ngrok or nginx tunnel REMOTE_ADDR is the proxy, so the first
+    forwarded hop is used when it parses. This is a rate-limit hint, not an
+    identity: a spoofed header can only spend someone else's allowance.
+    """
+    forwarded = (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")[0].strip()
+    candidate = forwarded or request.META.get("REMOTE_ADDR") or ""
+    return candidate[:45] or None
+
+
+def _otp_json(outcome, status=200, **extra):
+    body = {
+        "ok": outcome.ok,
+        "reason": outcome.reason,
+        "message": "" if outcome.ok else OTP_TEXT.get(outcome.reason, ""),
+    }
+    if outcome.phone:
+        body["phone"] = outcome.phone
+    if outcome.retry_after:
+        body["retry_after"] = outcome.retry_after
+    if outcome.attempts_left:
+        body["attempts_left"] = outcome.attempts_left
+    if outcome.debug_code:
+        body["debug_code"] = outcome.debug_code
+    if outcome.skipped:
+        body["already_verified"] = True
+    body.update(extra)
+    return JsonResponse(body, status=status)
+
+
+@require_POST
+def otp_send(request, key):
+    """Send a code to the number in the sheet. Answers JSON, never redirects."""
+    qr = _qr(key)
+    if qr is None:
+        return JsonResponse({"ok": False, "reason": "not_found"}, status=404)
+
+    phone = _posted_phone(_payload(request))
+    if not phone:
+        return JsonResponse(
+            {
+                "ok": False,
+                "reason": otp.Reason.BAD_PHONE,
+                "message": OTP_TEXT[otp.Reason.BAD_PHONE],
+            },
+            status=400,
+        )
+
+    # A guest who already proved this exact number on this device does not
+    # need another message. Re-verifying the same number is friction with no
+    # security value, so it is skipped and the proof is refreshed.
+    handle = getattr(request, "guest", None)
+    profile = handle.profile if handle is not None else None
+    if profile is not None and profile.phone_verified and profile.phone == phone:
+        otp.remember(request, phone)
+        return _otp_json(
+            otp.Outcome(True, otp.Reason.OK, phone=phone, skipped=True),
+            resend_after=0,
+        )
+
+    outcome = otp.issue(phone, ip=_client_ip(request))
+    status = 200
+    if not outcome.ok:
+        status = 429 if outcome.retry_after else 400
+        # The caller needs the number on every refusal too: a cooldown means
+        # a code is already on its way to THIS number, and the sheet sends
+        # the guest back to the code field rather than to a dead end.
+        return _otp_json(outcome, status=status, resend_after=outcome.retry_after, phone=phone)
+    return _otp_json(outcome, status=status, resend_after=outcome.retry_after)
+
+
+@require_POST
+def otp_check(request, key):
+    """Check a typed code and remember the verified number for this session."""
+    qr = _qr(key)
+    if qr is None:
+        return JsonResponse({"ok": False, "reason": "not_found"}, status=404)
+
+    data = _payload(request)
+    phone = _posted_phone(data)
+    outcome = otp.verify(phone, data.get("code"))
+
+    if outcome.ok:
+        row = (
+            otp.PhoneOTP.objects.filter(phone=phone, consumed_at__isnull=False)
+            .order_by("-consumed_at")
+            .first()
+        )
+        otp.remember(request, phone, row.pk if row else None)
+        return _otp_json(outcome)
+
+    status = 400
+    if outcome.reason in (otp.Reason.LOCKED,):
+        status = 429
+    return _otp_json(outcome, status=status)
 
 
 @require_GET
@@ -111,8 +254,13 @@ def identity_submit(request, key):
 
     first_name = (request.POST.get("first_name") or "").strip()[:80]
     last_name = (request.POST.get("last_name") or "").strip()[:80]
+    country = (request.POST.get("country") or "").strip()[:8]
     typed_phone = (request.POST.get("phone") or "").strip()[:40]
-    phone = normalise_phone(typed_phone)
+    phone = (
+        normalise_with_country(country, typed_phone)
+        if country
+        else normalise_phone(typed_phone)
+    )
     consent = (request.POST.get("consent") or "").lower() in _TRUE_VALUES
     ig_follow = request.POST.get("ig_follow") == "1"
 
@@ -123,8 +271,15 @@ def identity_submit(request, key):
         error = "bad_phone"
     elif not consent:
         error = "no_consent"
+    elif not otp.consume(request, phone):
+        # The number was never proved in this browser, or the proof is for a
+        # different number than the one being submitted. Either way the value
+        # is only a claim, so it must not be stored as the guest's own.
+        error = "phone_unverified"
     if error:
-        _park_draft(request, first_name, last_name, typed_phone, ig_follow)
+        _park_draft(
+            request, first_name, last_name, typed_phone, ig_follow, country
+        )
         return _bounce(back, identity_error=error)
 
     profile, _created = identity.ensure_profile(
@@ -136,6 +291,12 @@ def identity_submit(request, key):
     profile.last_name = last_name
     profile.phone = phone
     fields = ["first_name", "last_name", "phone", "updated_at"]
+
+    # The proof was consumed above, so this number is now proved for this
+    # profile. That is the only place phone_verified is ever set.
+    if not profile.phone_verified:
+        profile.phone_verified = True
+        fields.append("phone_verified")
 
     # Consent is stamped once, so a later visit cannot silently backdate it.
     if not profile.consent_at:
@@ -275,6 +436,13 @@ def guest_profile_page(request, key):
                     was_blank = not profile.phone
                     profile.phone = normalised_phone
                     fields.append("phone")
+                    # A number edited later on the profile page has not been
+                    # proved, so the tick must go with the old number. Without
+                    # this reset a guest could verify once and then swap in
+                    # any number while still counting as verified.
+                    if profile.phone_verified:
+                        profile.phone_verified = False
+                        fields.append("phone_verified")
                     if not was_blank:
                         profile.phone_changed_at = now
                         fields.append("phone_changed_at")

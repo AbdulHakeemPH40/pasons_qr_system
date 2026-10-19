@@ -37,6 +37,21 @@
   // gold ring survives a resize re-layout. Cleared with each new game.
   var matchedSet = {};
 
+  // Turn guard and input lock. A missed pair stays face up for
+  // `nonMatchingCardTime`, but the model conceals both cards the instant the
+  // pair resolves. A tap landing inside that window was therefore read
+  // against a card the guest could still see: the flip was accepted, the
+  // `.clicked` class was toggled OFF (hiding the food they had just turned
+  // over), and the pending timeout then stripped the face off the card that
+  // had become the new turn's first pick. The card looked face down while
+  // the model still held it as selected, so every later tap on it was
+  // refused as "already facing up" and the board felt stuck. The board is
+  // locked for the window instead, which is what a memory game does: both
+  // cards show, both go down, then you may play. `turnId` also lets a
+  // pending timeout notice that a new board was dealt and leave it alone.
+  var turnId = 0;
+  var boardLocked = false;
+
   var timerEl = document.getElementById('memory--timer');
   var pointsEl = document.getElementById('memory--points');
 
@@ -140,6 +155,10 @@
       }
       renderPoints();
       matchedSet = {};
+      // A fresh board: release any lock left by the previous round and make
+      // its pending miss timeout bail instead of clearing faces here.
+      turnId++;
+      boardLocked = false;
       buildLayout($.cards, $.settings.rows, $.settings.columns, true);
       startTimer(budgetFor($.settings.rows, $.settings.columns));
     }
@@ -179,20 +198,47 @@
     showEndGame('Time\u2019s up!');
   };
 
+  // Build the node list of the board. Rebuilt on every layout, so it must be
+  // asked for fresh instead of cached.
+  var cardNodes = function () {
+    return document.getElementById('memory--cards').childNodes;
+  };
+
+  // Paint one card to match the model. Never `toggle`: the model holds the
+  // truth, and toggling a stale class is what hid a card mid-turn.
+  var paintCard = function (index, isFaceUp) {
+    var node = cardNodes()[index];
+    if (node) {
+      node.classList.toggle('clicked', !!isFaceUp);
+    }
+  };
+
   // Handle clicking on card
   var handleFlipCard = function (event) {
 
     event.preventDefault();
 
-    if ($.isGameOver) {
+    if ($.isGameOver || boardLocked) {
       return;
     }
 
-    var status = $.play(this.index);
-    console.log(status);
+    var index = this.index;
+    var status = $.play(index);
 
-    if (status.code != 0 ) {
-      this.classList.toggle('clicked');
+    if (status.code == 3) {
+      // A missed pair: keep both faces up for the window even though the
+      // model has already concealed them.
+      paintCard(status.args[0], true);
+      paintCard(status.args[1], true);
+    }
+    else {
+      // First card of a turn, a match, the final pair, or a card that is
+      // already up: the screen follows the model.
+      paintCard(index, $.cards[index].isRevealed);
+      if (status.args) {
+        paintCard(status.args[0], $.cards[status.args[0]].isRevealed);
+        paintCard(status.args[1], $.cards[status.args[1]].isRevealed);
+      }
     }
 
     renderPoints();
@@ -200,7 +246,7 @@
     // Glass-pass motion: ring matched pairs in gold, shake a missed pair.
     // Purely visual — the flip contract above is untouched.
     if (status.code == 2 || status.code == 4) {
-      var nodes = document.getElementById('memory--cards').childNodes;
+      var nodes = cardNodes();
       matchedSet[status.args[0]] = true;
       matchedSet[status.args[1]] = true;
       nodes[status.args[0]].classList.add('matched');
@@ -210,16 +256,29 @@
     }
 
     if (status.code == 3 ) {
-      var missNodes = document.getElementById('memory--cards').childNodes;
+      var missNodes = cardNodes();
       missNodes[status.args[0]].classList.add('miss');
       missNodes[status.args[1]].classList.add('miss');
+
+      var stamp = turnId;
+      var pair = [status.args[0], status.args[1]];
+      boardLocked = true;
       setTimeout(function () {
-        var childNodes = document.getElementById('memory--cards').childNodes;
-        childNodes[status.args[0]].classList.remove('clicked');
-        childNodes[status.args[1]].classList.remove('clicked');
-        childNodes[status.args[0]].classList.remove('miss');
-        childNodes[status.args[1]].classList.remove('miss');
-      }.bind(status), nonMatchingCardTime);
+        if (stamp !== turnId) {
+          // A new board was dealt while this pair was up. Those nodes are
+          // gone, and the ones standing in their place are not ours.
+          return;
+        }
+        boardLocked = false;
+        var childNodes = cardNodes();
+        pair.forEach(function (i) {
+          if (!childNodes[i]) {
+            return;
+          }
+          childNodes[i].classList.remove('miss');
+          paintCard(i, $.cards[i].isRevealed);
+        });
+      }, nonMatchingCardTime);
     }
     else if (status.code == 4) {
       stopTimer();

@@ -28,6 +28,18 @@ urlpatterns = [
         views.identity_google,
         name="guest_identity_google",
     ),
+    # WhatsApp one time code: send a fresh code, then check what was typed.
+    # Both answer JSON and are called by the sheet's script.
+    path(
+        "q/<slug:key>/identity/otp/send/",
+        views.otp_send,
+        name="guest_otp_send",
+    ),
+    path(
+        "q/<slug:key>/identity/otp/check/",
+        views.otp_check,
+        name="guest_otp_check",
+    ),
     path(
         "q/<slug:key>/profile/",
         views.guest_profile_page,

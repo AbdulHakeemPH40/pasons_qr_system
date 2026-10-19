@@ -13,10 +13,14 @@ Locks the cookie/identity contract:
 
 import csv
 import io
+import json
+import urllib.error
+from datetime import timedelta
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth.models import User
+from django.contrib.staticfiles import finders
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
@@ -24,11 +28,11 @@ from django.utils import timezone
 
 from apps.core.models import Brand, Outlet, QrCode, SmartPage
 
-from . import identity, panel_views
+from . import identity, otp, panel_views, whatsapp
 from .google import profile_fields_from_claims, verify_id_token
 from .middleware import GuestIdentityMiddleware
-from .models import GuestProfile
-from .phone import normalise_phone
+from .models import GuestProfile, PhoneOTP
+from .phone import COUNTRIES, normalise_phone, normalise_with_country, picker_countries
 
 COOKIE = identity.COOKIE_NAME
 
@@ -107,6 +111,39 @@ class GuestQrFixtures(TestCase):
     @property
     def landing_url(self):
         return reverse("qr_landing", args=[self.qr.redirect_key])
+
+    # --- WhatsApp one time code -----------------------------------------
+    # The suite runs with WHATSAPP_OTP_DEBUG forced on (config/settings.py),
+    # so no message is ever sent and the send endpoint answers with the code.
+    # These helpers drive the REAL endpoints rather than seeding a session,
+    # so the tests cover the same path a guest takes.
+
+    def send_code(self, phone="050 123 4567", country="971"):
+        response = self.client.post(
+            reverse("guest_otp_send", args=[self.qr.redirect_key]),
+            data={"country": country, "phone": phone},
+            content_type="application/json",
+        )
+        return response, response.json()
+
+    def verify_phone(self, phone="050 123 4567", country="971"):
+        """Send and check a code, leaving the session holding a proof.
+
+        A guest who already proved this number on this device is skipped by
+        the server (no second message), so that answer is a success too.
+        """
+        _response, sent = self.send_code(phone=phone, country=country)
+        self.assertTrue(sent.get("ok"), sent)
+        if sent.get("already_verified"):
+            return sent
+        code = sent.get("debug_code")
+        self.assertTrue(code, "debug delivery must return the code in tests")
+        response = self.client.post(
+            reverse("guest_otp_check", args=[self.qr.redirect_key]),
+            data={"country": country, "phone": phone, "code": code},
+            content_type="application/json",
+        )
+        return response.json()
 
 
 class AnonymousBrowseWritesNothingTests(GuestQrFixtures):
@@ -242,6 +279,26 @@ class DedicatedGuestProfilePageTests(GuestQrFixtures):
         response = self.client.get(self.profile_url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], self.landing_url)
+
+    def test_changing_the_number_later_drops_the_verified_tick(self):
+        """A number edited on the profile page was never proved.
+
+        Without this reset a guest could verify once, then swap in any number
+        and still count as verified, which is the hole the OTP step closes.
+        """
+        profile = self._saved(phone_verified=True)
+        response = self.client.post(
+            self.profile_url,
+            {
+                "first_name": "Abdul",
+                "last_name": "Hakeem",
+                "phone": "050 111 2233",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        profile.refresh_from_db()
+        self.assertEqual(profile.phone, "+971501112233")
+        self.assertFalse(profile.phone_verified)
 
     def test_renders_dedicated_profile_page_with_guest_details_and_coupons(self):
         from datetime import timedelta
@@ -588,11 +645,11 @@ class InstagramFallbackPageTests(GuestQrFixtures):
         """The mobile number is the handle staff match at the counter when a
         guest redeems, so the form says so BEFORE the guest submits."""
         body = self.client.get(self._url()).content.decode()
-        self.assertIn("It must match when you redeem your coupon", body)
-        self.assertIn("make sure it is correct before you submit", body)
+        self.assertIn("We send a 6 digit code on WhatsApp to check this number", body)
+        self.assertIn("Use your own number: it must match when you claim", body)
         # The note sits under the mobile field, not somewhere else on the page.
         phone_at = body.index('name="phone"')
-        note_at = body.index("It must match when you redeem your coupon")
+        note_at = body.index("Use your own number: it must match when you claim")
         self.assertLess(phone_at, note_at)
 
     def test_unknown_key_is_404(self):
@@ -636,19 +693,188 @@ class LandingSheetTests(GuestQrFixtures):
         self.assertIn('name="phone"', body)
         self.assertIn('name="consent"', body)
 
+    def test_the_sheet_carries_the_code_step_and_its_controls(self):
+        body = self.client.get(self.landing_url).content.decode()
+        self.assertIn('data-panel="code"', body)
+        # country picker, UAE preselected. The value that posts is the dial
+        # code, still carried by a field named `country`, so nothing about the
+        # submitted form changed when the native select became a flag picker.
+        self.assertIn('name="country"', body)
+        self.assertIn('value="971"', body)
+        # the code field lets the phone fill it from the WhatsApp message
+        self.assertIn('autocomplete="one-time-code"', body)
+        self.assertIn("Didn't get it?", body)
+        self.assertIn("Wrong number? Edit the number", body)
+        key = self.qr.redirect_key
+        self.assertIn(f"/q/{key}/identity/otp/send/", body)
+        self.assertIn(f"/q/{key}/identity/otp/check/", body)
+
+    def test_the_country_picker_is_flags_and_dial_codes_not_a_select(self):
+        """Client direction 2026-10-19: no country names in the sheet.
+
+        The picker is a searchable list of flags and dial codes. This locks
+        three things that would each be a silent regression:
+
+        1. the native select is gone (it could not be searched, and on a
+           desktop it spilled outside the card),
+        2. every row carries a flag and a shorter search haystack than the
+           visible text, so "uae" and "91" both find something,
+        3. no country NAME is printed: the only visible text on a row is the
+           dial code.
+        """
+        body = self.client.get(self.landing_url).content.decode()
+        self.assertNotIn("<select", body)
+        self.assertIn("ig-picker__row", body)
+        self.assertIn('data-picker-search', body)
+        # one row per country, each with its flag file. Counted on the class,
+        # not on data-picker-row: the script in the same partial mentions that
+        # attribute twice.
+        self.assertEqual(body.count('class="ig-picker__row"'), len(COUNTRIES))
+        self.assertIn("/static/img/flags/ae.png", body)
+        self.assertIn("/static/img/flags/in.png", body)
+        # every row is a flag, a dial code, and a tick. The English name lives
+        # only in data-search and aria-label, never between the tags.
+        for dial, _name, _iso in COUNTRIES:
+            self.assertIn(f'<span class="ig-picker__dial">+{dial}</span>', body)
+
+    def test_the_unverified_error_explains_the_code_step(self):
+        body = self.client.get(
+            self.landing_url + "?identity_error=phone_unverified"
+        ).content.decode()
+        self.assertIn('data-state="form"', body)
+        self.assertIn("Please verify your mobile number with the code", body)
+
+
+class SheetMaterialCssTests(TestCase):
+    """The sheet and the pre-game prompt must not be see-through.
+
+    Client report 2026-10-19: over a game, the page behind showed THROUGH the
+    sign-in card and through the pre-game prompt, so two sets of words landed
+    on top of each other and neither could be read. The fix is an opaque warm
+    cream surface plus a deep scrim, and this test locks it so a later "make
+    it look more glassy" pass cannot quietly bring the ghosting back.
+
+    The material is also the reason there is no backdrop-filter left on either
+    layer: an opaque surface has nothing to sample, and a blur over a live
+    game canvas is re-sampled on every frame.
+    """
+
+    @staticmethod
+    def _rule(css, selector):
+        """The declaration block of the first rule that opens with `selector`.
+
+        Brace balanced on purpose: a regex over the whole stylesheet drifts
+        as soon as one comment or one nested at-rule block upsets the
+        pairing, and then it silently matches the wrong rule.
+        """
+        at = css.find(selector + " {")
+        if at == -1:
+            return ""
+        start = css.index("{", at)
+        depth = 0
+        for i in range(start, len(css)):
+            if css[i] == "{":
+                depth += 1
+            elif css[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    return css[start + 1 : i]
+        return ""
+
+    def setUp(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        self.css = (
+            Path(settings.BASE_DIR) / "static" / "css" / "theme-warm.css"
+        ).read_text(encoding="utf-8")
+
+    def test_the_sheet_surface_is_opaque_cream(self):
+        glass = self._rule(self.css, "body.theme-warm .ig-draw__glass")
+        self.assertTrue(glass, "the sheet's surface rule is gone")
+        self.assertIn(
+            "background-color: #",
+            glass,
+            "the sheet must declare an opaque background-color: a translucent "
+            "gradient alone is what let the game read through the form",
+        )
+        self.assertNotIn(
+            "backdrop-filter",
+            glass,
+            "an opaque surface has nothing to blur; a filter here is a per "
+            "frame cost with no visual gain",
+        )
+
+    def test_the_scrim_dims_without_blurring_a_live_game(self):
+        scrim = self._rule(self.css, "body.theme-warm .ig-draw__backdrop")
+        self.assertTrue(scrim, "the scrim rule is gone")
+        self.assertNotIn(
+            "backdrop-filter",
+            scrim,
+            "a blur on the scrim is re-sampled on every frame of the game "
+            "canvas running underneath it",
+        )
+        self.assertIn("radial-gradient", scrim)
+
+    def test_the_pregame_prompt_is_opaque_too(self):
+        card = self._rule(self.css, "body.theme-warm .page--play .game-nudge__card")
+        self.assertTrue(card, "the pre-game prompt card rule is gone")
+        self.assertIn(
+            "background-color: #",
+            card,
+            "the chess setup panel read straight through this card at 16% "
+            "opacity and collided with its own copy",
+        )
+
+    def test_the_form_does_not_show_a_scroll_bar(self):
+        scroll = self._rule(self.css, "body.theme-warm .ig-draw__scroll")
+        self.assertIn(
+            "scrollbar-width: none",
+            scroll,
+            "the operating system scroll track drew a pale line down the edge "
+            "of the form and read as a broken border",
+        )
+        self.assertIn("::-webkit-scrollbar", self.css)
+
+    def test_a_short_phone_keeps_continue_above_the_fold(self):
+        """375x667 is the smallest screen the client tests on.
+
+        The form is taller than the card there, so the primary action fell
+        below the fold, and with the scroll bar hidden there was no cue that
+        anything was below. Compact mode gives the card more height and drops
+        the decorative icon.
+        """
+        self.assertIn("@media (max-height: 720px)", self.css)
+        start = self.css.index("@media (max-height: 720px)")
+        block = self.css[start : self.css.index("\n}\n", start)]
+        self.assertIn("body.theme-warm .ig-draw__icon { display: none; }", block)
+        self.assertIn("max-height: 98%", block)
+
 
 class IdentitySubmitTests(GuestQrFixtures):
     """POST /q/<key>/identity/ -- the single write in the guest flow."""
 
     def _post(self, **overrides):
+        # `claimed_phone` proves one number and then posts a different one,
+        # which is the flow a tester cannot reach by accident.
+        claimed = overrides.pop("claimed_phone", None)
         payload = {
             "first_name": "Aisha",
             "last_name": "Rahman",
+            "country": "971",
             "phone": "050 123 4567",
             "consent": "1",
             "next": self.landing_url,
         }
         payload.update(overrides)
+        # The form refuses a number that was not proved, so prove it first,
+        # exactly as the sheet does. A test about a wrong shape skips this
+        # because no code can be sent to a number that is not a number.
+        if normalise_with_country(payload["country"], payload["phone"]):
+            self.verify_phone(phone=payload["phone"], country=payload["country"])
+        if claimed is not None:
+            payload["phone"] = claimed
         return self.client.post(
             reverse("guest_identity_submit", args=[self.qr.redirect_key]), payload
         )
@@ -662,7 +888,7 @@ class IdentitySubmitTests(GuestQrFixtures):
         self.assertEqual(profile.first_name, "Aisha")
         self.assertEqual(profile.last_name, "Rahman")
         self.assertEqual(profile.phone, "+971501234567")
-        self.assertFalse(profile.phone_verified)
+        self.assertTrue(profile.phone_verified)
         self.assertTrue(profile.consent_marketing)
         self.assertIsNotNone(profile.consent_at)
         self.assertTrue(profile.ig_follow_claimed)
@@ -773,6 +999,415 @@ class IdentitySubmitTests(GuestQrFixtures):
             {"first_name": "A", "phone": "0501234567", "consent": "1"},
         )
         self.assertEqual(response.status_code, 404)
+
+    def test_a_number_that_was_never_proved_is_refused(self):
+        """No code, no profile. This is the whole point of the OTP step."""
+        response = self.client.post(
+            reverse("guest_identity_submit", args=[self.qr.redirect_key]),
+            {
+                "first_name": "Aisha",
+                "last_name": "Rahman",
+                "country": "971",
+                "phone": "050 123 4567",
+                "consent": "1",
+                "next": self.landing_url,
+            },
+        )
+        self.assertIn("identity_error=phone_unverified", response["Location"])
+        self.assertEqual(GuestProfile.objects.count(), 0)
+        # the typed values are kept out of the URL, as on every other error
+        self.assertNotIn("9715", response["Location"])
+
+    def test_proving_one_number_does_not_let_another_one_through(self):
+        response = self._post(claimed_phone="050 999 8887")
+        self.assertIn("identity_error=phone_unverified", response["Location"])
+        self.assertEqual(GuestProfile.objects.count(), 0)
+
+    def test_the_country_picker_decides_the_country(self):
+        response = self._post(country="44", phone="07911 123456")
+        self.assertIn("joined=1", response["Location"])
+        self.assertEqual(GuestProfile.objects.get().phone, "+447911123456")
+
+    def test_a_proof_is_spent_by_the_submit_it_verified(self):
+        """One code buys one profile, not two."""
+        self._post()
+        self.assertEqual(GuestProfile.objects.count(), 1)
+        second = self.client.post(
+            reverse("guest_identity_submit", args=[self.qr.redirect_key]),
+            {
+                "first_name": "Someone",
+                "last_name": "Else",
+                "country": "971",
+                "phone": "050 123 4567",
+                "consent": "1",
+                "next": self.landing_url,
+            },
+        )
+        self.assertIn("identity_error=phone_unverified", second["Location"])
+        self.assertEqual(GuestProfile.objects.count(), 1)
+
+
+# --------------------------------------------------------------------------
+# WhatsApp one time code (2026-10-19)
+# --------------------------------------------------------------------------
+
+PHONE = "+971501234567"
+
+
+class CountryPickerTests(TestCase):
+    """The picker supplies the dial code, so no country guessing is needed."""
+
+    def test_the_uae_is_first_and_no_code_repeats(self):
+        self.assertEqual(COUNTRIES[0][0], "971")
+        dials = [dial for dial, _name, _iso in COUNTRIES]
+        self.assertEqual(len(dials), len(set(dials)))
+
+    def test_every_country_has_a_flag_file_on_disk(self):
+        """A missing flag is a broken image in the sheet, not a test failure
+        anywhere else, so it is checked here."""
+        for dial, name, iso in COUNTRIES:
+            path = f"img/flags/{iso}.png"
+            self.assertIsNotNone(
+                finders.find(path), msg=f"{name} ({dial}) has no flag at {path}"
+            )
+
+    def test_the_picker_rows_carry_what_search_needs(self):
+        rows = picker_countries()
+        self.assertEqual(len(rows), len(COUNTRIES))
+        for row in rows:
+            # the visible text is the dial code and nothing else
+            self.assertTrue(row["dial"])
+            self.assertTrue(row["iso"])
+            # the haystack is what the search box matches against
+            self.assertIn(row["dial"], row["search"])
+            self.assertIn(row["iso"], row["search"])
+            self.assertEqual(row["search"], row["search"].lower())
+            # and the accessible name still says which country it is
+            self.assertIn(f"+{row['dial']}", row["label"])
+
+    def test_search_words_people_actually_type(self):
+        """The English name alone is not enough: "uae" is not inside
+        "United Arab Emirates", and nobody types "United States"."""
+        by_dial = {row["dial"]: row["search"] for row in picker_countries()}
+        self.assertIn("uae", by_dial["971"])
+        self.assertIn("dubai", by_dial["971"])
+        self.assertIn("india", by_dial["91"])
+        self.assertIn("91", by_dial["91"])
+        self.assertIn("uk", by_dial["44"])
+        self.assertIn("usa", by_dial["1"])
+
+    def test_country_plus_national_number_becomes_e164(self):
+        self.assertEqual(normalise_with_country("971", "050 123 4567"), PHONE)
+        self.assertEqual(normalise_with_country("971", "501234567"), PHONE)
+        self.assertEqual(normalise_with_country("44", "07911 123456"), "+447911123456")
+        self.assertEqual(normalise_with_country("91", "98765 43210"), "+919876543210")
+
+    def test_a_pasted_full_number_wins_over_the_picker(self):
+        self.assertEqual(
+            normalise_with_country("971", "+44 7911 123456"), "+447911123456"
+        )
+        self.assertEqual(
+            normalise_with_country("971", "00971501234567"), PHONE
+        )
+
+    def test_garbage_is_refused(self):
+        for dial, phone in (("971", ""), ("971", "abc"), ("", "abc"), ("971", "0")):
+            self.assertEqual(
+                normalise_with_country(dial, phone), "", msg=repr((dial, phone))
+            )
+
+
+class OtpIssueTests(GuestQrFixtures):
+    """Issuing and sending a code, and every limit that guards it."""
+
+    def _age(self, row, minutes):
+        PhoneOTP.objects.filter(pk=row.pk).update(
+            created_at=timezone.now() - timedelta(minutes=minutes)
+        )
+
+    def _old_row(self, phone=PHONE, minutes=5, **extra):
+        row = PhoneOTP.objects.create(
+            phone=phone, code_hash="x", expires_at=timezone.now(), **extra
+        )
+        self._age(row, minutes)
+        return row
+
+    def test_the_digits_are_never_stored(self):
+        outcome = otp.issue(PHONE)
+        self.assertTrue(outcome.ok)
+        self.assertRegex(outcome.debug_code, r"^\d{6}$")
+
+        row = PhoneOTP.objects.get()
+        self.assertNotIn(outcome.debug_code, row.code_hash)
+        self.assertTrue(row.code_hash.startswith("pbkdf2_"))
+        self.assertTrue(row.delivered)
+        self.assertLessEqual(
+            row.expires_at - timezone.now(), timedelta(minutes=5, seconds=2)
+        )
+
+    def test_a_second_send_inside_a_minute_is_refused_with_a_wait(self):
+        otp.issue(PHONE)
+        outcome = otp.issue(PHONE)
+        self.assertFalse(outcome.ok)
+        self.assertEqual(outcome.reason, otp.Reason.COOLDOWN)
+        self.assertGreater(outcome.retry_after, 50)
+        self.assertLessEqual(outcome.retry_after, 60)
+
+    def test_three_codes_an_hour_then_a_fourth_is_refused(self):
+        for minutes in (30, 20, 10):
+            self._old_row(minutes=minutes)
+        outcome = otp.issue(PHONE)
+        self.assertFalse(outcome.ok)
+        self.assertEqual(outcome.reason, otp.Reason.HOURLY_LIMIT)
+        self.assertGreater(outcome.retry_after, 0)
+
+    def test_ten_codes_a_day_then_a_wait(self):
+        for hours in range(2, 12):
+            self._old_row(minutes=hours * 60)
+        outcome = otp.issue(PHONE)
+        self.assertEqual(outcome.reason, otp.Reason.DAILY_LIMIT)
+
+    def test_one_address_cannot_message_twelve_numbers(self):
+        for n in range(12):
+            self._old_row(phone=f"+9715000000{n:02d}", sent_ip="10.0.0.9")
+        outcome = otp.issue("+971509999999", ip="10.0.0.9")
+        self.assertEqual(outcome.reason, otp.Reason.IP_LIMIT)
+
+    def test_a_failed_send_leaves_no_code_behind(self):
+        with mock.patch.object(
+            whatsapp, "send_otp", return_value=whatsapp.Delivery(False, "http_500")
+        ):
+            outcome = otp.issue(PHONE)
+        self.assertFalse(outcome.ok)
+        self.assertEqual(outcome.reason, otp.Reason.SEND_FAILED)
+        self.assertEqual(PhoneOTP.objects.count(), 0)
+
+    def test_a_new_code_kills_the_old_one(self):
+        first = otp.issue(PHONE)
+        self._age(PhoneOTP.objects.get(), 2)
+        second = otp.issue(PHONE)
+        self.assertTrue(second.ok)
+        self.assertNotEqual(first.debug_code, second.debug_code)
+        # The replaced digits are no longer a working code. They are not
+        # accepted silently and they do not open a second window: typing an
+        # old code is just a wrong guess against the live one.
+        stale = otp.verify(PHONE, first.debug_code)
+        self.assertFalse(stale.ok)
+        self.assertEqual(stale.reason, otp.Reason.WRONG)
+        self.assertTrue(otp.verify(PHONE, second.debug_code).ok)
+
+
+class OtpVerifyTests(GuestQrFixtures):
+    """Checking a typed code: single use, five tries, five minutes."""
+
+    def test_the_right_code_is_accepted_once(self):
+        issued = otp.issue(PHONE)
+        first = otp.verify(PHONE, issued.debug_code)
+        self.assertTrue(first.ok)
+        self.assertIsNotNone(PhoneOTP.objects.get().consumed_at)
+        # replaying the same digits cannot open a second profile
+        self.assertFalse(otp.verify(PHONE, issued.debug_code).ok)
+
+    def test_wrong_digits_count_down_then_lock(self):
+        issued = otp.issue(PHONE)
+        wrong = "000000" if issued.debug_code != "000000" else "111111"
+        for left in (4, 3, 2, 1):
+            answer = otp.verify(PHONE, wrong)
+            self.assertEqual(answer.reason, otp.Reason.WRONG)
+            self.assertEqual(answer.attempts_left, left)
+        locked = otp.verify(PHONE, wrong)
+        self.assertEqual(locked.reason, otp.Reason.LOCKED)
+        self.assertIsNotNone(PhoneOTP.objects.get().consumed_at)
+
+    def test_a_code_dies_when_it_expires(self):
+        issued = otp.issue(PHONE)
+        PhoneOTP.objects.update(expires_at=timezone.now() - timedelta(seconds=1))
+        self.assertEqual(
+            otp.verify(PHONE, issued.debug_code).reason, otp.Reason.EXPIRED
+        )
+
+    def test_a_number_that_never_asked_for_a_code_has_none(self):
+        self.assertEqual(otp.verify(PHONE, "123456").reason, otp.Reason.NO_CODE)
+
+
+class OtpHttpTests(GuestQrFixtures):
+    """The two JSON endpoints the sheet calls."""
+
+    def test_send_answers_the_code_in_debug_mode(self):
+        response, data = self.send_code()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["phone"], PHONE)
+        self.assertEqual(len(data["debug_code"]), 6)
+        self.assertEqual(data["resend_after"], 60)
+
+    def test_a_second_send_inside_the_minute_is_429(self):
+        self.send_code()
+        response, data = self.send_code()
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(data["reason"], "cooldown")
+        self.assertTrue(data["message"])
+        self.assertGreater(data["retry_after"], 0)
+
+    def test_a_bad_number_is_400_and_stores_nothing(self):
+        response, data = self.send_code(phone="hello")
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(data["ok"])
+        self.assertEqual(PhoneOTP.objects.count(), 0)
+
+    def test_check_accepts_the_code_and_leaves_a_session_proof(self):
+        data = self.verify_phone()
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["phone"], PHONE)
+        self.assertEqual(self.client.session.get(otp.SESSION_KEY)["phone"], PHONE)
+
+    def test_check_refuses_a_wrong_code_and_says_how_many_tries_are_left(self):
+        _response, sent = self.send_code()
+        wrong = "000000" if sent["debug_code"] != "000000" else "111111"
+        response = self.client.post(
+            reverse("guest_otp_check", args=[self.qr.redirect_key]),
+            data={"country": "971", "phone": "050 123 4567", "code": wrong},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        body = response.json()
+        self.assertEqual(body["reason"], "wrong")
+        self.assertEqual(body["attempts_left"], 4)
+        self.assertFalse(self.client.session.get(otp.SESSION_KEY))
+
+    def test_unknown_qr_key_is_404(self):
+        response = self.client.post(
+            reverse("guest_otp_send", args=["no-such-key"]),
+            data={"country": "971", "phone": "0501234567"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 404)
+
+
+class PhoneProofTests(GuestQrFixtures):
+    """The session proof: one number, one submit, half an hour."""
+
+    def _request(self):
+        from django.test import RequestFactory
+
+        request = RequestFactory().post("/")
+        request.session = self.client.session
+        return request
+
+    def test_a_fresh_proof_matches_its_own_number_only(self):
+        self.verify_phone()
+        request = self._request()
+        self.assertEqual(otp.proof_phone(request), PHONE)
+        self.assertFalse(otp.consume(request, "+971509999999"))
+        # a mismatch must not spend the proof for the real number
+        self.assertTrue(otp.consume(request, PHONE))
+
+    def test_a_proof_is_single_use(self):
+        self.verify_phone()
+        request = self._request()
+        self.assertTrue(otp.consume(request, PHONE))
+        self.assertFalse(otp.consume(request, PHONE))
+
+    def test_a_stale_proof_is_dropped(self):
+        self.verify_phone()
+        request = self._request()
+        session = request.session
+        entry = dict(session[otp.SESSION_KEY])
+        entry["at"] = (
+            timezone.now() - timedelta(seconds=otp.PROOF_MAX_AGE_SECONDS + 60)
+        ).isoformat()
+        session[otp.SESSION_KEY] = entry
+        session.save()
+        self.assertEqual(otp.proof_phone(request), "")
+        self.assertNotIn(otp.SESSION_KEY, session)
+
+
+class WhatsAppDeliveryTests(TestCase):
+    """The Cloud API call, without ever touching the network."""
+
+    @override_settings(
+        WHATSAPP_OTP_DEBUG=False,
+        WHATSAPP_ACCESS_TOKEN="test-token",
+        WHATSAPP_PHONE_NUMBER_ID="123456",
+        WHATSAPP_API_VERSION="v25.0",
+        WHATSAPP_OTP_TEMPLATE="pasons_otp",
+        WHATSAPP_OTP_LANGUAGE="en",
+    )
+    def test_the_code_is_sent_in_the_body_and_the_copy_button(self):
+        captured = {}
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def read(self):
+                return b'{"messages":[{"id":"wamid.X"}]}'
+
+        def fake_urlopen(request, timeout=None):
+            captured["url"] = request.full_url
+            captured["body"] = json.loads(request.data.decode("utf-8"))
+            captured["auth"] = request.headers.get("Authorization")
+            captured["timeout"] = timeout
+            return FakeResponse()
+
+        with mock.patch(
+            "apps.guests.whatsapp.urllib.request.urlopen", fake_urlopen
+        ):
+            result = whatsapp.send_otp(PHONE, "123456")
+
+        self.assertTrue(result.ok)
+        self.assertIn("/v25.0/123456/messages", captured["url"])
+        self.assertEqual(captured["auth"], "Bearer test-token")
+        self.assertEqual(captured["body"]["to"], "971501234567")
+        template = captured["body"]["template"]
+        self.assertEqual(template["name"], "pasons_otp")
+        # body carries the digits, and so does the copy-code URL button
+        self.assertEqual(
+            template["components"][0]["parameters"][0]["text"], "123456"
+        )
+        self.assertEqual(template["components"][1]["sub_type"], "url")
+        self.assertEqual(
+            template["components"][1]["parameters"][0]["text"], "123456"
+        )
+
+    @override_settings(
+        WHATSAPP_OTP_DEBUG=False,
+        WHATSAPP_ACCESS_TOKEN="test-token",
+        WHATSAPP_PHONE_NUMBER_ID="123456",
+    )
+    def test_a_refused_send_reports_a_code_not_the_api_message(self):
+        def boom(request, timeout=None):
+            raise urllib.error.HTTPError(
+                "https://graph.facebook.com",
+                400,
+                "Bad Request",
+                {},
+                io.BytesIO(b'{"error":{"message":"internal detail"}}'),
+            )
+
+        with mock.patch("apps.guests.whatsapp.urllib.request.urlopen", boom):
+            result = whatsapp.send_otp(PHONE, "123456")
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error, "http_400")
+        self.assertNotIn("internal detail", result.error)
+
+    @override_settings(
+        WHATSAPP_OTP_DEBUG=True,
+        WHATSAPP_ACCESS_TOKEN="test-token",
+        WHATSAPP_PHONE_NUMBER_ID="123456",
+    )
+    def test_debug_mode_never_touches_the_network(self):
+        with mock.patch(
+            "apps.guests.whatsapp.urllib.request.urlopen",
+            side_effect=AssertionError("network used in debug mode"),
+        ):
+            result = whatsapp.send_otp(PHONE, "123456")
+        self.assertTrue(result.ok)
+        self.assertEqual(result.debug_code, "123456")
 
 
 # Claims as Google returns them for a normal personal account.
