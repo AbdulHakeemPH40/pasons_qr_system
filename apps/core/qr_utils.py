@@ -12,9 +12,21 @@ from django.urls import reverse
 
 
 def get_qr_url(redirect_key, request=None):
+    """The absolute URL a printed QR code must point at.
+
+    A request knows its own host, so it wins when one is available. With no
+    request in hand (the make_qr_images management command, run from a shell)
+    the configured public address is used, because a QR printed for a table
+    tent must open the live site and never localhost or an internal address.
+    """
     path = reverse("qr_landing", args=[redirect_key])
     if request:
         return request.build_absolute_uri(path)
+
+    public = (getattr(settings, "PUBLIC_BASE_URL", "") or "").rstrip("/")
+    if public:
+        return f"{public}{path}"
+
     host = settings.ALLOWED_HOSTS[0] if settings.ALLOWED_HOSTS and settings.ALLOWED_HOSTS[0] != "*" else "localhost:8000"
     return f"http://{host}{path}"
 

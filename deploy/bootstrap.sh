@@ -3,7 +3,11 @@
 # One-time server setup for the Pasons Smart QR platform.
 # Run as root on a fresh Ubuntu droplet, once:
 #
-#     bash deploy/bootstrap.sh 139.59.84.247
+#     bash deploy/bootstrap.sh qr-system.pasons.group
+#
+# Pass the public host name so the .env it writes already knows the site's
+# real address. A bare IP also works, and is treated as plain http because no
+# certificate authority issues certificates for an IP address.
 #
 # It installs the runtime packages, adds a 1 GB swap file (the 1 vCPU / 1 GB
 # droplets need it), creates the `pasons` service user, the PostgreSQL role
@@ -36,6 +40,14 @@ fi
 
 if [ -z "$HOST_NAME" ]; then
   HOST_NAME="$(hostname -I | awk '{print $1}')"
+fi
+
+# A host name is expected to serve https once certbot runs; a bare IP cannot,
+# so it stays on http. This is the address printed QR codes point at.
+if printf '%s' "$HOST_NAME" | grep -Eq '^[0-9]+(\.[0-9]+){3}$'; then
+  PUBLIC_BASE_URL="http://$HOST_NAME"
+else
+  PUBLIC_BASE_URL="https://$HOST_NAME"
 fi
 
 # --- packages -------------------------------------------------------------
@@ -111,7 +123,8 @@ else
 SECRET_KEY=$SECRET_KEY
 DEBUG=0
 ALLOWED_HOSTS=$HOST_NAME
-CSRF_TRUSTED_ORIGINS=http://$HOST_NAME
+CSRF_TRUSTED_ORIGINS=http://$HOST_NAME,https://$HOST_NAME
+PUBLIC_BASE_URL=$PUBLIC_BASE_URL
 SERVE_MEDIA=0
 USE_X_FORWARDED_PROTO=0
 

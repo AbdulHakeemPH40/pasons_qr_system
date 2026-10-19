@@ -18,6 +18,7 @@ from apps.menu.models import MenuCategory, MenuItem, items_for
 from config.settings import tunnel_trusted_hosts, tunnel_trusted_origins
 
 from .models import Brand, Campaign, Outlet, PageModule, QrCode, SmartPage
+from .qr_utils import get_qr_url
 
 
 def make_brand_page(brand, slug=None):
@@ -436,3 +437,67 @@ class DevTunnelHostTests(TestCase):
 
         plain = RequestFactory().get("/", HTTP_HOST="localhost")
         self.assertFalse(plain.is_secure())
+
+
+class PublicDomainTests(TestCase):
+    """The project knows its own address: qr-system.pasons.group.
+
+    A printed QR code, a QR image built by the management command and the
+    production nginx site all have to name the same host. A QR printed with
+    the wrong host fails only on a phone at a real table, so these tests lock
+    the address instead of trusting a deploy-time memory.
+    """
+
+    DOMAIN = "qr-system.pasons.group"
+
+    def _deploy_file(self, name):
+        return (settings.BASE_DIR / "deploy" / name).read_text(encoding="utf-8")
+
+    def _env_values(self, text):
+        values = {}
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, _, value = stripped.partition("=")
+            values[key.strip()] = value.strip()
+        return values
+
+    def test_public_address_is_the_projects_own_domain(self):
+        self.assertEqual(settings.PUBLIC_BASE_URL, f"https://{self.DOMAIN}")
+
+    def test_the_domain_is_accepted_without_being_listed_in_env(self):
+        """A fresh deploy must not answer with "Invalid HTTP_HOST header"."""
+        self.assertIn(self.DOMAIN, settings.ALLOWED_HOSTS)
+        request = RequestFactory().get("/", HTTP_HOST=self.DOMAIN)
+        self.assertEqual(request.get_host(), self.DOMAIN)
+
+    def test_a_printed_qr_points_at_the_public_address(self):
+        """A table tent printed from a shell must not open localhost."""
+        url = get_qr_url("kcic-table-001")
+        self.assertTrue(url.startswith(f"https://{self.DOMAIN}/q/"))
+        self.assertNotIn("localhost", url)
+
+    def test_a_live_request_still_uses_its_own_host(self):
+        request = RequestFactory().get("/", HTTP_HOST="localhost")
+        url = get_qr_url("kcic-table-001", request)
+        self.assertTrue(url.startswith("http://localhost/q/"))
+
+    def test_the_production_env_template_names_the_domain(self):
+        values = self._env_values(self._deploy_file("env.production.example"))
+        self.assertEqual(values["ALLOWED_HOSTS"], self.DOMAIN)
+        self.assertEqual(values["PUBLIC_BASE_URL"], f"https://{self.DOMAIN}")
+        self.assertIn(
+            f"https://{self.DOMAIN}", values["CSRF_TRUSTED_ORIGINS"].split(",")
+        )
+
+    def test_the_nginx_site_answers_on_the_domain(self):
+        text = self._deploy_file("nginx-pasons.conf")
+        self.assertIn(f"server_name {self.DOMAIN};", text)
+
+    def test_the_installer_writes_the_domain_into_the_env(self):
+        text = self._deploy_file("bootstrap.sh")
+        self.assertIn("PUBLIC_BASE_URL=$PUBLIC_BASE_URL", text)
+        self.assertIn(
+            "CSRF_TRUSTED_ORIGINS=http://$HOST_NAME,https://$HOST_NAME", text
+        )

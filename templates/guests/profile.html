@@ -172,6 +172,28 @@
         </div>
       </section>
 
+      {% comment %}
+      Sign out. A quiet row at the bottom, not a red warning: leaving is a
+      normal thing to do, and the copy has to say plainly that the coupons
+      stay, or a guest will assume they are about to lose them.
+      {% endcomment %}
+      <section class="profile-signout reveal" style="--i: 3" aria-labelledby="profile-signout-heading">
+        <div class="profile-signout__copy">
+          <h3 id="profile-signout-heading" class="profile-signout__title">Sign out</h3>
+          <p class="profile-signout__note">
+            This phone forgets you. Your coupons stay saved: sign in again with the same mobile number and they come straight back.
+          </p>
+        </div>
+        <form method="post" action="{% url 'guest_signout' qr.redirect_key %}" class="profile-signout__form">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ back_url }}">
+          <button type="submit" class="profile-signout__button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 17l5-5-5-5M20 12H9M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6"/></svg>
+            <span>Sign out</span>
+          </button>
+        </form>
+      </section>
+
     </div>
     <div class="device-home-indicator" aria-hidden="true"></div>
   </div>

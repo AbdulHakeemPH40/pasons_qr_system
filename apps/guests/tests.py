@@ -15,7 +15,7 @@ import csv
 import io
 import json
 import urllib.error
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
@@ -28,7 +28,7 @@ from django.utils import timezone
 
 from apps.core.models import Brand, Outlet, QrCode, SmartPage
 
-from . import identity, otp, panel_views, whatsapp
+from . import identity, otp, panel_views, reporting, whatsapp
 from .google import profile_fields_from_claims, verify_id_token
 from .middleware import GuestIdentityMiddleware
 from .models import GuestProfile, PhoneOTP
@@ -744,6 +744,36 @@ class LandingSheetTests(GuestQrFixtures):
         self.assertIn('data-state="form"', body)
         self.assertIn("Please verify your mobile number with the code", body)
 
+    def test_a_full_code_never_verifies_itself(self):
+        """Client direction 2026-10-19: no auto approve.
+
+        Six digits must not sign anyone in on their own. A code that arrives
+        whole (WhatsApp autofill, a paste, a fast thumb) still waits for the
+        guest to look at it and tap "Verify and continue". The readiness ring
+        is the only thing a complete code changes.
+
+        This locks the three ways the rule could quietly come back:
+
+        1. no side effect on the sixth digit,
+        2. the tap is wired to the check,
+        3. Enter still submits, because a keyboard is an explicit act too.
+        """
+        body = self.client.get(self.landing_url).content.decode()
+        self.assertNotIn("this.value.length === 6", body)
+        self.assertIn(
+            'verifyButton.addEventListener("click", verifyCode)', body
+        )
+        self.assertIn('verifyButton.setAttribute("data-ready"', body)
+        self.assertIn('if (e.key === "Enter")', body)
+        # a refused code clears the field and says how many tries are left,
+        # so the guest never taps a code the server already rejected
+        self.assertIn('verifyButton.setAttribute("aria-busy", "true")', body)
+
+    def test_a_short_code_says_what_is_missing_instead_of_silently_staying(self):
+        """A tap on an empty field must explain itself, not do nothing."""
+        body = self.client.get(self.landing_url).content.decode()
+        self.assertIn("Enter the 6 digits from the WhatsApp message.", body)
+
 
 class SheetMaterialCssTests(TestCase):
     """The sheet and the pre-game prompt must not be see-through.
@@ -850,6 +880,22 @@ class SheetMaterialCssTests(TestCase):
         block = self.css[start : self.css.index("\n}\n", start)]
         self.assertIn("body.theme-warm .ig-draw__icon { display: none; }", block)
         self.assertIn("max-height: 98%", block)
+
+    def test_the_readiness_ring_is_a_shadow_not_a_new_surface(self):
+        """A complete code lights the button; it does not layer a new one.
+
+        A fifth glass layer, or a size change, over the blurred scrim is
+        exactly the repaint this sheet was rebuilt to avoid. The ring is a
+        box-shadow, which composites without touching the layers behind it.
+        """
+        ready = self._rule(
+            self.css, 'body.theme-warm .ig-draw__cta[data-ready="true"]'
+        )
+        self.assertTrue(ready, "the readiness cue is gone")
+        self.assertIn("box-shadow", ready)
+        self.assertNotIn("backdrop-filter", ready)
+        self.assertNotIn("width", ready)
+        self.assertNotIn("background", ready)
 
 
 class IdentitySubmitTests(GuestQrFixtures):
@@ -1054,6 +1100,270 @@ class IdentitySubmitTests(GuestQrFixtures):
 PHONE = "+971501234567"
 
 
+class SignOutAndReturningGuestTests(GuestQrFixtures):
+    """Sign out forgets the browser, not the account.
+
+    Client decision 2026-10-19: the mobile number is the account. A guest who
+    signs out and signs back in with the same number must land on the same
+    row, with the same coupons and the same ladder. Clearing cookies used to
+    mint a second account, and the coupons on the first one looked lost.
+    """
+
+    def _profile(self, **overrides):
+        data = {
+            "guest_id": "returning-guest",
+            "first_name": "Reem",
+            "last_name": "Khalid",
+            "phone": PHONE,
+            "phone_verified": True,
+            "first_brand": self.brand,
+            "first_outlet": self.outlet,
+        }
+        data.update(overrides)
+        return GuestProfile.objects.create(**data)
+
+    def _sign_in_as(self, profile):
+        self.client.cookies[COOKIE] = identity.sign_guest_id(profile.guest_id)
+        return profile
+
+    def _sign_out(self, next_url=None):
+        response = self.client.post(
+            reverse("guest_signout", args=[self.qr.redirect_key]),
+            {"next": next_url or self.landing_url},
+        )
+        # A genuinely signed-out browser: the test client would otherwise keep
+        # the empty Morsel and every later request would look "signed out" for
+        # the wrong reason.
+        self.client.cookies.pop(COOKIE, None)
+        return response
+
+    def _submit(self, **overrides):
+        payload = {
+            "first_name": "Reem",
+            "last_name": "",
+            "country": "971",
+            "phone": "050 123 4567",
+            "consent": "1",
+            "next": self.landing_url,
+        }
+        payload.update(overrides)
+        return self.client.post(
+            reverse("guest_identity_submit", args=[self.qr.redirect_key]), payload
+        )
+
+    # --- sign out -------------------------------------------------------
+
+    def test_sign_out_clears_the_cookie_and_keeps_the_account(self):
+        profile = self._sign_in_as(self._profile())
+        response = self._sign_out()
+
+        self.assertEqual(response.status_code, 302)
+        # delete_cookie answers with an already-expired cookie
+        self.assertEqual(response.cookies[COOKIE]["max-age"], 0)
+        self.assertTrue(GuestProfile.objects.filter(pk=profile.pk).exists())
+
+    def test_sign_out_returns_to_the_page_it_came_from(self):
+        self._sign_in_as(self._profile())
+        back = self.landing_url
+        response = self._sign_out(next_url=back)
+        self.assertEqual(response["Location"], back)
+
+    def test_sign_out_refuses_an_off_site_destination(self):
+        self._sign_in_as(self._profile())
+        response = self.client.post(
+            reverse("guest_signout", args=[self.qr.redirect_key]),
+            {"next": "https://evil.example.com/steal"},
+        )
+        self.assertTrue(response["Location"].startswith(self.landing_url))
+        self.assertNotIn("evil.example.com", response["Location"])
+
+    def test_sign_out_is_post_only(self):
+        self._sign_in_as(self._profile())
+        response = self.client.get(
+            reverse("guest_signout", args=[self.qr.redirect_key])
+        )
+        self.assertEqual(response.status_code, 405)
+
+    def test_sign_out_drops_a_pending_code_proof(self):
+        """The proof vouches for a number, not for a browser session."""
+        self.verify_phone()
+        self.assertIn(otp.SESSION_KEY, self.client.session)
+        self._sign_out()
+        self.assertNotIn(otp.SESSION_KEY, self.client.session)
+
+    def test_sign_out_on_an_unknown_qr_key_is_404(self):
+        response = self.client.post(reverse("guest_signout", args=["no-such-key"]))
+        self.assertEqual(response.status_code, 404)
+
+    # --- coming back ----------------------------------------------------
+
+    def test_signing_back_in_with_the_same_number_reopens_the_same_account(self):
+        from datetime import timedelta
+
+        from apps.rewards.models import RewardCoupon, RewardTier, RewardType
+
+        profile = self._profile()
+        RewardCoupon.objects.create(
+            code="RET-READY1",
+            profile=profile,
+            brand=self.brand,
+            outlet=self.outlet,
+            game_slug="chess-master",
+            tier=RewardTier.GOOD,
+            reward_type=RewardType.DESSERT,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        self._sign_in_as(profile)
+        self._sign_out()
+
+        verified = self.verify_phone()
+        self.assertTrue(verified["ok"])
+        self.assertTrue(verified.get("returning"), verified)
+
+        response = self._submit()
+        self.assertIn("joined=1", response["Location"])
+        self.assertEqual(GuestProfile.objects.count(), 1)
+        self.assertEqual(GuestProfile.objects.get().pk, profile.pk)
+
+        # the coupon is back on the page the guest lands on
+        landing = self.client.get(self.landing_url)
+        self.assertContains(landing, "RET-READY1")
+        self.assertContains(landing, "Reem Khalid")
+
+    def test_a_blank_field_never_erases_the_stored_name(self):
+        profile = self._profile()
+        self._sign_in_as(profile)
+        self._sign_out()
+
+        self.verify_phone()
+        self._submit(last_name="")
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.last_name, "Khalid")
+
+    def test_a_different_number_does_not_take_the_old_account(self):
+        profile = self._profile()
+        self._sign_in_as(profile)
+        self._sign_out()
+
+        # +971 50 999 8887 has never been verified before
+        self.verify_phone(phone="050 999 8887")
+        response = self._submit(phone="050 999 8887")
+
+        self.assertIn("joined=1", response["Location"])
+        self.assertEqual(GuestProfile.objects.count(), 2)
+        self.assertTrue(GuestProfile.objects.filter(pk=profile.pk).exists())
+
+    def test_anonymous_history_on_this_device_moves_into_the_account(self):
+        account = self._profile()
+        anon = GuestProfile.objects.create(
+            guest_id="anon-device",
+            ig_follow_claimed=True,
+            ig_claimed_at=timezone.now(),
+        )
+        self._sign_in_as(anon)
+
+        self.assertTrue(self.verify_phone().get("returning"))
+        self._submit()
+
+        self.assertEqual(GuestProfile.objects.count(), 1)
+        survivor = GuestProfile.objects.get()
+        self.assertEqual(survivor.pk, account.pk)
+        self.assertTrue(survivor.ig_follow_claimed)
+
+    def test_a_profile_verified_with_another_number_is_left_alone(self):
+        """A shared tablet: the second guest signs in, the first keeps their row."""
+        other_person = self._profile(guest_id="first-guest", phone="+971509990001")
+        owner = self._profile(guest_id="phone-owner")
+        self._sign_in_as(other_person)
+
+        self.assertTrue(self.verify_phone().get("returning"))
+
+        # this browser now belongs to the account that owns PHONE, and the
+        # account that owns the other number is untouched
+        self.assertEqual(GuestProfile.objects.count(), 2)
+        self.assertTrue(GuestProfile.objects.filter(pk=other_person.pk).exists())
+
+        cookie = self.client.cookies[COOKIE].value
+        signing_in_as = GuestProfile.objects.get(
+            guest_id=identity.unsign_guest_id(cookie)
+        )
+        self.assertEqual(signing_in_as.pk, owner.pk)
+
+    def test_duplicate_accounts_for_one_number_are_folded_together(self):
+        from datetime import timedelta
+
+        from apps.rewards.models import RewardCoupon, RewardTier, RewardType
+
+        older = self._profile(guest_id="older-account")
+        newer = self._profile(guest_id="newer-account")
+        RewardCoupon.objects.create(
+            code="OLD-COUPON",
+            profile=newer,
+            brand=self.brand,
+            outlet=self.outlet,
+            game_slug="chess-master",
+            tier=RewardTier.GOOD,
+            reward_type=RewardType.DESSERT,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        self.assertTrue(self.verify_phone().get("returning"))
+
+        self.assertEqual(GuestProfile.objects.count(), 1)
+        survivor = GuestProfile.objects.get()
+        self.assertEqual(survivor.pk, older.pk)
+        self.assertEqual(survivor.coupons.count(), 1)
+
+    def test_the_higher_ladder_rung_survives_a_merge(self):
+        from apps.rewards.models import RewardProgress
+
+        older = self._profile(guest_id="older-account")
+        newer = self._profile(guest_id="newer-account")
+        RewardProgress.objects.create(profile=older, game_slug="chess-master", rung=1)
+        RewardProgress.objects.create(profile=newer, game_slug="chess-master", rung=3)
+
+        self.assertTrue(self.verify_phone().get("returning"))
+
+        self.assertEqual(GuestProfile.objects.count(), 1)
+        progress = RewardProgress.objects.get(profile_id=older.pk)
+        self.assertEqual(progress.rung, 3)
+
+
+class SignOutAffordanceTests(GuestQrFixtures):
+    """The button has to be reachable, and it has to be a POST form."""
+
+    def _signed_in(self):
+        profile = GuestProfile.objects.create(
+            guest_id="signed-in-guest",
+            first_name="Reem",
+            last_name="Khalid",
+            phone=PHONE,
+            phone_verified=True,
+            first_brand=self.brand,
+            first_outlet=self.outlet,
+        )
+        self.client.cookies[COOKIE] = identity.sign_guest_id(profile.guest_id)
+        return profile
+
+    def test_the_profile_page_offers_sign_out(self):
+        self._signed_in()
+        response = self.client.get(
+            reverse("guest_profile_page", args=[self.qr.redirect_key])
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        self.assertIn(reverse("guest_signout", args=[self.qr.redirect_key]), body)
+        self.assertIn("Sign out", body)
+        self.assertIn("Your coupons stay saved", body)
+        self.assertIn('method="post"', body)
+
+    def test_a_signed_out_guest_sees_no_sign_out_button(self):
+        response = self.client.get(self.landing_url)
+        self.assertNotIn(reverse("guest_signout", args=[self.qr.redirect_key]),
+                         response.content.decode())
+
+
 class CountryPickerTests(TestCase):
     """The picker supplies the dial code, so no country guessing is needed."""
 
@@ -1126,6 +1436,9 @@ class OtpIssueTests(GuestQrFixtures):
         )
 
     def _old_row(self, phone=PHONE, minutes=5, **extra):
+        # delivered=True is what the limits count. A row that never arrived
+        # is kept for the panel, but it must not spend the guest's window.
+        extra.setdefault("delivered", True)
         row = PhoneOTP.objects.create(
             phone=phone, code_hash="x", expires_at=timezone.now(), **extra
         )
@@ -1173,14 +1486,58 @@ class OtpIssueTests(GuestQrFixtures):
         outcome = otp.issue("+971509999999", ip="10.0.0.9")
         self.assertEqual(outcome.reason, otp.Reason.IP_LIMIT)
 
-    def test_a_failed_send_leaves_no_code_behind(self):
+    def test_a_failed_send_is_recorded_but_never_opens_a_code(self):
+        """A refused send leaves a row for the panel and nothing to type.
+
+        The row used to be deleted, which made "delivered" a column that was
+        always true and hid how often WhatsApp refuses. It stays now, spent,
+        so the six undelivered digits cannot be reused and the panel can show
+        the failure.
+        """
         with mock.patch.object(
             whatsapp, "send_otp", return_value=whatsapp.Delivery(False, "http_500")
         ):
             outcome = otp.issue(PHONE)
         self.assertFalse(outcome.ok)
         self.assertEqual(outcome.reason, otp.Reason.SEND_FAILED)
-        self.assertEqual(PhoneOTP.objects.count(), 0)
+
+        row = PhoneOTP.objects.get()
+        self.assertFalse(row.delivered)
+        self.assertEqual(row.delivery_error, "http_500")
+        self.assertIsNotNone(row.consumed_at)
+        self.assertIsNone(row.verified_at)
+
+    def test_a_failed_send_does_not_burn_the_guest_allowance(self):
+        with mock.patch.object(
+            whatsapp, "send_otp", return_value=whatsapp.Delivery(False, "network")
+        ):
+            otp.issue(PHONE)
+
+        # No 60 second wait and no hourly slot spent: the guest may ask again
+        # straight away, and three delivered codes still fit in the hour.
+        retry = otp.issue(PHONE)
+        self.assertTrue(retry.ok)
+        self.assertEqual(retry.retry_after, 60)
+        self.assertEqual(
+            PhoneOTP.objects.filter(phone=PHONE, delivered=True).count(), 1
+        )
+        self.assertEqual(PhoneOTP.objects.filter(phone=PHONE).count(), 2)
+
+    def test_verifying_stamps_verified_at(self):
+        sent = otp.issue(PHONE)
+        self.assertTrue(otp.verify(PHONE, sent.debug_code).ok)
+        row = PhoneOTP.objects.get()
+        self.assertIsNotNone(row.verified_at)
+        self.assertIsNotNone(row.consumed_at)
+
+    def test_a_replaced_code_is_consumed_but_not_verified(self):
+        otp.issue(PHONE)
+        first_row = PhoneOTP.objects.get(phone=PHONE)
+        self._age(first_row, 2)
+        otp.issue(PHONE)
+        first_row.refresh_from_db()
+        self.assertIsNotNone(first_row.consumed_at)
+        self.assertIsNone(first_row.verified_at)
 
     def test_a_new_code_kills_the_old_one(self):
         first = otp.issue(PHONE)
@@ -1299,7 +1656,9 @@ class OtpHttpTests(GuestQrFixtures):
         """
         response, data = self.send_code()
 
-        self.assertEqual(response.status_code, 429)
+        # 502, not 429: nothing was throttled, the provider refused. The
+        # guest may try again at once, and the panel sees the failed attempt.
+        self.assertEqual(response.status_code, 502)
         self.assertFalse(data["ok"])
         self.assertEqual(data["reason"], "send_failed")
         self.assertNotIn("debug_code", data)
@@ -1307,8 +1666,10 @@ class OtpHttpTests(GuestQrFixtures):
         # the six digits never can.
         self.assertEqual(data["phone"], PHONE)
         self.assertTrue(data["message"])
-        # A refused send must not burn the guest's allowance either.
-        self.assertEqual(PhoneOTP.objects.count(), 0)
+        # A refused send must not burn the guest's allowance: the attempt is
+        # logged for the panel, but nothing counts as delivered.
+        self.assertEqual(PhoneOTP.objects.filter(phone=PHONE).count(), 1)
+        self.assertFalse(PhoneOTP.objects.get(phone=PHONE).delivered)
 
 
 class PhoneProofTests(GuestQrFixtures):
@@ -1783,3 +2144,363 @@ class PanelGuestContactTests(TestCase):
         self.assertEqual(
             self.client.get(reverse("panel_guests_export")).status_code, 403
         )
+
+
+# --------------------------------------------------------------------------
+# WhatsApp code report (/panel/verification/)
+# --------------------------------------------------------------------------
+def _report_now():
+    """A fixed local midday, so a window test never depends on the clock."""
+    return timezone.make_aware(
+        datetime(2026, 10, 19, 12, 0), timezone.get_current_timezone()
+    )
+
+
+class OtpReportFixtures(GuestQrFixtures):
+    """A second brand and branch, the three staff roles, dated codes."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.other_brand = Brand.objects.create(
+            name_en="Milan Report", code="MILAN-REPORT", status="active"
+        )
+        cls.other_outlet = Outlet.objects.create(
+            code="MILAN-REPORT-1",
+            slug="milan-report-branch",
+            official_name="Milan Report - Karama",
+            brand=cls.other_brand,
+            opening_hours=_hours_open_all_day(),
+            active=True,
+        )
+
+    def make_code(
+        self,
+        phone="+971501234567",
+        when=None,
+        delivered=True,
+        verified=False,
+        outlet="default",
+        brand="default",
+    ):
+        """One PhoneOTP row, dated to `when` so the windows are testable."""
+        when = when or timezone.now()
+        row = PhoneOTP.objects.create(
+            phone=phone,
+            code_hash="x",
+            expires_at=when + timedelta(minutes=5),
+            delivered=delivered,
+            verified_at=when if verified else None,
+            brand=self.brand if brand == "default" else brand,
+            outlet=self.outlet if outlet == "default" else outlet,
+        )
+        PhoneOTP.objects.filter(pk=row.pk).update(created_at=when, updated_at=when)
+        row.refresh_from_db()
+        return row
+
+    def head_office(self, name="ho-report"):
+        user = User.objects.create_user(name, password="pw-ho-123456")
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        return user
+
+    def brand_manager(self, brand=None, name="bm-report"):
+        from apps.core.panel_permissions import apply_role_to_user
+
+        user = User.objects.create_user(name, password="pw-bm-123456")
+        apply_role_to_user(user, "brand_manager", brand or self.brand, [])
+        return user
+
+    def branch_manager(self, outlets=None, name="br-report"):
+        from apps.core.panel_permissions import apply_role_to_user
+
+        user = User.objects.create_user(name, password="pw-br-123456")
+        apply_role_to_user(user, "outlet_manager", None, outlets or [self.outlet])
+        return user
+
+
+class OtpWindowTests(OtpReportFixtures):
+    """The six windows the client named, and what belongs in each."""
+
+    def setUp(self):
+        self.now = _report_now()
+        self.w = {row["key"]: row for row in reporting.periods(now=self.now)}
+        self.make_code(when=self.w["today"]["start"] + timedelta(hours=1))
+        self.make_code(
+            phone="+971500000002",
+            when=self.w["yesterday"]["start"] + timedelta(hours=1),
+        )
+        self.make_code(
+            phone="+971500000003",
+            when=self.w["week"]["start"] + timedelta(hours=1),
+        )
+        self.make_code(
+            phone="+971500000004",
+            when=self.w["last_month"]["start"] + timedelta(hours=1),
+        )
+
+    def _rows(self):
+        return {
+            row["key"]: row
+            for row in reporting.period_rows(PhoneOTP.objects.all(), now=self.now)
+        }
+
+    def test_the_six_windows_the_client_named(self):
+        labels = [row["label"] for row in reporting.periods(now=self.now)]
+        self.assertEqual(
+            labels,
+            [
+                "Today",
+                "Yesterday",
+                "Last 7 days",
+                "Last 30 days",
+                "This month",
+                "Last month",
+            ],
+        )
+
+    def test_today_starts_where_yesterday_ends(self):
+        rows = reporting.periods(now=self.now)
+        self.assertEqual(rows[0]["start"], rows[1]["end"])
+        # The 7 day window is today plus the six days before it, so it opens
+        # five days before yesterday opens.
+        self.assertEqual(rows[1]["start"], rows[2]["start"] + timedelta(days=5))
+
+    def test_each_window_counts_only_its_own_days(self):
+        rows = self._rows()
+        self.assertEqual(rows["today"]["sent"], 1)
+        self.assertEqual(rows["yesterday"]["sent"], 1)
+        # Today, yesterday and the code placed on the first day of the window.
+        self.assertEqual(rows["week"]["sent"], 3)
+        self.assertEqual(rows["month30"]["sent"], 3)
+        self.assertEqual(rows["this_month"]["sent"], 3)
+        self.assertEqual(rows["last_month"]["sent"], 1)
+
+    def test_a_window_carries_the_dates_it_covers(self):
+        today = self._rows()["today"]
+        self.assertEqual(today["range"], "19 Oct 2026")
+
+    def test_sent_delivered_and_verified_are_three_different_numbers(self):
+        PhoneOTP.objects.all().delete()
+        when = self.w["month30"]["start"] + timedelta(hours=2)
+        self.make_code(phone="+971500000011", when=when, delivered=True, verified=True)
+        self.make_code(phone="+971500000012", when=when, delivered=True)
+        self.make_code(phone="+971500000013", when=when, delivered=False)
+
+        row = self._rows()["month30"]
+        self.assertEqual(row["sent"], 3)
+        self.assertEqual(row["delivered"], 2)
+        self.assertEqual(row["verified"], 1)
+        self.assertEqual(row["guests"], 3)
+        self.assertEqual(row["delivery_pct"], 67)
+        self.assertEqual(row["verified_pct"], 50)
+
+    def test_the_month_trend_is_zero_filled_and_ends_on_this_month(self):
+        trend = reporting.monthly_trend(PhoneOTP.objects.all(), now=self.now)
+        self.assertEqual(len(trend), 6)
+        self.assertEqual(trend[-1]["label"], "Oct")
+        self.assertEqual([m["sent"] for m in trend[:4]], [0, 0, 0, 0])
+        self.assertEqual(trend[-1]["sent"], 3)
+        self.assertEqual(trend[-1]["failed"], 0)
+
+    def test_the_trend_keeps_the_refused_slice(self):
+        PhoneOTP.objects.all().delete()
+        when = self.w["today"]["start"] + timedelta(hours=1)
+        self.make_code(phone="+971500000021", when=when, delivered=True)
+        self.make_code(phone="+971500000022", when=when, delivered=False)
+        month = reporting.monthly_trend(PhoneOTP.objects.all(), now=self.now)[-1]
+        self.assertEqual((month["sent"], month["delivered"], month["failed"]), (2, 1, 1))
+        self.assertEqual(month["pct"], 100)
+
+
+class OtpReportScopeTests(OtpReportFixtures):
+    """Who may see which branch's codes."""
+
+    def test_a_branch_manager_sees_only_their_branch(self):
+        self.make_code(phone="+971500000031")
+        self.make_code(
+            phone="+971500000032",
+            outlet=self.other_outlet,
+            brand=self.other_brand,
+        )
+        self.client.force_login(self.branch_manager())
+
+        response = self.client.get(reverse("panel_otp"))
+        self.assertContains(response, "King Chef - International City")
+        self.assertNotContains(response, "Milan Report - Karama")
+
+    def test_a_brand_manager_sees_their_brand_page_codes(self):
+        self.make_code(phone="+971500000033", outlet=None)
+        self.make_code(
+            phone="+971500000034",
+            outlet=self.other_outlet,
+            brand=self.other_brand,
+        )
+        self.client.force_login(self.brand_manager())
+
+        response = self.client.get(reverse("panel_otp"))
+        self.assertContains(response, "Brand page")
+        self.assertNotContains(response, "Milan Report")
+
+    def test_head_office_sees_rows_written_before_branch_recording(self):
+        self.make_code(phone="+971500000035", brand=None, outlet=None)
+        self.client.force_login(self.head_office())
+
+        response = self.client.get(reverse("panel_otp"))
+        self.assertContains(response, "Before recording")
+        self.assertContains(response, "+971500000035")
+
+    def test_a_manager_never_sees_unrecorded_rows(self):
+        self.make_code(phone="+971500000036", brand=None, outlet=None)
+        self.client.force_login(self.branch_manager())
+
+        response = self.client.get(reverse("panel_otp"))
+        self.assertContains(response, "No codes yet")
+
+    def test_the_branch_filter_cannot_reach_another_branch(self):
+        self.make_code(phone="+971500000037")
+        self.client.force_login(self.branch_manager())
+
+        response = self.client.get(
+            reverse("panel_otp"), {"branch": self.other_outlet.pk}
+        )
+        self.assertEqual(response.status_code, 200)
+        # The out-of-scope id is ignored, so the manager still sees their own
+        # branch rather than an empty page or the other brand's numbers.
+        self.assertContains(response, "+971500000037")
+
+    def test_head_office_can_narrow_to_one_branch(self):
+        self.make_code(phone="+971500000038")
+        self.make_code(
+            phone="+971500000039",
+            outlet=self.other_outlet,
+            brand=self.other_brand,
+        )
+        self.client.force_login(self.head_office())
+
+        response = self.client.get(
+            reverse("panel_otp"), {"branch": self.other_outlet.pk}
+        )
+        self.assertContains(response, "+971500000039")
+        self.assertNotContains(response, "+971500000038")
+
+
+class OtpAttributionTests(OtpReportFixtures):
+    """A send carries the branch of the QR page it was asked on."""
+
+    def test_a_send_is_attributed_to_the_qr_page_branch(self):
+        _response, data = self.send_code()
+        self.assertTrue(data["ok"])
+        row = PhoneOTP.objects.get()
+        self.assertEqual(row.brand, self.brand)
+        self.assertEqual(row.outlet, self.outlet)
+
+    def test_a_verified_code_is_stamped_verified_at(self):
+        self.verify_phone()
+        row = PhoneOTP.objects.get()
+        self.assertIsNotNone(row.verified_at)
+        self.assertEqual(row.verified_at, row.consumed_at)
+
+    def test_a_failed_send_is_attributed_too(self):
+        with mock.patch.object(
+            whatsapp, "send_otp", return_value=whatsapp.Delivery(False, "http_500")
+        ):
+            self.send_code()
+        row = PhoneOTP.objects.get()
+        self.assertFalse(row.delivered)
+        self.assertEqual(row.outlet, self.outlet)
+
+
+class OtpReportPageTests(OtpReportFixtures):
+    """The page itself: gate, layout contract, search, and no money."""
+
+    def test_the_page_requires_sign_in(self):
+        response = self.client.get(reverse("panel_otp"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/panel/login/", response["Location"])
+
+    def test_a_user_with_no_role_is_refused(self):
+        user = User.objects.create_user("no-role-report", password="pw-no-123456")
+        self.client.force_login(user)
+        self.assertEqual(self.client.get(reverse("panel_otp")).status_code, 403)
+
+    def test_the_page_renders_the_windows_and_the_guest_list(self):
+        self.verify_phone()
+        self.client.force_login(self.brand_manager())
+
+        response = self.client.get(reverse("panel_otp"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "The six windows")
+        self.assertContains(response, "By branch")
+        self.assertContains(response, "Guests who asked for a code")
+        self.assertContains(response, "+971501234567")
+        self.assertContains(response, "Verified")
+
+    def test_the_page_prints_no_money_figure(self):
+        """The client chose counts only. A guessed rate is worse than none."""
+        self.verify_phone()
+        self.client.force_login(self.head_office())
+        body = self.client.get(reverse("panel_otp")).content.decode()
+
+        for token in ("$", "USD", "AED", "AED ", "per message", "cost", "price", "invoice"):
+            self.assertNotIn(token, body, msg=f"{token!r} must not appear on the page")
+
+    def test_the_guest_name_is_joined_by_mobile_number(self):
+        profile = GuestProfile.objects.create(
+            guest_id="report-guest",
+            first_name="Layla",
+            last_name="Noor",
+            phone="+971501234567",
+            phone_verified=True,
+            first_brand=self.brand,
+            first_outlet=self.outlet,
+        )
+        self.make_code(phone=profile.phone, verified=True)
+        self.client.force_login(self.brand_manager())
+
+        response = self.client.get(reverse("panel_otp"))
+        self.assertContains(response, "Layla")
+        self.assertContains(response, "Noor")
+
+    def test_search_finds_a_guest_by_name_and_by_number(self):
+        GuestProfile.objects.create(
+            guest_id="search-guest",
+            first_name="Mariam",
+            last_name="Haddad",
+            phone="+971507778888",
+            first_brand=self.brand,
+            first_outlet=self.outlet,
+        )
+        self.make_code(phone="+971507778888")
+        self.client.force_login(self.head_office())
+
+        by_name = self.client.get(reverse("panel_otp"), {"q": "mariam"})
+        self.assertContains(by_name, "+971507778888")
+
+        by_number = self.client.get(reverse("panel_otp"), {"q": "0507778888"})
+        self.assertContains(by_number, "+971507778888")
+
+    def test_a_search_with_no_match_shows_the_empty_state(self):
+        self.make_code(phone="+971500000041")
+        self.client.force_login(self.head_office())
+        response = self.client.get(reverse("panel_otp"), {"q": "zzzz"})
+        self.assertContains(response, "No codes yet")
+
+    def test_the_destination_uses_a_flag_and_a_dial_code(self):
+        self.make_code(phone="+919876543210")
+        self.client.force_login(self.head_office())
+        response = self.client.get(reverse("panel_otp"))
+        self.assertContains(response, "+91")
+        self.assertContains(response, "flags/in.png")
+
+    def test_the_nav_link_is_visible_to_managers(self):
+        self.client.force_login(self.branch_manager())
+        response = self.client.get(reverse("panel_dashboard"))
+        self.assertContains(response, reverse("panel_otp"))
+        self.assertContains(response, "Verification")
+
+    def test_an_empty_report_still_renders(self):
+        self.client.force_login(self.head_office())
+        response = self.client.get(reverse("panel_otp"))
+        self.assertContains(response, "No codes yet")
+        self.assertEqual(response.status_code, 200)

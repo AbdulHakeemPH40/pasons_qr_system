@@ -389,6 +389,7 @@
       {% endif %}
       {% if "analytics" in nav_caps %}
       <a href="{% url 'panel_analytics' %}" class="{% if nav_active == 'analytics' %}active{% endif %}">{% icon "trend" %} Analytics</a>
+      <a href="{% url 'panel_otp' %}" class="{% if nav_active == 'otp' %}active{% endif %}">{% icon "whatsapp" %} Verification</a>
       {% endif %}
       {% if "users" in nav_caps %}
       <a href="{% url 'panel_users' %}" class="{% if nav_active == 'users' %}active{% endif %}">{% icon "users" %} Users</a>

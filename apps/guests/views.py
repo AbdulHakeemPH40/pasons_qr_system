@@ -192,10 +192,18 @@ def otp_send(request, key):
             resend_after=0,
         )
 
-    outcome = otp.issue(phone, ip=_client_ip(request))
+    outcome = otp.issue(phone, ip=_client_ip(request), brand=qr.brand, outlet=qr.outlet)
     status = 200
     if not outcome.ok:
-        status = 429 if outcome.retry_after else 400
+        if outcome.reason == otp.Reason.SEND_FAILED:
+            # Not the guest's fault and not throttling, so neither 400 nor
+            # 429 tells the truth. A refused upstream provider is a gateway
+            # failure, and the guest is free to try again at once.
+            status = 502
+        elif outcome.retry_after:
+            status = 429
+        else:
+            status = 400
         # The caller needs the number on every refusal too: a cooldown means
         # a code is already on its way to THIS number, and the sheet sends
         # the guest back to the code field rather than to a dead end.
@@ -221,7 +229,12 @@ def otp_check(request, key):
             .first()
         )
         otp.remember(request, phone, row.pk if row else None)
-        return _otp_json(outcome)
+        # The code just proved this number is theirs, which is the whole of
+        # what "sign in" means here. If a verified account already owns the
+        # number, this browser gets that account back (coupons, ladder and
+        # all) instead of starting an empty second one.
+        account = identity.adopt_account(request, phone)
+        return _otp_json(outcome, returning=account is not None)
 
     status = 400
     if outcome.reason in (otp.Reason.LOCKED,):
@@ -286,6 +299,12 @@ def identity_submit(request, key):
         request, brand=qr.brand, outlet=qr.outlet
     )
     now = timezone.now()
+
+    # A returning guest signs in with their number and fills the form again.
+    # A blank field must never erase what the account already holds, so an
+    # empty last name keeps the stored one instead of wiping it.
+    if not last_name and profile.last_name:
+        last_name = profile.last_name
 
     profile.first_name = first_name
     profile.last_name = last_name
@@ -478,4 +497,33 @@ def guest_profile_page(request, key):
         "error_text": PROFILE_ERROR_TEXT.get(error_code, ""),
     }
     return render(request, "guests/profile.html", context)
+
+
+@require_POST
+def guest_signout(request, key):
+    """Forget this browser. The account, its coupons and its ladder stay.
+
+    A cookie is a session, not the person. Clearing it would be enough to look
+    anonymous again, but deleting the row would take the guest's coupons with
+    it, so nothing in the database is touched here. Signing in again with the
+    same mobile number reopens the same account (apps.guests.identity
+    .adopt_account).
+
+    POST only: a sign-out link that a crawler or a prefetcher can trigger
+    would log guests out by accident.
+    """
+    qr = _qr(key)
+    if qr is None:
+        return render(request, "404.html", status=404)
+
+    back = _safe_next(request.POST.get("next"), _landing_url(qr))
+
+    session = getattr(request, "session", None)
+    if session is not None:
+        # The code proof vouches for a number, not for a browser session. It
+        # must not survive the sign-out and let a submit through afterwards.
+        session.pop(otp.SESSION_KEY, None)
+        session.pop(DRAFT_KEY, None)
+
+    return identity.clear_guest_cookie(redirect(back))
 

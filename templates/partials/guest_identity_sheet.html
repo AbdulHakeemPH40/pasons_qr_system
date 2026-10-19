@@ -361,7 +361,11 @@ comment renders as literal page text in this project.
        The form never posts straight away: a submit first asks for a code,
        and only a verified code lets the native submit happen. Server side,
        a submit whose number was not verified in this session is refused, so
-       turning JavaScript off cannot skip the step. */
+       turning JavaScript off cannot skip the step.
+
+       Nothing approves itself. The six digits reaching the field is not an
+       approval; the guest taps "Verify and continue" (or presses Enter),
+       and that tap is what sends the code to the server. */
     var form = sheet.querySelector("[data-otp-form]");
     var sendUrl = sheet.dataset.sendUrl || "";
     var checkUrl = sheet.dataset.checkUrl || "";
@@ -449,6 +453,7 @@ comment renders as literal page text in this project.
             if (data && data.reason === "cooldown") {
               if (destLabel) destLabel.textContent = prettyPhone(data.phone);
               if (codeInput) codeInput.value = "";
+              paintReady();
               say(codeError, data.message);
               show("code");
               if (codeInput) codeInput.focus();
@@ -469,6 +474,7 @@ comment renders as literal page text in this project.
           if (destLabel) destLabel.textContent = prettyPhone(data.phone);
           say(codeError, "");
           if (codeInput) codeInput.value = "";
+          paintReady();
           show("code");
           if (codeInput) codeInput.focus();
           startCountdown(data.resend_after || 60);
@@ -484,10 +490,15 @@ comment renders as literal page text in this project.
       var code = (codeInput ? codeInput.value : "").replace(/\D/g, "");
       if (code.length < 6) {
         say(codeError, "Enter the 6 digits from the WhatsApp message.");
+        if (codeInput) codeInput.focus();
         return;
       }
       otpBusy = true;
-      if (verifyButton) verifyButton.disabled = true;
+      if (verifyButton) {
+        verifyButton.disabled = true;
+        verifyButton.setAttribute("aria-busy", "true");
+        verifyButton.textContent = "Checking\u2026";
+      }
       var payload = phonePayload();
       payload.code = code;
       postJson(checkUrl, payload)
@@ -506,6 +517,7 @@ comment renders as literal page text in this project.
           }
           say(codeError, text);
           if (codeInput) { codeInput.value = ""; codeInput.focus(); }
+          paintReady();
           if (data && data.retry_after) startCountdown(data.retry_after);
         })
         .catch(function () {
@@ -513,7 +525,11 @@ comment renders as literal page text in this project.
         })
         .then(function () {
           otpBusy = false;
-          if (verifyButton) verifyButton.disabled = false;
+          if (verifyButton) {
+            verifyButton.disabled = false;
+            verifyButton.removeAttribute("aria-busy");
+            verifyButton.textContent = "Verify and continue";
+          }
         });
     }
 
@@ -525,14 +541,32 @@ comment renders as literal page text in this project.
       });
     }
 
+    /* Readiness is painted, never acted on.
+
+       Client direction 2026-10-19: six digits must not sign anyone in by
+       themselves. A code that arrives whole (WhatsApp autofill, a paste, a
+       fast thumb) still waits for the guest to look at it and tap Verify.
+       The button only changes appearance, so the commitment stays a
+       deliberate act, and the one thing on this sheet a stranger could
+       guess at is never spent without it. */
+    function paintReady() {
+      if (!verifyButton) return;
+      var full = codeInput ? codeInput.value.length === 6 : false;
+      verifyButton.setAttribute("data-ready", full ? "true" : "false");
+    }
+
     if (codeInput) {
       codeInput.addEventListener("input", function () {
         this.value = this.value.replace(/\D/g, "").slice(0, 6);
-        if (this.value.length === 6) verifyCode();
+        /* Clear a stale refusal while the guest is correcting it, so the
+           red line never sits under a code that has already changed. */
+        if (codeError && !codeError.hidden) say(codeError, "");
+        paintReady();
       });
       codeInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") { e.preventDefault(); verifyCode(); }
       });
+      paintReady();
     }
 
     if (verifyButton) verifyButton.addEventListener("click", verifyCode);

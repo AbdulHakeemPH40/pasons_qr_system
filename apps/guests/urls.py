@@ -45,4 +45,11 @@ urlpatterns = [
         views.guest_profile_page,
         name="guest_profile_page",
     ),
+    # Sign out forgets this browser only. POST, because a prefetched or
+    # crawled link must never log a guest out.
+    path(
+        "q/<slug:key>/profile/signout/",
+        views.guest_signout,
+        name="guest_signout",
+    ),
 ]

@@ -1,0 +1,813 @@
+{% extends "panel/base_panel.html" %}
+{% load icon_tags static %}
+
+{% block title %}Verification · Pasons Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Verification report.
+     One ledger of the six windows the client named, then the same numbers cut
+     by branch, by destination and by guest. Counts only: no money figure is
+     printed anywhere on this page, by the client's decision.
+
+     The page deliberately avoids a row of identical stat cards. Six windows
+     are a sequence (today, yesterday, week, month, this month, last month)
+     and a sequence reads better as rows than as six equal tiles, where the
+     eye has no order to follow. */
+
+  .vf-head { align-items: flex-start; }
+  .vf-eyebrow {
+    margin: 0 0 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold, #a8893e);
+  }
+  .vf-scope {
+    display: inline-block;
+    margin-left: 0.35rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(46, 91, 62, 0.09);
+    color: var(--forest);
+    font-size: 0.76rem;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .vf-stamp {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  /* ---- filters ---- */
+  .vf-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.6rem 0.75rem;
+    margin: 0 0 1.15rem;
+  }
+  .vf-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+  .vf-filters label > span {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .vf-filters select,
+  .vf-filters input[type="search"] {
+    min-height: 2.4rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.65rem;
+    border: 1px solid rgba(49, 69, 45, 0.16);
+    background: #fff;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.88rem;
+  }
+  .vf-filters select { min-width: 13rem; max-width: 20rem; }
+  .vf-filters input[type="search"] { min-width: 12rem; }
+  .vf-filters select:focus-visible,
+  .vf-filters input:focus-visible,
+  .vf-filters button:focus-visible,
+  .vf-reset:focus-visible {
+    outline: 2px solid var(--leaf);
+    outline-offset: 2px;
+  }
+  .vf-reset {
+    align-self: center;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+  }
+
+  /* ---- today strip ---- */
+  .vf-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 2fr);
+    gap: 0;
+    margin: 0 0 1.15rem;
+    border-radius: 1.1rem;
+    background: #fff;
+    border: 1px solid rgba(49, 69, 45, 0.07);
+    box-shadow: 0 10px 28px rgba(49, 69, 45, 0.05);
+    overflow: hidden;
+  }
+  .vf-hero-lead {
+    padding: 1rem 1.15rem 1rem;
+    border-right: 1px solid rgba(49, 69, 45, 0.08);
+    background: linear-gradient(180deg, rgba(194, 162, 75, 0.07), rgba(194, 162, 75, 0));
+  }
+  .vf-hero-lead span {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .vf-hero-lead strong {
+    display: block;
+    margin: 0.2rem 0 0;
+    font-size: 2.9rem;
+    line-height: 0.95;
+    letter-spacing: -0.045em;
+    color: var(--forest);
+    font-variant-numeric: tabular-nums;
+  }
+  .vf-hero-lead em {
+    display: block;
+    margin-top: 0.35rem;
+    font-style: normal;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+  .vf-hero-facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .vf-hero-facts li {
+    padding: 1rem 1.1rem;
+    border-right: 1px solid rgba(49, 69, 45, 0.07);
+  }
+  .vf-hero-facts li:last-child { border-right: 0; }
+  .vf-hero-facts span {
+    display: block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .vf-hero-facts b {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 1.3rem;
+    letter-spacing: -0.03em;
+    color: var(--forest);
+    font-variant-numeric: tabular-nums;
+  }
+  .vf-hero-facts em {
+    display: block;
+    margin-top: 0.15rem;
+    font-style: normal;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  /* ---- sections ---- */
+  .vf-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 0.9rem;
+    margin-bottom: 1.15rem;
+    align-items: start;
+  }
+  .vf-panel {
+    background: #fff;
+    border: 1px solid rgba(49, 69, 45, 0.07);
+    border-radius: 1.1rem;
+    box-shadow: 0 8px 24px rgba(49, 69, 45, 0.04);
+    min-width: 0;
+    overflow: hidden;
+  }
+  .vf-panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem 0.7rem;
+    border-bottom: 1px solid rgba(49, 69, 45, 0.07);
+  }
+  .vf-panel-head h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    letter-spacing: -0.015em;
+    color: var(--forest);
+  }
+  .vf-panel-head p {
+    margin: 0;
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+  }
+  .vf-panel-body { padding: 0.9rem 1rem 1rem; }
+  .vf-panel-body--flush { padding: 0; }
+
+  /* ---- the six windows: a ledger, not six cards ---- */
+  .vf-ledger { width: 100%; border-collapse: collapse; }
+  .vf-ledger th {
+    padding: 0.2rem 0.6rem 0.45rem;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .vf-ledger th:first-child { text-align: left; padding-left: 1rem; }
+  .vf-ledger th:last-child { padding-right: 1rem; }
+  .vf-ledger td {
+    padding: 0.6rem;
+    border-top: 1px solid rgba(49, 69, 45, 0.07);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+  }
+  .vf-ledger td:first-child {
+    text-align: left;
+    padding-left: 1rem;
+    font-variant-numeric: normal;
+  }
+  .vf-ledger td:last-child { padding-right: 1rem; }
+  .vf-ledger .vf-period { display: block; font-weight: 650; color: var(--forest); }
+  .vf-ledger .vf-range {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 0.1rem;
+  }
+  .vf-ledger .vf-mute { color: var(--text-secondary); }
+  .vf-ledger .vf-pct { font-size: 0.8rem; color: var(--text-secondary); }
+  .vf-ledger tbody tr:hover { background: rgba(127, 160, 107, 0.07); }
+  /* Today is the one row a manager checks first, so it carries a gold edge
+     rather than a background: a tint would fight the hover state. */
+  .vf-ledger tr.vf-now td { background: rgba(194, 162, 75, 0.06); }
+  .vf-ledger tr.vf-now td:first-child { box-shadow: inset 3px 0 0 var(--gold, #c2a24b); }
+
+  /* ---- month trend: stacked, delivered under refused ---- */
+  .vf-trend {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .vf-trend li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    min-width: 0;
+  }
+  /* The plot is a fixed height so a bar's percentage is a real percentage.
+     A percentage inside a flex item that only grew to fit has no definite
+     height to resolve against, and the bars collapse. */
+  .vf-trend .vf-plot {
+    display: flex;
+    align-items: flex-end;
+    height: 7rem;
+    padding: 0 0.1rem;
+  }
+  .vf-trend .vf-bar {
+    width: 100%;
+    min-height: 2px;
+    display: flex;
+    flex-direction: column-reverse;
+    border-radius: 0.4rem 0.4rem 0.25rem 0.25rem;
+    overflow: hidden;
+    background: rgba(49, 69, 45, 0.06);
+    transform-origin: bottom;
+    animation: vf-grow 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .vf-trend .vf-bar i {
+    display: block;
+    background: var(--forest);
+  }
+  .vf-trend .vf-bar u {
+    display: block;
+    background: rgba(194, 162, 75, 0.65);
+  }
+                  .vf-trend .vf-total {
+    font-size: 0.78rem;
+    font-weight: 650;
+    text-align: center;
+    color: var(--forest);
+    font-variant-numeric: tabular-nums;
+  }
+  .vf-trend .vf-month {
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--text-secondary);
+  }
+  @keyframes vf-grow { from { transform: scaleY(0.02); opacity: 0.4; } to { transform: scaleY(1); opacity: 1; } }
+  .vf-legend {
+    display: flex;
+    gap: 0.9rem;
+    margin-top: 0.85rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid rgba(49, 69, 45, 0.07);
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+  }
+  .vf-legend i {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 0.15rem;
+    margin-right: 0.3rem;
+    vertical-align: -0.02rem;
+  }
+
+  /* ---- branch table ---- */
+  .vf-table { width: 100%; border-collapse: collapse; }
+  .vf-table caption { text-align: left; }
+  .vf-table th, .vf-table td {
+    padding: 0.62rem 0.75rem;
+    text-align: left;
+    border-top: 1px solid rgba(49, 69, 45, 0.07);
+    vertical-align: middle;
+  }
+  .vf-table thead th {
+    border-top: 0;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .vf-table td.vf-num, .vf-table th.vf-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .vf-table tbody tr:hover { background: rgba(127, 160, 107, 0.07); }
+  .vf-name { font-weight: 600; color: var(--forest); }
+  .vf-kind {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(49, 69, 45, 0.07);
+    color: var(--text-secondary);
+    font-size: 0.66rem;
+    font-weight: 650;
+    vertical-align: 0.08rem;
+  }
+  .vf-track {
+    position: relative;
+    display: block;
+    height: 0.42rem;
+    border-radius: 999px;
+    background: rgba(49, 69, 45, 0.07);
+    overflow: hidden;
+    min-width: 4rem;
+  }
+  .vf-track b {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+    background: var(--forest);
+  }
+  .vf-track.slim b { background: rgba(46, 91, 62, 0.55); }
+
+  /* ---- destination + latest ---- */
+  .vf-countries { width: 100%; border-collapse: collapse; }
+  .vf-countries td { padding: 0.5rem 0.15rem; border-top: 1px solid rgba(49, 69, 45, 0.06); font-size: 0.88rem; }
+  .vf-countries tr:first-child td { border-top: 0; }
+  .vf-countries .vf-flag {
+    width: 22px;
+    height: 15px;
+    object-fit: cover;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(49, 69, 45, 0.12);
+    vertical-align: -0.15rem;
+    margin-right: 0.45rem;
+  }
+  .vf-countries .vf-dial { font-weight: 650; font-variant-numeric: tabular-nums; }
+  .vf-countries td.vf-num { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+  .vf-countries td.vf-num b { color: var(--forest); }
+
+  .vf-recent { list-style: none; margin: 0; padding: 0; }
+  .vf-recent li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.5rem 1rem;
+    border-top: 1px solid rgba(49, 69, 45, 0.06);
+    font-size: 0.86rem;
+  }
+  .vf-recent li:first-child { border-top: 0; }
+  .vf-recent .vf-who { min-width: 0; }
+  .vf-recent .vf-who b { display: block; font-weight: 600; color: var(--forest); }
+  .vf-recent .vf-who span {
+    display: block;
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .vf-status {
+    flex: none;
+    padding: 0.09rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .vf-status--ok { background: rgba(121, 179, 107, 0.2); color: #2f5a28; }
+  .vf-status--sent { background: rgba(49, 69, 45, 0.08); color: var(--text-secondary); }
+  .vf-status--fail { background: rgba(176, 88, 60, 0.14); color: #8a3d24; }
+
+  /* ---- guests ---- */
+  .vf-guests { width: 100%; border-collapse: collapse; }
+  .vf-guests th, .vf-guests td {
+    padding: 0.58rem 0.75rem;
+    border-top: 1px solid rgba(49, 69, 45, 0.07);
+    text-align: left;
+    font-size: 0.88rem;
+  }
+  .vf-guests thead th {
+    border-top: 0;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .vf-guests td.vf-num, .vf-guests th.vf-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .vf-guests .vf-none { color: var(--text-secondary); font-style: italic; }
+  .vf-guests tbody tr:hover { background: rgba(127, 160, 107, 0.07); }
+  /* On a phone the full table is wider than the screen. Rather than let it
+     scroll sideways with a column half cut off, the last name moves beside
+     the first name and the two count columns step out. Nothing is lost: the
+     name is still whole, the number still leads, and the counts return as
+     soon as there is room for them. */
+  .vf-last-m { display: none; }
+
+  /* ---- notes and empty state ---- */
+  .vf-note {
+    margin: 1.15rem 0 0;
+    padding: 0.7rem 0.9rem;
+    border-radius: 0.75rem;
+    background: rgba(194, 162, 75, 0.1);
+    color: #6b5522;
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+  .vf-empty {
+    padding: 2.2rem 1.2rem 2.4rem;
+    text-align: center;
+    color: var(--text-secondary);
+  }
+  .vf-empty .vf-empty-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.9rem;
+    height: 2.9rem;
+    border-radius: 50%;
+    background: rgba(46, 91, 62, 0.1);
+    color: var(--forest);
+    margin-bottom: 0.7rem;
+  }
+  .vf-empty h2 { margin: 0 0 0.35rem; font-size: 1.02rem; color: var(--forest); }
+  .vf-empty p { margin: 0 auto; max-width: 34ch; font-size: 0.88rem; line-height: 1.5; }
+  .vf-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 1040px) {
+    .vf-grid { grid-template-columns: minmax(0, 1fr); }
+    .vf-hero { grid-template-columns: minmax(0, 1fr); }
+    .vf-hero-lead { border-right: 0; border-bottom: 1px solid rgba(49, 69, 45, 0.08); }
+  }
+  @media (max-width: 700px) {
+    .vf-opt { display: none; }
+    .vf-hero-facts li { padding: 0.8rem 0.7rem; }
+    .vf-hero-lead strong { font-size: 2.4rem; }
+    .vf-filters select { min-width: 0; width: 100%; max-width: none; }
+    .vf-filters label { flex: 1 1 100%; }
+    .vf-ledger td, .vf-ledger th { padding-left: 0.45rem; padding-right: 0.45rem; }
+    .vf-ledger td:first-child, .vf-ledger th:first-child { padding-left: 0.8rem; }
+    .vf-ledger td:last-child, .vf-ledger th:last-child { padding-right: 0.8rem; }
+    .vf-last-m { display: inline; font-weight: 400; color: var(--text-secondary); }
+    .vf-last-col, .vf-codes-col { display: none; }
+    .vf-guests th, .vf-guests td { padding: 0.55rem 0.6rem; font-size: 0.86rem; }
+    .vf-table th, .vf-table td { padding: 0.55rem 0.6rem; }
+    .vf-recent .vf-who span { white-space: normal; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vf-trend .vf-bar { animation: none; }
+  }
+</style>
+{% endblock %}
+
+{% block panel_content %}
+<div class="panel-header vf-head">
+  <div>
+    <p class="vf-eyebrow">WhatsApp codes</p>
+    <h1>Verification</h1>
+    <p>
+      Every code a guest asked for on a shop QR page, whether WhatsApp accepted it,
+      and whether the guest finished.
+      <span class="vf-scope">{{ scope_label }}</span>
+    </p>
+  </div>
+  <p class="vf-stamp">Updated {{ generated_at|date:"d M Y, H:i" }}</p>
+</div>
+
+<form class="vf-filters" method="get" role="search" aria-label="Filter codes">
+  <label>
+    <span>Branch</span>
+    <select name="branch">
+      <option value="">All branches I can see ({{ outlet_count }})</option>
+      {% for outlet in branch_options %}
+      <option value="{{ outlet.pk }}" {% if branch_id == outlet.pk|stringformat:"s" %}selected{% endif %}>
+        {{ outlet.brand.name_en }} · {{ outlet.official_name }}
+      </option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    <span>Search</span>
+    <input type="search" name="q" value="{{ search }}" placeholder="Mobile number or guest name" autocomplete="off">
+  </label>
+  <button type="submit" class="btn btn-outline btn-sm">Apply</button>
+  {% if branch_id or search %}
+  <a class="vf-reset" href="{% url 'panel_otp' %}">Clear filters</a>
+  {% endif %}
+</form>
+
+{% if summary.sent %}
+<div class="vf-hero">
+  <div class="vf-hero-lead">
+    <span>Codes sent today</span>
+    <strong>{{ windows.0.sent|default:"0" }}</strong>
+    <em>
+      {{ windows.0.delivered }} delivered &middot;
+      {{ windows.0.verified }} verified by the guest
+    </em>
+  </div>
+  <ul class="vf-hero-facts">
+    <li>
+      <span>Delivered, all time</span>
+      <b>{{ summary.delivered }}</b>
+      <em>{{ summary.delivery_pct }}% of {{ summary.sent }} attempts</em>
+    </li>
+    <li>
+      <span>Verified, all time</span>
+      <b>{{ summary.verified }}</b>
+      <em>{{ summary.verified_pct }}% of delivered</em>
+    </li>
+    <li>
+      <span>Mobile numbers</span>
+      <b>{{ summary.numbers }}</b>
+      <em>
+        {% if summary.since %}first code {{ summary.since|date:"d M Y" }}{% else %}no codes yet{% endif %}
+      </em>
+    </li>
+  </ul>
+</div>
+
+<div class="vf-grid">
+  <section class="vf-panel" aria-labelledby="vf-windows-title">
+    <div class="vf-panel-head">
+      <h2 id="vf-windows-title">The six windows</h2>
+      <p>Calendar days, Dubai time</p>
+    </div>
+    <div class="vf-panel-body vf-panel-body--flush">
+      <table class="vf-ledger">
+        <caption class="vf-sr">Codes sent, delivered and verified by period</caption>
+        <thead>
+          <tr>
+            <th scope="col">Period</th>
+            <th scope="col" class="vf-num">Sent</th>
+            <th scope="col" class="vf-num">Delivered</th>
+            <th scope="col" class="vf-num">Verified</th>
+            <th scope="col" class="vf-num vf-opt">Delivery</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in windows %}
+          <tr {% if row.key == "today" %}class="vf-now"{% endif %}>
+            <td>
+              <span class="vf-period">{{ row.label }}</span>
+              <span class="vf-range">{{ row.range }}</span>
+            </td>
+            <td class="vf-num">{{ row.sent }}</td>
+            <td class="vf-num">{{ row.delivered }}</td>
+            <td class="vf-num {{ row.verified|yesno:",vf-mute" }}">{{ row.verified }}</td>
+            <td class="vf-num vf-opt"><span class="vf-pct">{{ row.delivery_pct }}%</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="vf-panel" aria-labelledby="vf-trend-title">
+    <div class="vf-panel-head">
+      <h2 id="vf-trend-title">Last six months</h2>
+      <p>Same filters</p>
+    </div>
+    <div class="vf-panel-body">
+      <ul class="vf-trend">
+        {% for month in trend %}
+        <li>
+          <span class="vf-total">{{ month.sent }}</span>
+          <span class="vf-plot">
+            <span class="vf-bar" style="height: {{ month.pct|default:1 }}%;" aria-hidden="true">
+              {% if month.delivered %}<i style="flex: {{ month.delivered }} 0 0;"></i>{% endif %}
+              {% if month.failed %}<u style="flex: {{ month.failed }} 0 0;"></u>{% endif %}
+            </span>
+          </span>
+          <span class="vf-month" title="{{ month.long_label }}: {{ month.sent }} sent, {{ month.delivered }} delivered">{{ month.label }}</span>
+          <span class="vf-sr">{{ month.long_label }}: {{ month.sent }} sent, {{ month.delivered }} delivered, {{ month.verified }} verified</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="vf-legend">
+        <span><i style="background: var(--forest);"></i>Delivered</span>
+        <span><i style="background: rgba(194, 162, 75, 0.65);"></i>Not delivered</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="vf-panel" aria-labelledby="vf-branch-title" style="margin-bottom: 1.15rem;">
+  <div class="vf-panel-head">
+    <h2 id="vf-branch-title">By branch</h2>
+    <p>{{ detail.label }} &middot; {{ detail.range }}</p>
+  </div>
+  <div style="overflow-x: auto;">
+    <table class="vf-table">
+      <caption class="vf-sr">Codes per branch over {{ detail.label }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Branch</th>
+          <th scope="col" class="vf-num">Sent</th>
+          <th scope="col" class="vf-num">Delivered</th>
+          <th scope="col" class="vf-num">Verified</th>
+          <th scope="col" class="vf-num vf-opt">Delivery</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in branches %}
+        <tr>
+          <td>
+            <span class="vf-name">{{ row.label }}</span>
+            {% if row.kind == "brand" %}<span class="vf-kind">Brand page</span>{% endif %}
+            {% if row.kind == "unknown" %}<span class="vf-kind">Before recording</span>{% endif %}
+          </td>
+          <td class="vf-num">{{ row.sent }}</td>
+          <td class="vf-num">{{ row.delivered }}</td>
+          <td class="vf-num">{{ row.verified }}</td>
+          <td class="vf-num vf-opt">
+            <span class="vf-track slim" aria-hidden="true"><b style="width: {{ row.delivery_pct }}%;"></b></span>
+            <span class="vf-sr">{{ row.delivery_pct }} percent delivered</span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="vf-none" style="color: var(--text-secondary);">No codes in this window.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="vf-grid">
+  <section class="vf-panel" aria-labelledby="vf-recent-title">
+    <div class="vf-panel-head">
+      <h2 id="vf-recent-title">Latest codes</h2>
+      <p>{{ detail.label }}</p>
+    </div>
+    <ul class="vf-recent">
+      {% for row in recent %}
+      <li>
+        <span class="vf-who">
+          <b>{% if row.name %}{{ row.name }}{% else %}{{ row.phone }}{% endif %}</b>
+          <span>
+            {{ row.when|date:"d M, H:i" }}
+            {% if row.name %}&middot; {{ row.phone }}{% endif %}
+            {% if row.branch %}&middot; {{ row.branch }}{% endif %}
+            {% if row.error %}&middot; {{ row.error }}{% endif %}
+          </span>
+        </span>
+        <span class="vf-status vf-status--{{ row.tone }}">{{ row.status }}</span>
+      </li>
+      {% empty %}
+      <li><span class="vf-who vf-none">No codes in this window.</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="vf-panel" aria-labelledby="vf-country-title">
+    <div class="vf-panel-head">
+      <h2 id="vf-country-title">Destination</h2>
+      <p>{{ detail.label }}</p>
+    </div>
+    <div class="vf-panel-body">
+      <table class="vf-countries">
+        <caption class="vf-sr">Codes by destination country dialling code</caption>
+        <tbody>
+          {% for row in countries %}
+          <tr>
+            <td>
+              {% if row.flag %}
+              <img class="vf-flag" src="{% static row.flag %}" alt="" width="22" height="15" loading="lazy">
+              {% endif %}
+              <span class="vf-dial">+{{ row.dial }}</span>
+            </td>
+            <td class="vf-num"><b>{{ row.sent }}</b> sent</td>
+            <td class="vf-num">{{ row.delivered }} delivered</td>
+            <td class="vf-num">{{ row.delivery_pct }}%</td>
+          </tr>
+          {% empty %}
+          <tr><td class="vf-none" style="color: var(--text-secondary);">No codes in this window.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<section class="vf-panel" aria-labelledby="vf-guests-title">
+  <div class="vf-panel-head">
+    <h2 id="vf-guests-title">Guests who asked for a code</h2>
+    <p>{{ detail.label }} &middot; one row per mobile number</p>
+  </div>
+  <div style="overflow-x: auto;">
+    <table class="vf-guests">
+      <caption class="vf-sr">Guests behind the codes in {{ detail.label }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">First name</th>
+          <th scope="col" class="vf-last-col">Last name</th>
+          <th scope="col">Mobile</th>
+          <th scope="col" class="vf-num vf-codes-col">Codes</th>
+          <th scope="col" class="vf-num">Verified</th>
+          <th scope="col" class="vf-num vf-opt">Last asked</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in guests %}
+        <tr>
+          <td>
+            {% if row.first_name %}{{ row.first_name }}{% else %}<span class="vf-none">not given</span>{% endif %}{% if row.last_name %} <span class="vf-last-m">{{ row.last_name }}</span>{% endif %}
+          </td>
+          <td class="vf-last-col">{% if row.last_name %}{{ row.last_name }}{% else %}<span class="vf-none">not given</span>{% endif %}</td>
+          <td>{{ row.phone }}</td>
+          <td class="vf-num vf-codes-col">{{ row.sent }}</td>
+          <td class="vf-num">{{ row.verified }}</td>
+          <td class="vf-num vf-opt">{{ row.last_at|date:"d M, H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="color: var(--text-secondary);">No codes in this window.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if summary.failed %}
+<p class="vf-note">
+  {{ summary.failed }} attempt(s) were refused by WhatsApp and are counted as sent but not delivered.
+  They never reached the guest, so they do not spend that guest's limit.
+</p>
+{% endif %}
+{% if branches %}
+{% for row in branches %}{% if row.kind == "unknown" and row.sent %}
+<p class="vf-note">
+  {{ row.sent }} code(s) predate branch recording, so they show as "Before recording" rather than being
+  guessed onto a branch. Every new code carries its branch from the QR page it was asked on.
+</p>
+{% endif %}{% endfor %}
+{% endif %}
+
+{% else %}
+<section class="vf-panel">
+  <div class="vf-empty">
+    <span class="vf-empty-mark">{% icon "whatsapp" %}</span>
+    <h2>No codes yet</h2>
+    <p>
+      A code appears here the moment a guest asks for one on a shop QR page.
+      Nothing has been sent{% if search or branch_id %} for this filter{% endif %} yet.
+    </p>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

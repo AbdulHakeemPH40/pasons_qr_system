@@ -78,9 +78,25 @@ if not DEBUG and (SECRET_KEY == INSECURE_DEV_SECRET or len(SECRET_KEY) < 32):
         "and put it in .env."
     )
 
+# The public address this project answers on. Any absolute link built with no
+# request in hand (printed QR images, exports run from a shell) uses it,
+# because a host list cannot tell a phone-friendly address from a tunnel name.
+# Override it in .env for a staging host.
+PUBLIC_BASE_URL = os.environ.get(
+    "PUBLIC_BASE_URL", "https://qr-system.pasons.group"
+).rstrip("/")
+
+# The host part of that address, kept in ALLOWED_HOSTS by default so the site
+# answers on its own domain even when .env lists only an address. Without this
+# every request arrives as "Invalid HTTP_HOST header" after a fresh deploy.
+PUBLIC_HOST = PUBLIC_BASE_URL.split("://", 1)[-1].split("/")[0]
+
 ALLOWED_HOSTS = [
     h for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h
 ]
+
+if PUBLIC_HOST and PUBLIC_HOST not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(PUBLIC_HOST)
 
 # Hosts added on top of ALLOWED_HOSTS for sharing the dev server through a
 # tunnel (ngrok, cloudflared, localtunnel...). Kept as a *separate* key because

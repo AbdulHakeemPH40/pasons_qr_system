@@ -8,7 +8,10 @@ and a CSV file the campaign team can import.
 Every value is labelled at its true strength, because the difference matters
 when someone acts on it:
 
-  * mobile   -- typed by the guest, UNVERIFIED (client decision: no OTP step)
+  * mobile   -- proved with a WhatsApp one time code before it is stored as
+                verified (`GuestProfile.phone_verified`). The page reports
+                codes sent, delivered and verified separately, because those
+                three numbers answer three different questions.
   * email    -- only "verified" when a Google sign-in proved it
   * Instagram follow -- SELF-DECLARED; Meta exposes no follow check, so this
     is the guest's word, and the panel says so
@@ -27,11 +30,14 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from apps.core.panel_permissions import (
+    brand_for_manager,
+    is_brand_manager,
     is_head_office,
     scoped_brands,
     scoped_outlets,
 )
 
+from . import reporting
 from .models import GuestProfile
 
 # The hand-off to the campaign platform, one column per field, written once
@@ -184,3 +190,72 @@ def _cell(profile, key):
     if key in ("email_verified", "ig_follow_claimed", "consent_marketing"):
         return "yes" if getattr(profile, key) else "no"
     return getattr(profile, key) or ""
+
+
+# --------------------------------------------------------------------------
+# WhatsApp verification report
+# --------------------------------------------------------------------------
+@login_required
+@require_GET
+def panel_otp(request):
+    """Codes sent, delivered and verified, per window and per branch.
+
+    The client asked for six windows at once (today, yesterday, 7 days,
+    30 days, this month, last month) plus the branch breakdown and the guest
+    behind each number. The arithmetic lives in ``reporting``; this view only
+    scopes it to the person reading and passes the labels through.
+
+    No money figure is printed. The partner chose counts only, and a guessed
+    rate would be worse than no rate: the panel would show a cost the invoice
+    does not match.
+    """
+    user = request.user
+    codes = reporting.scoped_codes(user)
+
+    branch_id = (request.GET.get("branch") or "").strip()
+    codes = reporting.filter_by_branch(codes, user, branch_id)
+
+    search = (request.GET.get("q") or "").strip()
+    codes = reporting.filter_by_search(codes, search)
+
+    windows = reporting.period_rows(codes)
+    by_key = {row["key"]: row for row in windows}
+
+    # Detail sections share one window so the numbers below the fold agree
+    # with the row a manager just read. 30 days is the useful working span.
+    detail = by_key["month30"]
+    start, end = detail["start"], detail["end"]
+
+    scope_outlets = reporting.branch_choices(user)
+    scope_brands = reporting.brand_choices(user)
+    if is_head_office(user):
+        scope_label = "All branches"
+    elif is_brand_manager(user) and brand_for_manager(user) is None:
+        # The all-brands manager holds no single brand, so their scope is the
+        # whole group even though they are not head office.
+        scope_label = "All branches"
+    elif scope_brands.count() == 1:
+        scope_label = scope_brands.first().name_en
+    else:
+        scope_label = "Your branches"
+
+    context = {
+        "title": "WhatsApp Verification",
+        "nav_active": "otp",
+        "summary": reporting.summary(codes),
+        "windows": windows,
+        "detail": detail,
+        "trend": reporting.monthly_trend(codes),
+        "branches": reporting.by_branch(codes, start, end),
+        "countries": reporting.by_country(codes, start, end),
+        "recent": reporting.recent_rows(codes, start, end, limit=25),
+        "guests": reporting.guest_rows(codes, start, end, limit=100),
+        "branch_options": scope_outlets,
+        "branch_id": branch_id,
+        "search": search,
+        "scope_label": scope_label,
+        "brand_count": scope_brands.count(),
+        "outlet_count": scope_outlets.count(),
+        "generated_at": timezone.localtime(),
+    }
+    return render(request, "panel/otp_report.html", context)

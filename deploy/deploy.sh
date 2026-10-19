@@ -17,6 +17,9 @@ set -euo pipefail
 
 HOST="${HOST:-139.59.84.247}"
 REMOTE_USER="${REMOTE_USER:-root}"
+# The public name the site is served under, printed at the end. HOST above is
+# still the droplet address, because the deploy connects to it directly.
+SITE_URL="${SITE_URL:-https://qr-system.pasons.group}"
 APP_USER="pasons"
 APP_DIR="/srv/pasons/platform"
 SERVICE="pasons"
@@ -136,4 +139,4 @@ for path in "/" "/panel/login/" "/static/css/app.css"; do
   esac
 done
 
-printf '\nDeployed: http://%s/\n' "$HOST"
+printf '\nDeployed: http://%s/  (public: %s)\n' "$HOST" "$SITE_URL"

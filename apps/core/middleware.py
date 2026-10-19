@@ -61,6 +61,10 @@ VIEW_CAPABILITIES = {
     "panel_coupon_redeem": "rewards",
     "panel_guests": "guests",
     "panel_guests_export": "guests",
+    # The code report is a number page, so it rides the analytics capability.
+    # Branch managers have it, which is what the client asked for, and their
+    # scope still limits every row to their own branches.
+    "panel_otp": "analytics",
 }
 
 # Kept so a future staff route outside /panel/ can declare its own gate

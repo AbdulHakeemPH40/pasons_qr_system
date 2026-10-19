@@ -110,6 +110,9 @@ urlpatterns = [
         guest_panel_views.panel_guests_export,
         name="panel_guests_export",
     ),
+    # WhatsApp one time codes: sent, delivered and verified, per window and
+    # per branch, with the guest behind each number. Counts only, no money.
+    path("panel/verification/", guest_panel_views.panel_otp, name="panel_otp"),
 
     path(
         "dashboard/",

@@ -18,6 +18,7 @@ import secrets
 
 from django.conf import settings
 from django.core import signing
+from django.db import transaction
 
 from .models import GuestProfile
 
@@ -151,3 +152,145 @@ def ensure_profile(request, brand=None, outlet=None):
     # profile and then return a redirect, so the cookie is set in one place.
     request._guest_cookie_to_set = profile.guest_id
     return profile, True
+
+
+# --------------------------------------------------------------------------
+# sign out, and coming back to the same account
+# --------------------------------------------------------------------------
+#
+# The cookie is a SESSION, not the account. The account is the mobile number,
+# because that is the only thing the WhatsApp code actually proves. So:
+#
+#   sign out   forgets this browser. The row and its coupons stay put.
+#   sign in    with a number that a verified account already owns hands this
+#              browser that account back, coupons and ladder included.
+#
+# Without the second half, clearing cookies (or signing out and back in) made
+# a second account, and the guest's coupons looked lost. The reward engine
+# already treated the number as the person (see rewards.services
+# ._profiles_sharing_a_phone); this is the same rule applied to the account.
+
+
+def clear_guest_cookie(response):
+    """Forget this device. The account itself is never deleted."""
+    response.delete_cookie(COOKIE_NAME, path="/")
+    return response
+
+
+def _merge_into(target, source):
+    """Move everything one profile owns onto another, then delete the empty row.
+
+    Only the rows a guest would notice are moved: coupons, the round history,
+    and the ladder. Everything else is a fact about the person, and the target
+    already holds the authoritative copy, so a blank is filled from the source
+    and a value is never overwritten.
+    """
+    if source.pk == target.pk:
+        return target
+
+    # Imported here rather than at module level: apps.rewards imports this
+    # app's models, and a top-level import would tie the two modules to a
+    # load order that neither of them controls.
+    from apps.rewards.models import RewardCoupon, RewardProgress, RewardRound
+
+    with transaction.atomic():
+        RewardCoupon.objects.filter(profile=source).update(profile=target)
+        RewardRound.objects.filter(profile=source).update(profile=target)
+
+        for row in RewardProgress.objects.filter(profile=source):
+            mine = RewardProgress.objects.filter(
+                profile=target, game_slug=row.game_slug
+            ).first()
+            if mine is None:
+                row.profile = target
+                row.save(update_fields=["profile", "updated_at"])
+            else:
+                # Two runs on the same ladder: the higher rung wins, because
+                # progress is never taken away from a guest.
+                if row.rung > mine.rung:
+                    mine.rung = row.rung
+                    mine.save(update_fields=["rung", "updated_at"])
+                row.delete()
+
+        filled = []
+        for name in ("first_name", "last_name", "email", "google_sub"):
+            if not getattr(target, name) and getattr(source, name):
+                setattr(target, name, getattr(source, name))
+                filled.append(name)
+        for name in ("first_brand_id", "first_outlet_id"):
+            if not getattr(target, name) and getattr(source, name):
+                setattr(target, name, getattr(source, name))
+                filled.append(name)
+        if not target.email_verified and source.email_verified:
+            target.email_verified = True
+            filled.append("email_verified")
+        if not target.consent_at and source.consent_at:
+            target.consent_marketing = source.consent_marketing
+            target.consent_at = source.consent_at
+            filled += ["consent_marketing", "consent_at"]
+        if not target.ig_claimed_at and source.ig_claimed_at:
+            target.ig_follow_claimed = source.ig_follow_claimed
+            target.ig_claimed_at = source.ig_claimed_at
+            filled += ["ig_follow_claimed", "ig_claimed_at"]
+        # The phone lock is "once per calendar month", so the LATER change is
+        # the one that counts when two rows are folded together.
+        if source.phone_changed_at and (
+            target.phone_changed_at is None
+            or source.phone_changed_at > target.phone_changed_at
+        ):
+            target.phone_changed_at = source.phone_changed_at
+            filled.append("phone_changed_at")
+        if filled:
+            target.save(update_fields=filled + ["updated_at"])
+
+        source.delete()
+    return target
+
+
+def adopt_account(request, phone):
+    """Point this browser at the account that already owns `phone`.
+
+    Called after a code is verified, which is the moment the guest proved the
+    number is theirs. Returns the account, or None when the number is new.
+
+    Never called with an unproved number: that would let a typed number pick
+    somebody else's coupons.
+    """
+    if not phone:
+        return None
+
+    handle = getattr(request, "guest", None)
+    current = handle.profile if handle is not None else None
+
+    if current is not None and current.phone == phone and current.phone_verified:
+        return current
+
+    accounts = list(
+        GuestProfile.objects.filter(phone=phone, phone_verified=True).order_by(
+            "created_at", "pk"
+        )
+    )
+    if not accounts:
+        return None
+
+    # Oldest first, so the surviving row is the account the guest has had
+    # longest. Any older duplicates with this same proved number are the same
+    # person by the rule the client chose, so they are folded in rather than
+    # left behind holding coupons.
+    target = accounts[0]
+    folded = {row.pk for row in accounts}
+    for other in accounts[1:]:
+        target = _merge_into(target, other)
+
+    if current is not None and current.pk not in folded:
+        if not current.phone_verified:
+            # Anonymous history on this device (a game played, an Instagram
+            # claim) belongs to whoever just proved the number.
+            target = _merge_into(target, current)
+        # A row proved with a DIFFERENT number is somebody else's account on a
+        # shared phone or tablet. It is left alone, so they can sign back in.
+
+    if handle is not None:
+        handle.adopt(target)
+    request._guest_cookie_to_set = target.guest_id
+    return target

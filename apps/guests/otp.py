@@ -22,6 +22,10 @@ The rules, and why each one exists:
   hashing       PBKDF2 (Django's default hasher) with a per-row salt. The
                 digits are never stored, so a database copy is not a list of
                 live codes.
+  accounting    Every attempt is a row, delivered or not, so the panel can
+                report what was sent, what arrived and what was verified.
+                Only DELIVERED rows count toward the limits above: a message
+                the guest never received must not spend their allowance.
 
 Nothing here trusts the browser: the phone is normalised by the caller from
 the country picker, and the proof that a number was verified lives in the
@@ -94,13 +98,22 @@ def _seconds_until_slot(rows, limit, window, now):
     return _ceil_seconds(oldest.created_at + window - now)
 
 
-def issue(phone, ip=None):
-    """Create, send and return a new code for `phone`."""
+def issue(phone, ip=None, brand=None, outlet=None):
+    """Create, send and return a new code for `phone`.
+
+    `brand` and `outlet` are the shop the guest was standing in when they
+    asked (the QR page). They are stored on the row so the panel can report
+    per branch instead of printing one number nobody can act on.
+    """
     if not phone:
         return Outcome(False, Reason.BAD_PHONE)
 
     now = timezone.now()
-    recent = PhoneOTP.objects.filter(phone=phone).order_by("-created_at")
+
+    # Only a message the guest actually received spends their allowance.
+    # A refused send (Meta down, wrong template, no token) is logged, but it
+    # must not cost them the wait or the hourly window.
+    recent = PhoneOTP.objects.filter(phone=phone, delivered=True).order_by("-created_at")
     last = recent.first()
 
     if last is not None:
@@ -135,7 +148,7 @@ def issue(phone, ip=None):
 
     if ip:
         per_ip = PhoneOTP.objects.filter(
-            sent_ip=ip, created_at__gte=now - timedelta(hours=1)
+            sent_ip=ip, delivered=True, created_at__gte=now - timedelta(hours=1)
         ).count()
         if per_ip >= MAX_SENDS_PER_IP_PER_HOUR:
             return Outcome(
@@ -150,18 +163,25 @@ def issue(phone, ip=None):
         code_hash=make_password(code),
         expires_at=now + PhoneOTP.ttl(),
         sent_ip=ip or None,
+        brand=brand,
+        outlet=outlet,
     )
 
     delivery = whatsapp.send_otp(phone, code)
     row.delivered = delivery.ok
     row.delivery_error = "" if delivery.ok else delivery.error[:120]
-    row.save(update_fields=["delivered", "delivery_error", "updated_at"])
+    if not delivery.ok:
+        # The row stays so the panel can show the truth: a message that was
+        # attempted and never arrived. It is spent at once, so the undelivered
+        # digits can never be typed in, and it is excluded from the limits
+        # above, so the guest may try again immediately.
+        row.consumed_at = now
+    row.save(
+        update_fields=["delivered", "delivery_error", "consumed_at", "updated_at"]
+    )
 
     if not delivery.ok:
-        # A failed send must not cost the guest their allowance. The row is
-        # removed so the cooldown and the hourly window stay honest.
-        row.delete()
-        return Outcome(False, Reason.SEND_FAILED, retry_after=RESEND_COOLDOWN_SECONDS)
+        return Outcome(False, Reason.SEND_FAILED, retry_after=0)
 
     # Only the newest code may work. An older, still valid code is spent now.
     PhoneOTP.objects.filter(phone=phone, consumed_at__isnull=True).exclude(
@@ -204,7 +224,13 @@ def verify(phone, code):
         return Outcome(False, Reason.LOCKED)
 
     if check_password(typed, row.code_hash):
-        row.spend(now=now)
+        # Two timestamps, two different facts. `consumed_at` means the code
+        # can never be used again. `verified_at` means somebody actually got
+        # it right, which is the number the panel reports; a resend also
+        # consumes a code, so consumed_at alone would over-count.
+        row.consumed_at = now
+        row.verified_at = now
+        row.save(update_fields=["consumed_at", "verified_at", "updated_at"])
         return Outcome(True, Reason.OK, phone=phone)
 
     row.attempts += 1

@@ -6,15 +6,18 @@ QR landing, retired tokens, review fallback, specials, menu redirect,
 and panel scope.
 """
 
+import csv
 import json
+import tempfile
 from io import StringIO
+from pathlib import Path
 from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -2044,3 +2047,205 @@ class SeedStaffCommandTests(TestCase):
         self._run("--password", "pw-123456", "--style", "b")
         self.assertTrue(User.objects.filter(username="brand_manager").exists())
         self.assertTrue(User.objects.filter(username="manager.branda_one").exists())
+
+
+class ImportStaffCsvCommandTests(TestCase):
+    """The client's account sheet must create exactly the accounts it lists.
+
+    The sheet writes branch names the way people say them ("Brand A, One")
+    while the database stores them with dashes ("Brand A — One"), so the
+    command has to resolve a branch without guessing: the username carries
+    the outlet code, and the written name is only a second try.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.brand_a = Brand.objects.create(
+            code="BRANDA", name_en="Brand A", status="active"
+        )
+        cls.brand_b = Brand.objects.create(
+            code="BRANDB", name_en="Brand B", status="active"
+        )
+        # Em dash in the name, comma in the sheet: the punctuation fold test.
+        Outlet.objects.create(
+            code="BRANDA-ONE", official_name="Brand A \u2014 One", brand=cls.brand_a,
+            slug="branda-one", active=True,
+        )
+        Outlet.objects.create(
+            code="BRANDA-TWO", official_name="Brand A \u2014 Two", brand=cls.brand_a,
+            slug="branda-two", active=True,
+        )
+        Outlet.objects.create(
+            code="BRANDB-ONE", official_name="Brand B \u2014 One", brand=cls.brand_b,
+            slug="brandb-one", active=True,
+        )
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def _sheet(self, rows, name="accounts.csv"):
+        """Write a sheet with the real header and return its path."""
+        path = Path(self.tmp.name) / name
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(
+                ["Role", "Username", "Email", "Password", "Brand", "Branch", "Sign-in page"]
+            )
+            writer.writerows(rows)
+        return str(path)
+
+    def _run(self, path, *args):
+        out = StringIO()
+        call_command("import_staff_csv", path, *args, stdout=out)
+        return out.getvalue()
+
+    @staticmethod
+    def _standard_rows():
+        return [
+            ["Superuser", "boss", "boss@example.test", "Vault-2026!", "All brands", "All branches", ""],
+            ["Brand user", "brand_manager", "bm@example.test", "Sheet-2026!", "All brands", "All branches", ""],
+            ["Branch user", "br.branda-one", "one@example.test", "Sheet-2026!", "Brand A", "Brand A, One", ""],
+            ["Branch user", "br.brandb-one", "bone@example.test", "Sheet-2026!", "Brand B", "Brand B, One", ""],
+        ]
+
+    # ---------------------------------------------------------------- the sheet
+    def test_dry_run_writes_nothing(self):
+        output = self._run(self._sheet(self._standard_rows()), "--dry-run")
+        self.assertFalse(User.objects.exists(), "a dry run created a user")
+        self.assertIn("br.branda-one", output)
+        self.assertIn("4 account(s) in the sheet", output)
+        self.assertIn("Dry run", output)
+
+    def test_sheet_creates_one_account_per_row_with_its_scope(self):
+        self._run(self._sheet(self._standard_rows()))
+
+        boss = User.objects.get(username="boss")
+        self.assertTrue(boss.is_superuser)
+        self.assertTrue(boss.is_staff)
+        self.assertFalse(
+            hasattr(boss, "outlet_manager_profile"),
+            "a superuser must not carry a scoped manager profile",
+        )
+
+        every_brand = User.objects.get(username="brand_manager")
+        self.assertEqual(every_brand.outlet_manager_profile.role, OutletManager.Role.BRAND)
+        self.assertIsNone(every_brand.outlet_manager_profile.brand)
+        self.assertFalse(every_brand.is_staff)
+        self.assertEqual(
+            set(scoped_outlets(every_brand).values_list("code", flat=True)),
+            {"BRANDA-ONE", "BRANDA-TWO", "BRANDB-ONE"},
+        )
+
+        one = User.objects.get(username="br.branda-one")
+        self.assertEqual(one.outlet_manager_profile.role, OutletManager.Role.OUTLET)
+        self.assertEqual(
+            list(scoped_outlets(one).values_list("code", flat=True)), ["BRANDA-ONE"]
+        )
+        self.assertEqual(one.email, "one@example.test")
+        self.assertFalse(one.is_staff)
+
+    def test_branch_label_punctuation_does_not_matter(self):
+        # The username has no usable code here, so the written name decides.
+        path = self._sheet(
+            [["Branch user", "ali", "ali@example.test", "Sheet-2026!", "Brand A", "Brand A, Two", ""]]
+        )
+        self._run(path)
+        self.assertEqual(
+            list(scoped_outlets(User.objects.get(username="ali")).values_list("code", flat=True)),
+            ["BRANDA-TWO"],
+        )
+
+    def test_username_code_wins_over_a_stale_branch_label(self):
+        # A renamed branch leaves the sheet's old wording behind. The username
+        # still names the real code, so the account follows the code.
+        path = self._sheet(
+            [["Branch user", "br.branda-two", "t@example.test", "Sheet-2026!", "Brand A", "Brand A, Old Name", ""]]
+        )
+        self._run(path)
+        self.assertEqual(
+            list(
+                scoped_outlets(User.objects.get(username="br.branda-two")).values_list(
+                    "code", flat=True
+                )
+            ),
+            ["BRANDA-TWO"],
+        )
+
+    def test_unknown_branch_stops_the_whole_import(self):
+        rows = self._standard_rows() + [
+            ["Branch user", "br.ghost", "g@example.test", "Sheet-2026!", "Brand A", "Brand A, Nowhere", ""],
+        ]
+        with self.assertRaises(CommandError):
+            self._run(self._sheet(rows))
+        self.assertFalse(
+            User.objects.exists(),
+            "a bad row must not leave the good rows half created",
+        )
+
+    def test_missing_column_is_refused(self):
+        path = Path(self.tmp.name) / "broken.csv"
+        path.write_text("Role,Username,Email\nBranch user,x,x@example.test\n", encoding="utf-8")
+        with self.assertRaises(CommandError) as caught:
+            self._run(str(path))
+        self.assertIn("missing column", str(caught.exception))
+
+    def test_duplicate_username_is_refused(self):
+        rows = self._standard_rows() + [self._standard_rows()[2]]
+        with self.assertRaises(CommandError) as caught:
+            self._run(self._sheet(rows))
+        self.assertIn("both use the username", str(caught.exception))
+
+    # ------------------------------------------------------------- idempotency
+    def test_second_run_creates_nothing_and_keeps_the_password(self):
+        path = self._sheet(self._standard_rows())
+        self._run(path)
+        before = User.objects.get(username="brand_manager").password
+        output = self._run(path)
+        self.assertEqual(User.objects.count(), 4)
+        self.assertEqual(User.objects.get(username="brand_manager").password, before)
+        self.assertIn("Created 0 account(s), refreshed 4", output)
+        self.assertTrue(self.client.login(username="brand_manager", password="Sheet-2026!"))
+
+    def test_passwords_always_resets_to_the_sheet_value(self):
+        path = self._sheet(self._standard_rows())
+        self._run(path)
+        stale = User.objects.get(username="brand_manager")
+        stale.set_password("something-else")
+        stale.save(update_fields=["password"])
+        self.assertFalse(
+            self.client.login(username="brand_manager", password="Sheet-2026!")
+        )
+        self._run(path, "--passwords", "always")
+        self.assertTrue(self.client.login(username="brand_manager", password="Sheet-2026!"))
+
+    def test_an_existing_account_follows_the_sheet_when_its_branch_changes(self):
+        # No code in the username, so the written branch name decides: this is
+        # how a person who moves branch is updated on the next import.
+        self._run(
+            self._sheet(
+                [["Branch user", "ali", "ali@example.test", "Sheet-2026!", "Brand A", "Brand A, One", ""]]
+            )
+        )
+        self.assertEqual(
+            list(scoped_outlets(User.objects.get(username="ali")).values_list("code", flat=True)),
+            ["BRANDA-ONE"],
+        )
+        self._run(
+            self._sheet(
+                [["Branch user", "ali", "ali@example.test", "Sheet-2026!", "Brand A", "Brand A, Two", ""]],
+                name="moved.csv",
+            )
+        )
+        self.assertEqual(
+            list(scoped_outlets(User.objects.get(username="ali")).values_list("code", flat=True)),
+            ["BRANDA-TWO"],
+        )
+
+    def test_a_branch_user_row_without_a_branch_is_refused(self):
+        path = self._sheet(
+            [["Branch user", "nobody", "n@example.test", "Sheet-2026!", "Brand A", "All branches", ""]]
+        )
+        with self.assertRaises(CommandError) as caught:
+            self._run(path)
+        self.assertIn("Give one branch per branch user", str(caught.exception))

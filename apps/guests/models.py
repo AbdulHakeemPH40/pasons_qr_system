@@ -187,6 +187,10 @@ class PhoneOTP(TimeStampedModel):
     `consumed_at` is the single-use marker. A resend marks the older rows
     consumed, so only the newest code can ever be accepted. That is what stops
     a guest from keeping an old working code after asking for a new one.
+
+    `verified_at` answers a different question: was this code actually typed
+    correctly? A resend also sets `consumed_at`, so that column alone cannot
+    tell a win from a replacement, and the panel would over-report.
     """
 
     class Purpose(models.TextChoices):
@@ -218,7 +222,12 @@ class PhoneOTP(TimeStampedModel):
     )
     delivered = models.BooleanField(
         default=False,
-        help_text="True when WhatsApp accepted the message",
+        help_text=(
+            "True when WhatsApp accepted the message. A failed attempt is "
+            "kept with False so the panel can show it, but it is excluded "
+            "from the rate limits: a message the guest never received must "
+            "not spend their allowance."
+        ),
     )
     delivery_error = models.CharField(
         max_length=120,
@@ -227,6 +236,44 @@ class PhoneOTP(TimeStampedModel):
     )
     sent_ip = models.GenericIPAddressField(null=True, blank=True)
 
+    # --- where the guest was standing when they asked for the code ---
+    #
+    # The sheet is only ever opened from a shop QR page, so the brand and the
+    # branch are known at send time. Storing them is what lets the panel say
+    # "King Chef, Al Quoz sent 41 codes this week" instead of one flat total
+    # nobody can act on. SET_NULL, not CASCADE: deleting a branch must not
+    # erase the record of messages the client was billed for.
+    #
+    # Rows written before this column existed have no branch. They are shown
+    # as "Not recorded" rather than guessed from the guest's later profile,
+    # because a guess would move a real count to the wrong branch.
+    brand = models.ForeignKey(
+        Brand,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="otp_codes",
+        help_text="Brand of the QR page the guest asked on",
+    )
+    outlet = models.ForeignKey(
+        Outlet,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="otp_codes",
+        help_text="Branch of that QR page; empty for a brand-level page",
+    )
+
+    verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=(
+            "Set only when the guest typed the code correctly. `consumed_at` "
+            "alone cannot say this, because a resend also consumes a code."
+        ),
+    )
+
     class Meta:
         verbose_name = "Phone verification code"
         verbose_name_plural = "Phone verification codes"
@@ -234,6 +281,10 @@ class PhoneOTP(TimeStampedModel):
         indexes = [
             models.Index(fields=["phone", "-created_at"]),
             models.Index(fields=["phone", "consumed_at"]),
+            # The panel reads every report by date, scoped by branch.
+            models.Index(fields=["-created_at"]),
+            models.Index(fields=["outlet", "-created_at"]),
+            models.Index(fields=["brand", "-created_at"]),
         ]
 
     def __str__(self):
