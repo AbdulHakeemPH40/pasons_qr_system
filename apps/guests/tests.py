@@ -1283,6 +1283,33 @@ class OtpHttpTests(GuestQrFixtures):
         )
         self.assertEqual(response.status_code, 404)
 
+    @override_settings(
+        WHATSAPP_OTP_DEBUG=False,
+        WHATSAPP_ACCESS_TOKEN="",
+        WHATSAPP_PHONE_NUMBER_ID="",
+    )
+    def test_a_server_with_no_token_never_answers_the_code(self):
+        """Fail closed, end to end.
+
+        A missing token used to fall back to debug delivery, which would put
+        the six digits straight into this JSON response. On a production
+        server with an empty .env that made the whole check worthless: any
+        visitor could "verify" any number. Nothing is sent now, so nothing
+        can be verified, and the guest is asked to try again.
+        """
+        response, data = self.send_code()
+
+        self.assertEqual(response.status_code, 429)
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["reason"], "send_failed")
+        self.assertNotIn("debug_code", data)
+        # The number the guest typed may come back (the sheet shows it), but
+        # the six digits never can.
+        self.assertEqual(data["phone"], PHONE)
+        self.assertTrue(data["message"])
+        # A refused send must not burn the guest's allowance either.
+        self.assertEqual(PhoneOTP.objects.count(), 0)
+
 
 class PhoneProofTests(GuestQrFixtures):
     """The session proof: one number, one submit, half an hour."""
@@ -1408,6 +1435,30 @@ class WhatsAppDeliveryTests(TestCase):
             result = whatsapp.send_otp(PHONE, "123456")
         self.assertTrue(result.ok)
         self.assertEqual(result.debug_code, "123456")
+
+    @override_settings(
+        WHATSAPP_OTP_DEBUG=False,
+        WHATSAPP_ACCESS_TOKEN="",
+        WHATSAPP_PHONE_NUMBER_ID="",
+    )
+    def test_no_token_is_a_refusal_not_a_debug_delivery(self):
+        """`not configured` must never behave like debug mode.
+
+        The two were once the same branch, which is convenient on a fresh
+        machine and dangerous everywhere else: debug delivery returns the
+        code to the browser, so a server missing its token would hand out
+        every code it generated.
+        """
+        with mock.patch(
+            "apps.guests.whatsapp.urllib.request.urlopen",
+            side_effect=AssertionError("network used without a token"),
+        ):
+            result = whatsapp.send_otp(PHONE, "123456")
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error, "not_configured")
+        self.assertEqual(result.debug_code, "")
+
 
 
 # Claims as Google returns them for a normal personal account.

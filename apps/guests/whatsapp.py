@@ -22,6 +22,12 @@ Safety rules baked in here:
     logged, never returned and never put in an error string.
   * WHATSAPP_OTP_DEBUG (forced on during `manage.py test`) skips the network
     entirely and says so in the log. A test must never bill the client.
+  * A server with no token FAILS CLOSED. It is tempting to fall back to
+    debug delivery when the token is missing, because that keeps a fresh
+    machine working. It is also a hole: in production the debug code comes
+    back to the browser, so anyone could "verify" any number they liked.
+    With no token the send is refused, the guest is asked to try again, and
+    the operator sees `not_configured` in the log.
   * Failures are reported as short codes for the view to translate, so an
     API error message cannot leak into a guest-facing page.
 """
@@ -62,8 +68,12 @@ def configured():
 
 
 def debug_mode():
-    """True when delivery must not touch the network."""
-    return bool(getattr(settings, "WHATSAPP_OTP_DEBUG", False)) or not configured()
+    """True when delivery must not touch the network.
+
+    Only an EXPLICIT `WHATSAPP_OTP_DEBUG` counts. A missing token no longer
+    counts, because that would hand the code to the browser in production.
+    """
+    return bool(getattr(settings, "WHATSAPP_OTP_DEBUG", False))
 
 
 def _payload(phone, code):
@@ -103,6 +113,18 @@ def send_otp(phone, code):
         # WARNING and above, and a code nobody can read is no help at all.
         logger.warning("WhatsApp OTP DEBUG for %s: %s", phone, code)
         return Delivery(True, debug_code=code)
+
+    if not configured():
+        # FAIL CLOSED. Without this branch the smart-looking fallback would
+        # be "pretend it was delivered", which returns the code to the
+        # browser and makes verification meaningless on a misconfigured
+        # server. Refusing is honest: nothing was sent, so nothing verifies.
+        logger.warning(
+            "WhatsApp OTP refused: WHATSAPP_ACCESS_TOKEN or "
+            "WHATSAPP_PHONE_NUMBER_ID is empty, so no code was sent to %s",
+            phone,
+        )
+        return Delivery(False, "not_configured")
 
     url = (
         f"{GRAPH_ROOT}/{settings.WHATSAPP_API_VERSION}/"
