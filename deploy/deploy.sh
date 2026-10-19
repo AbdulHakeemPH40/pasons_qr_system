@@ -20,6 +20,10 @@ REMOTE_USER="${REMOTE_USER:-root}"
 # The public name the site is served under, printed at the end. HOST above is
 # still the droplet address, because the deploy connects to it directly.
 SITE_URL="${SITE_URL:-https://qr-system.pasons.group}"
+# The host part of SITE_URL, used to find the certificate certbot issued and
+# to decide whether the repo's nginx file may replace the live one.
+SITE_HOST="${SITE_URL#*://}"
+SITE_HOST="${SITE_HOST%%/*}"
 APP_USER="pasons"
 APP_DIR="/srv/pasons/platform"
 SERVICE="pasons"
@@ -56,10 +60,10 @@ rsync -az --chown="$APP_USER:$APP_USER" \
   "$HERE/" "$REMOTE_USER@$HOST:$APP_DIR/"
 
 printf '\n==> Installing, migrating, collecting, restarting\n'
-# The heredoc is quoted so the remote shell owns every $ inside it. The three
+# The heredoc is quoted so the remote shell owns every $ inside it. The four
 # values it needs from this machine are passed on the ssh command line.
 ssh "$REMOTE_USER@$HOST" \
-  "APP_USER='$APP_USER' APP_DIR='$APP_DIR' SERVICE='$SERVICE' bash -s" <<'REMOTE'
+  "APP_USER='$APP_USER' APP_DIR='$APP_DIR' SERVICE='$SERVICE' SITE_HOST='$SITE_HOST' bash -s" <<'REMOTE'
 set -euo pipefail
 cd "$APP_DIR"
 
@@ -114,7 +118,17 @@ test -f staticfiles/staticfiles.json || {
   exit 1
 }
 
-install -m 644 deploy/nginx-pasons.conf /etc/nginx/sites-available/pasons
+# Once HTTPS exists, certbot owns the live site file: it writes the 443 block
+# and the certificate paths into it. Copying the repo's HTTP-only file over
+# that would drop TLS and take the site offline over https, so the repo file is
+# installed only while no certificate has been issued. FORCE_NGINX=1 restores
+# it deliberately, after which https must be set up again with certbot.
+CERT_FILE="/etc/letsencrypt/live/$SITE_HOST/fullchain.pem"
+if [ -f "$CERT_FILE" ] && [ "${FORCE_NGINX:-0}" != "1" ]; then
+  echo "Keeping the certbot managed nginx site (found $CERT_FILE)"
+else
+  install -m 644 deploy/nginx-pasons.conf /etc/nginx/sites-available/pasons
+fi
 ln -sf /etc/nginx/sites-available/pasons /etc/nginx/sites-enabled/pasons
 rm -f /etc/nginx/sites-enabled/default
 install -m 644 deploy/pasons.service /etc/systemd/system/pasons.service
@@ -138,5 +152,11 @@ for path in "/" "/panel/login/" "/static/css/app.css"; do
     *) echo "Unexpected status for $path" >&2; exit 1 ;;
   esac
 done
+
+# Reported, never fatal: a fresh droplet has no certificate yet, and that is
+# not a failed deploy. Once certbot has run, this line confirms the public
+# address answers with a valid certificate.
+public_code="$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL/" 2>/dev/null || echo "unreachable")"
+printf '  %-24s %s\n' "public https" "$public_code"
 
 printf '\nDeployed: http://%s/  (public: %s)\n' "$HOST" "$SITE_URL"
